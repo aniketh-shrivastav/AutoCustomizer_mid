@@ -275,9 +275,11 @@
               <ul>${(o.items || [])
                 .map((i) => `<li>${i.name} x ${i.quantity} (₹${i.price})</li>`)
                 .join("")}</ul>
-              <a href="/customer/order-receipt/${
-                o._id
-              }" target="_blank" class="download-btn">Download Receipt</a>
+              ${
+                !(o.orderStatus || "").toLowerCase().includes("cancel")
+                  ? `<a href="/customer/order-receipt/${o._id}" target="_blank" class="download-btn">Download Receipt</a>`
+                  : ""
+              }
             </div>
           </li>`
             )
@@ -345,9 +347,11 @@
               <p><strong>Cost:</strong> ₹${s.totalCost || 0}</p>
               <p><strong>Status:</strong> ${pastServiceStatusSpan(s)}</p>
               ${s.status === "Ready" ? ratingBlock(s) : ""}
-              <a href="/customer/service-receipt/${
-                s._id
-              }" target="_blank" class="download-btn">Download Receipt</a>
+              ${
+                s.status === "Ready"
+                  ? `<a href="/customer/service-receipt/${s._id}" target="_blank" class="download-btn">Download Receipt</a>`
+                  : ""
+              }
             </div>
           </li>`
             )

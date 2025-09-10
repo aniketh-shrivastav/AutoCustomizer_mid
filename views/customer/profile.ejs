@@ -1,292 +1,469 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Profile Settings</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
-  <style>
-    * {
-      box-sizing: border-box;
-    }
-
-    body {
-      font-family: 'Inter', sans-serif;
-      background: linear-gradient(135deg, #e2eafc, #cfd9df);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-      margin: 0;
-      padding: 20px;
-    }
-
-    .profile-container {
-      background: #fff;
-      padding: 35px 30px;
-      border-radius: 20px;
-      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-      width: 100%;
-      max-width: 420px;
-      transition: all 0.3s ease;
-      animation: fadeIn 0.6s ease;
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(30px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    .header {
-      text-align: center;
-      margin-bottom: 25px;
-    }
-
-    .header h2 {
-      font-size: 26px;
-      margin: 0;
-      color: #333;
-      font-weight: 600;
-    }
-
-    a {
-      display: inline-block;
-      margin-bottom: 15px;
-      text-decoration: none;
-      color: #3498db;
-      font-weight: 600;
-      transition: color 0.3s ease;
-    }
-
-    a:hover {
-      color: #216a94;
-    }
-
-    .profile-content {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-
-    .profile-content img {
-      width: 110px;
-      height: 110px;
-      border-radius: 50%;
-      object-fit: cover;
-      margin-bottom: 12px;
-      border: 4px solid #dfe6e9;
-      transition: transform 0.3s;
-    }
-
-    .profile-content img:hover {
-      transform: scale(1.05);
-    }
-
-    .profile-content input[type="file"] {
-      margin-bottom: 20px;
-      font-size: 14px;
-    }
-
-    .form-group {
-      width: 100%;
-      margin-bottom: 18px;
-    }
-
-    .form-group label {
-      display: block;
-      font-weight: 600;
-      margin-bottom: 6px;
-      color: #2d3436;
-    }
-
-    .form-group input {
-      width: 100%;
-      padding: 10px 12px;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-      font-size: 15px;
-      transition: border 0.3s ease;
-    }
-
-    .form-group input:focus {
-      border-color: #3498db;
-      outline: none;
-    }
-
-    .buttons {
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      margin-top: 25px;
-    }
-
-    .buttons button {
-      flex: 1;
-      padding: 12px;
-      border: none;
-      border-radius: 8px;
-      font-weight: 600;
-      font-size: 15px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-
-    .buttons button:first-child {
-      background-color: #e74c3c;
-      color: white;
-    }
-
-    .buttons button:first-child:hover {
-      background-color: #c0392b;
-    }
-
-    .buttons button:last-child {
-      background-color: #2ecc71;
-      color: white;
-    }
-
-    .buttons button:last-child:hover {
-      background-color: #27ae60;
-    }
-
-    @media screen and (max-width: 500px) {
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Profile Settings</title>
+    <link rel="stylesheet" href="/styles/styles.css" />
+    <style>
+      body {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        background: linear-gradient(135deg, #e2eafc, #cfd9df);
+        margin: 0;
+        padding-top: 90px;
+      }
+      .profile-wrapper {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+      }
       .profile-container {
-        padding: 25px 20px;
+        background: #fff;
+        padding: 35px 30px;
+        border-radius: 20px;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        width: 100%;
+        max-width: 420px;
+        animation: fadeIn 0.6s ease;
+        font-family: "Inter", sans-serif;
       }
-
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(30px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .header {
+        text-align: center;
+        margin-bottom: 25px;
+      }
       .header h2 {
-        font-size: 22px;
+        margin: 0;
+        font-size: 26px;
+        font-weight: 600;
+        color: #333;
       }
-    }
-    .buttons {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-top: 25px;
+      a.back-link {
+        display: inline-block;
+        margin-bottom: 15px;
+        text-decoration: none;
+        color: #3498db;
+        font-weight: 600;
+      }
+      a.back-link:hover {
+        color: #216a94;
+      }
+      .form-group {
+        width: 100%;
+        margin-bottom: 18px;
+      }
+      .form-group label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 6px;
+        color: #2d3436;
+      }
+      .form-group input {
+        width: 100%;
+        padding: 10px 12px;
+        border-radius: 8px;
+        border: 1px solid #ccc;
+        font-size: 15px;
+      }
+      .form-group input:focus {
+        border-color: #3498db;
+        outline: none;
+      }
+      .buttons {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-top: 25px;
+      }
+      .buttons button {
+        padding: 12px;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 15px;
+        cursor: pointer;
+        transition: 0.2s;
+      }
+      .btn-logout {
+        background: #e74c3c;
+        color: #fff;
+      }
+      .btn-logout:hover {
+        background: #c0392b;
+      }
+      .btn-save {
+        background: #2ecc71;
+        color: #fff;
+      }
+      .btn-save:hover {
+        background: #27ae60;
+      }
+      .btn-delete {
+        background: #bd2130;
+        color: #fff;
+      }
+      .btn-delete:hover {
+        background: #941e2a;
+      }
+      .status {
+        text-align: center;
+        font-size: 14px;
+        margin-top: 10px;
+      }
+      .error {
+  color: #e63946; /* softer red */
+  font-weight: 500;
+  font-size: 0.9rem;
+  margin-top: 4px;
+  font-family: 'Inter', sans-serif;
 }
 
-.buttons button {
-  padding: 12px;
-  border: none;
-  border-radius: 8px;
-  font-weight: 600;
-  font-size: 15px;
-  cursor: pointer;
-  transition: all 0.2s ease;
+input.invalid {
+  border: 2px solid #e63946;
+  box-shadow: 0 0 4px rgba(230, 57, 70, 0.3);
 }
 
-.buttons button:nth-child(1) {
-  background-color: #e74c3c;
-  color: white;
-}
-
-.buttons button:nth-child(2) {
-  background-color: #2ecc71;
-  color: white;
-}
-
-.buttons button:nth-child(3) {
-  background-color: #bd2130;
-  color: white;
-}
-.buttons button:nth-child(3):hover {
-  background-color: #941e2a;
-}
-  </style>
-</head>
-<body>
-    <div class="profile-container">
-      <a href="/customer/index">← Back to Dashboard</a>
-      <div class="header">
-        <h2>My Profile</h2>
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="logo">
+        <img src="/images3/logo2.jpg" alt="AutoCustomizer Logo" />
       </div>
-      <div class="profile-content">
-  
-        <form id="profileForm" action="/customer/profile" method="POST">
-          <input type="hidden" name="userId" value="<%= user.id %>" />
-          
+      <nav>
+        <ul class="nav-links">
+          <li><a href="/">Home</a></li>
+          <li><a href="/customer/index.html">Products</a></li>
+          <li><a href="/customer/booking.html">Services</a></li>
+          <li><a href="/customer/history.html">Order History</a></li>
+          <li>
+            <a href="/customer/cart.html" class="cart-link"
+              ><img src="/images/cart-icon.png" alt="Cart" /><span>Cart</span
+              ><span class="badge" id="cart-count"></span
+            ></a>
+          </li>
+          <li><a href="/customer/profile.html" class="active">Profile</a></li>
+          <li><a href="/logout">Logout</a></li>
+        </ul>
+      </nav>
+    </header>
+    <div class="profile-wrapper">
+      <div class="profile-container">
+        <a class="back-link" href="/customer/index.html">← Back to Dashboard</a>
+        <div class="header"><h2>My Profile</h2></div>
+        <form id="profileForm">
           <div class="form-group">
-            <label for="name">Full Name</label>
-            <input type="text" id="name" name="name" value="<%= user.name %>" placeholder="Enter your name" required />
+            <label for="name">Full Name</label
+            ><input
+              id="name"
+              name="name"
+              required
+              placeholder="Enter your name"
+            />
           </div>
-  
           <div class="form-group">
-            <label for="phone">Phone Number</label>
-            <input type="tel" id="phone" name="phone" value="<%= user.phone %>" placeholder="Enter your phone number" />
+            <label for="phone">Phone Number</label
+            ><input
+              id="phone"
+              name="phone"
+              placeholder="Enter your phone number"
+            />
           </div>
-  
           <div class="form-group">
-            <label for="address">Address</label>
-            <input type="text" id="address" name="address" value="<%= profile.address %>" placeholder="Enter your address" />
+            <label for="address">Address</label
+            ><input
+              id="address"
+              name="address"
+              placeholder="Enter your address"
+            />
           </div>
-  
           <div class="form-group">
-            <label for="district">District</label>
-            <input type="text" id="district" name="district" value="<%= profile.district %>" placeholder="Enter your district" />
+            <label for="district">District</label
+            ><input
+              id="district"
+              name="district"
+              placeholder="Enter your district"
+            />
           </div>
-  
           <div class="form-group">
-            <label for="carModel">Car Model</label>
-            <input type="text" id="carModel" name="carModel" value="<%= profile.carModel %>" placeholder="Enter your car model" />
+            <label for="carModel">Car Model</label
+            ><input
+              id="carModel"
+              name="carModel"
+              placeholder="Enter your car model"
+            />
           </div>
-  
           <div class="form-group">
-            <label for="payments">Payments(COD or e-payments)</label>
-            <input type="text" id="payments" name="payments" value="<%= profile.payments %>" placeholder="Enter payment details" />
+            <label for="payments">Payments (COD or e-payments)</label
+            ><input
+              id="payments"
+              name="payments"
+              placeholder="Enter payment details"
+            />
           </div>
-  
           <div class="buttons">
-            <button type="button" onclick="logout()">Logout</button>
-            <button type="submit">Save Changes</button>
-            <button type="button" onclick="deleteProfile()">Delete Profile</button>
+            <button type="button" class="btn-logout" id="logoutBtn">
+              Logout
+            </button>
+            <button type="submit" class="btn-save">Save Changes</button>
+            <button type="button" class="btn-delete" id="deleteBtn">
+              Delete Profile
+            </button>
           </div>
+          <div class="status" id="statusMsg"></div>
         </form>
       </div>
     </div>
-  
     <script>
-      // Preview uploaded profile image
-      const imageUpload = document.getElementById('imageUpload');
-      const profileImage = document.getElementById('profileImage');
-  
-      imageUpload.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (file) {
-          const reader = new FileReader();
-          reader.onload = (event) => {
-            profileImage.src = event.target.result;
-          };
-          reader.readAsDataURL(file);
-        }
+  // --- Load profile from server ---
+  async function loadProfile() {
+    try {
+      const res = await fetch("/customer/api/profile", {
+        headers: { Accept: "application/json" },
       });
-  
-      // Logout function (redirect to logout route)
-      function logout() {
-        window.location.href = "/logout";
+      if (res.status === 401) {
+        window.location.href = "/login";
+        return;
       }
-
-      function deleteProfile() {
-  if (confirm("Are you sure you want to permanently delete your account? This action cannot be undone.")) {
-    fetch('/customer/delete-profile', {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ userId: "<%= user._id %>" })
-    })
-    .then(res => {
-      if (res.ok) {
-        alert("Your profile has been deleted.");
-        window.location.href = "/logout";
-      } else {
-        return res.json().then(data => {
-          throw new Error(data.message || "Deletion failed.");
-        });
-      }
-    })
-    .catch(err => alert(err.message));
+      if (!res.ok) throw new Error("Failed to load profile");
+      const data = await res.json();
+      const { user, profile } = data;
+      document.getElementById("name").value = user.name || "";
+      document.getElementById("phone").value = user.phone || "";
+      document.getElementById("address").value = profile.address || "";
+      document.getElementById("district").value = profile.district || "";
+      document.getElementById("carModel").value = profile.carModel || "";
+      document.getElementById("payments").value = profile.payments || "";
+    } catch (err) {
+      document.getElementById("statusMsg").textContent = err.message;
+      document.getElementById("statusMsg").style.color = "red";
+    }
   }
-}
-    </script>
+
+  // --- Elements ---
+  const form = document.getElementById("profileForm");
+  const name = document.getElementById("name");
+  const phone = document.getElementById("phone");
+  const address = document.getElementById("address");
+  const district = document.getElementById("district");
+  const carModel = document.getElementById("carModel");
+  const payments = document.getElementById("payments");
+  const status = document.getElementById("statusMsg");
+
+  // --- Error helper functions ---
+  function showError(input, message) {
+    let errorDiv = input.parentElement.querySelector(".error");
+    if (!errorDiv) {
+      errorDiv = document.createElement("div");
+      errorDiv.className = "error";
+      input.parentElement.appendChild(errorDiv);
+    }
+    errorDiv.textContent = message;
+    input.classList.add("invalid");
+  }
+
+  function clearError(input) {
+    const errorDiv = input.parentElement.querySelector(".error");
+    if (errorDiv) errorDiv.textContent = "";
+    input.classList.remove("invalid");
+  }
+
+  // --- Validation functions ---
+  function validateName() {
+    const v = name.value.trim();
+    const re = /^[A-Za-z\s]{3,}$/;
+    if (!re.test(v)) {
+      showError(name, "Name should contain only letters and spaces (min 3 chars).");
+      return false;
+    }
+    clearError(name);
+    return true;
+  }
+
+  function validatePhone() {
+    const raw = phone.value.trim();
+    const digits = raw.replace(/\D/g, "");
+    if (digits.length === 10 || (digits.length === 12 && digits.startsWith("91"))) {
+      clearError(phone);
+      return true;
+    }
+    showError(phone, "Enter a valid 10-digit phone number. You may include +91 or spaces.");
+    return false;
+  }
+
+  function validateAddress() {
+    const v = address.value.trim();
+    if (v.length < 5) {
+      showError(address, "Address is too short (min 5 characters).");
+      return false;
+    }
+    clearError(address);
+    return true;
+  }
+
+  function validateDistrict() {
+    const v = district.value.trim();
+    const re = /^[A-Za-z\s]{2,}$/;
+    if (!re.test(v)) {
+      showError(district, "District should contain only letters and spaces (no special characters).");
+      return false;
+    }
+    clearError(district);
+    return true;
+  }
+
+  function validateCarModel() {
+    const v = carModel.value.trim();
+    const re = /^[A-Za-z0-9\s\-\/\.]{1,}$/;
+    if (v.length === 0) {
+      showError(carModel, "Car model cannot be empty.");
+      return false;
+    }
+    if (!re.test(v)) {
+      showError(carModel, "Car model contains invalid characters.");
+      return false;
+    }
+    clearError(carModel);
+    return true;
+  }
+
+  function validatePayments() {
+    const v = payments.value.trim();
+    if (v.length === 0) {
+      showError(payments, "Payment method cannot be empty.");
+      return false;
+    }
+    const re = /^[A-Za-z0-9\s\-\&\,\.]{1,}$/;
+    if (!re.test(v)) {
+      showError(payments, "Payment method contains invalid characters.");
+      return false;
+    }
+    clearError(payments);
+    return true;
+  }
+
+  // --- Live validation ---
+  [
+    { el: name, fn: validateName },
+    { el: phone, fn: validatePhone },
+    { el: address, fn: validateAddress },
+    { el: district, fn: validateDistrict },
+    { el: carModel, fn: validateCarModel },
+    { el: payments, fn: validatePayments },
+  ].forEach((item) => {
+    item.el.addEventListener("input", item.fn);
+    item.el.addEventListener("blur", item.fn);
+  });
+
+  // --- Form submission with validation ---
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    document.querySelectorAll(".error").forEach((el) => (el.textContent = ""));
+    document.querySelectorAll("input").forEach((el) => el.classList.remove("invalid"));
+
+    const ok =
+      validateName() &
+      validatePhone() &
+      validateAddress() &
+      validateDistrict() &
+      validateCarModel() &
+      validatePayments();
+
+    if (!ok) {
+      const firstInvalid = document.querySelector(".invalid");
+      if (firstInvalid) firstInvalid.focus();
+      return;
+    }
+
+    status.textContent = "Saving...";
+    status.style.color = "#333";
+
+    const formData = {
+      name: name.value.trim(),
+      phone: phone.value.trim(),
+      address: address.value.trim(),
+      district: district.value.trim(),
+      carModel: carModel.value.trim(),
+      payments: payments.value.trim(),
+    };
+
+    try {
+      const res = await fetch("/customer/profile", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
+      if (res.status === 401) {
+        status.textContent = "Session expired. Redirecting to login...";
+        status.style.color = "red";
+        setTimeout(() => (window.location.href = "/login"), 800);
+        return;
+      }
+      if (!res.ok) {
+        const maybe = await res.json().catch(() => ({}));
+        throw new Error(maybe.message || "Save failed");
+      }
+      status.textContent = "Profile saved successfully!";
+      status.style.color = "green";
+    } catch (err) {
+      console.error("[profile] save error", err);
+      status.textContent = err.message || "Unexpected error";
+      status.style.color = "red";
+    }
+  });
+
+  // --- Logout & Delete ---
+  document.getElementById("logoutBtn").addEventListener("click", () => {
+    window.location.href = "/logout";
+  });
+
+  document.getElementById("deleteBtn").addEventListener("click", async () => {
+    if (!confirm("Are you sure you want to permanently delete your account?"))
+      return;
+    status.textContent = "Deleting...";
+    status.style.color = "#333";
+    try {
+      const idRes = await fetch("/customer/api/profile", {
+        headers: { Accept: "application/json" },
+      });
+      const idData = await idRes.json();
+      const userId = idData.user.id;
+      const res = await fetch("/customer/delete-profile", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({ userId }),
+      });
+      if (!res.ok) throw new Error("Delete failed");
+      alert("Profile deleted.");
+      window.location.href = "/logout";
+    } catch (err) {
+      status.textContent = err.message;
+      status.style.color = "red";
+    }
+  });
+
+  // --- Load profile on page ready ---
+  loadProfile();
+</script>
+
   </body>
-  </html>
+</html>

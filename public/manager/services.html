@@ -173,6 +173,7 @@
     </div>
 
     <script>
+      let currentRole = "all";
       async function fetchProfiles() {
         const resp = await fetch("/manager/api/services", {
           headers: { Accept: "application/json" },
@@ -333,25 +334,24 @@
         document
           .querySelector(`.tab-button[data-role="${role}"]`)
           .classList.add("active");
-        document.querySelectorAll(".profile-card").forEach((card) => {
-          if (role === "all") {
-            card.style.display = "block";
-            return;
-          }
-          card.style.display = card.classList.contains(role) ? "block" : "none";
-        });
-        document.getElementById("searchInput").value = "";
+        currentRole = role;
+        // Re-apply search so both filters combine
+        applySearch();
       }
 
       function applySearch() {
-        const term = document.getElementById("searchInput").value.toLowerCase();
+        const term = document
+          .getElementById("searchInput")
+          .value.toLowerCase()
+          .trim();
         document.querySelectorAll(".profile-card").forEach((card) => {
-          const name = card.getAttribute("data-name");
-          const email = card.getAttribute("data-email");
-          card.style.display =
-            !term || name.includes(term) || email.includes(term)
-              ? "block"
-              : "none";
+          const matchesRole =
+            currentRole === "all" || card.classList.contains(currentRole);
+          const name = card.getAttribute("data-name") || "";
+          const email = card.getAttribute("data-email") || "";
+          const matchesText =
+            !term || name.includes(term) || email.includes(term);
+          card.style.display = matchesRole && matchesText ? "block" : "none";
         });
       }
 
@@ -421,6 +421,16 @@
           btn.addEventListener("click", () => filterByRole(btn.dataset.role))
         );
 
+      function highlightActiveNav() {
+        const links = document.querySelectorAll(".navbar nav a");
+        const path = window.location.pathname;
+        links.forEach((a) => {
+          const href = a.getAttribute("href");
+          if (href === path) a.classList.add("active");
+        });
+      }
+
+      highlightActiveNav();
       loadProfiles();
     </script>
   </body>

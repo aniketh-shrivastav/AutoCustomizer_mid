@@ -11,30 +11,28 @@
     />
   </head>
   <body>
-    <div class="navbar">
+    <nav class="navbar">
       <div class="logo-brand">
         <img src="/public/images3/logo2.jpg" alt="Logo" class="logo" />
-        <strong>AutoCustomizer</strong>
+        <span class="brand">AutoCustomizer</span>
       </div>
+      <a href="#" class="menu-btn" onclick="toggleSidebar()">☰</a>
       <div class="nav-links" id="navLinks">
-        <a href="/service/dashboardService.html">Dashboard</a>
-        <a href="/service/profileSettings">Profile</a>
-        <a href="/service/bookingManagement">Bookings</a>
-        <a href="/service/customerCommunication">Communication</a>
-        <a href="/service/earnings">Earnings</a>
-        <a href="/service/reviews.html">Reviews</a>
+        <a href="/service/dashboardService.html" class="active">Dashboard</a>
+        <a href="/service/profileSettings.html">Profile Settings</a>
+        <a href="/service/bookingManagement">Booking Management</a>
+        <a href="/service/reviews.html">Reviews & Ratings</a>
         <a href="/logout">Logout</a>
       </div>
-      <div class="menu-btn" onclick="toggleNavLinks()">☰</div>
-    </div>
+    </nav>
 
     <div class="sidebar" id="sidebar">
       <a class="close-btn" onclick="toggleSidebar()">Close ×</a>
       <a href="/service/dashboardService.html"
         ><i class="fas fa-tachometer-alt"></i> Dashboard</a
       >
-      <a href="/service/profileSettings"
-        ><i class="fas fa-user-cog"></i> Profile</a
+      <a href="/service/profileSettings.html"
+        ><i class="fas fa-user-cog"></i> Profile Settings</a
       >
       <a href="/service/bookingManagement"
         ><i class="fas fa-calendar-alt"></i> Bookings</a

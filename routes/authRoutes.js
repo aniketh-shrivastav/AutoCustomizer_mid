@@ -21,9 +21,10 @@ router.post("/signup", async (req, res) => {
     req.body;
   const finalName = name || businessName || workshopName;
 
-  if (!phone || !/^\d{10}$/.test(phone.trim())) {
-    error = "Phone number must be 10 digits.";
-  }
+  // Helper to detect if client expects JSON (Fetch path)
+  const wantsJson =
+    (req.headers.accept || "").includes("application/json") ||
+    (req.headers["content-type"] || "").includes("application/json");
 
   // Validation regex
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -36,10 +37,12 @@ router.post("/signup", async (req, res) => {
     error = "Please enter a valid email ending in .com";
   } else if (!nameRegex.test(finalName)) {
     error = "Name should not contain numbers or special characters";
+  } else if (!phone || !/^\d{10}$/.test(String(phone).trim())) {
+    error = "Phone number must be 10 digits.";
   }
 
   if (error) {
-    if (req.headers.accept.includes("application/json")) {
+    if (wantsJson) {
       return res.status(400).json({ success: false, message: error });
     } else {
       return res.render("signup", { error });
@@ -50,11 +53,11 @@ router.post("/signup", async (req, res) => {
     // Check if email already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      error = "Email already exists";
-      if (req.headers.accept.includes("application/json")) {
-        return res.status(400).json({ success: false, message: error });
+      const errMsg = "Email already exists";
+      if (wantsJson) {
+        return res.status(400).json({ success: false, message: errMsg });
       } else {
-        return res.render("signup", { error });
+        return res.render("signup", { error: errMsg });
       }
     }
 
@@ -73,7 +76,7 @@ router.post("/signup", async (req, res) => {
     await newUser.save();
     console.log("MongoDB user inserted:", newUser);
 
-    if (req.headers.accept.includes("application/json")) {
+    if (wantsJson) {
       return res.json({
         success: true,
         message: "Signup successful. Redirecting to login...",
@@ -83,7 +86,10 @@ router.post("/signup", async (req, res) => {
     }
   } catch (error) {
     console.error("MongoDB error:", error.message);
-    res.status(500).json({ success: false, message: "Server error" });
+    if (wantsJson) {
+      return res.status(500).json({ success: false, message: "Server error" });
+    }
+    return res.render("signup", { error: "Server error" });
   }
 });
 

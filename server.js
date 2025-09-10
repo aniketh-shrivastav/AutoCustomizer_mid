@@ -55,6 +55,16 @@ app.use("/service", (req, res, next) => {
   next();
 });
 
+// Protect seller static HTML pages (converted from EJS)
+app.use(["/seller", "/Seller"], (req, res, next) => {
+  if (req.path.endsWith(".html")) {
+    if (!req.session.user) return res.redirect("/login");
+    if (req.session.user.role !== "seller")
+      return res.status(403).send("Access Denied: Sellers Only");
+  }
+  next();
+});
+
 // Expose only the public directory (avoid exposing entire project root for security)
 // Removed: app.use(express.static(__dirname));
 app.use(express.static("public"));

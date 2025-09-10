@@ -5,26 +5,8 @@
     <title>Payments | Manager Panel</title>
     <link rel="stylesheet" href="/styles/admin-consistent.css" />
     <style>
-      /* Tabs mimic payments.ejs but harmonize spacing with existing design */
       .tab-bar {
         margin-top: 10px;
-      }
-      .tab-button {
-        padding: 10px 18px;
-        margin-right: 10px;
-        border: none;
-        cursor: pointer;
-        background: #ddd;
-        border-radius: 8px;
-        font-weight: 500;
-        transition: background 0.25s ease, color 0.25s ease;
-      }
-      .tab-button:hover {
-        background: #cfcfcf;
-      }
-      .tab-button.active {
-        background: #2ecc71;
-        color: #fff;
       }
       .tab-content {
         display: none;
@@ -69,11 +51,9 @@
     <div class="main-content container" style="margin-top: 60px">
       <h1>Payments Overview</h1>
 
-      <div class="tab-bar">
-        <button class="tab-button active" data-target="ordersTab">
-          Orders
-        </button>
-        <button class="tab-button" data-target="servicesTab">
+      <div class="tab-bar tabs">
+        <button class="tab-btn active" data-target="ordersTab">Orders</button>
+        <button class="tab-btn" data-target="servicesTab">
           Service Orders
         </button>
       </div>
@@ -81,37 +61,41 @@
       <div id="feedback" class="loading">Loading payments data...</div>
 
       <div id="ordersTab" class="tab-content active">
-        <table class="order-table">
-          <thead>
-            <tr>
-              <th>Order ID</th>
-              <th>Customer</th>
-              <th>Seller(s)</th>
-              <th>Products</th>
-              <th>Total Cost</th>
-              <th>Commission (20%)</th>
-              <th>Date</th>
-            </tr>
-          </thead>
-          <tbody id="ordersBody"></tbody>
-        </table>
+        <div class="table-responsive">
+          <table class="order-table">
+            <thead>
+              <tr>
+                <th>Order ID</th>
+                <th>Customer</th>
+                <th>Seller(s)</th>
+                <th>Products</th>
+                <th>Total Cost</th>
+                <th>Commission (20%)</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody id="ordersBody"></tbody>
+          </table>
+        </div>
       </div>
 
       <div id="servicesTab" class="tab-content">
-        <table class="order-table">
-          <thead>
-            <tr>
-              <th>Booking ID</th>
-              <th>Customer</th>
-              <th>Provider</th>
-              <th>Services</th>
-              <th>Total Cost</th>
-              <th>Commission (20%)</th>
-              <th>Date</th>
-            </tr>
-          </thead>
-          <tbody id="servicesBody"></tbody>
-        </table>
+        <div class="table-responsive">
+          <table class="order-table">
+            <thead>
+              <tr>
+                <th>Booking ID</th>
+                <th>Customer</th>
+                <th>Provider</th>
+                <th>Services</th>
+                <th>Total Cost</th>
+                <th>Commission (20%)</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody id="servicesBody"></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -208,9 +192,9 @@
 
       // Tab switching
       document.addEventListener("click", (e) => {
-        if (e.target.classList.contains("tab-button")) {
+        if (e.target.classList.contains("tab-btn")) {
           document
-            .querySelectorAll(".tab-button")
+            .querySelectorAll(".tab-btn")
             .forEach((b) => b.classList.remove("active"));
           e.target.classList.add("active");
           const target = e.target.getAttribute("data-target");
@@ -221,6 +205,16 @@
         }
       });
 
+      function highlightActiveNav() {
+        const links = document.querySelectorAll(".navbar nav a");
+        const path = window.location.pathname;
+        links.forEach((a) => {
+          const href = a.getAttribute("href");
+          if (href === path) a.classList.add("active");
+        });
+      }
+
+      highlightActiveNav();
       loadPayments();
     </script>
   </body>

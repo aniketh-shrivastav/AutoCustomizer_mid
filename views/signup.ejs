@@ -243,7 +243,6 @@
       </div>
     </div>
 
-    <script src="/script.js"></script>
     <style>
       .error-msg {
         display: block;
@@ -397,14 +396,115 @@
           });
         }
         document.addEventListener("DOMContentLoaded", () => {
-          [
-            "customerSignup",
-            "sellerSignup",
-            "serviceProviderSignup",
-            "managerSignup",
-          ].forEach((id) => {
-            const f = document.getElementById(id);
-            if (f) attach(f);
+          const userTypeSelect = document.getElementById("userType");
+          const formsByRole = {
+            customer: document.getElementById("customerSignup"),
+            seller: document.getElementById("sellerSignup"),
+            "service-provider": document.getElementById(
+              "serviceProviderSignup"
+            ),
+            manager: document.getElementById("managerSignup"),
+          };
+
+          // Attach validation handlers
+          Object.values(formsByRole).forEach((f) => f && attach(f));
+
+          // Show/hide form based on selected user type
+          function showSelectedForm() {
+            const selected = userTypeSelect.value;
+            Object.values(formsByRole).forEach(
+              (f) => f && f.classList.add("hidden")
+            );
+            if (formsByRole[selected])
+              formsByRole[selected].classList.remove("hidden");
+          }
+          userTypeSelect.addEventListener("change", showSelectedForm);
+          showSelectedForm();
+
+          // Intercept submit and use Fetch API for signup
+          Object.values(formsByRole).forEach((form) => {
+            if (!form) return;
+            form.addEventListener("submit", async (e) => {
+              e.preventDefault();
+
+              // Re-validate all required inputs
+              let ok = true;
+              form.querySelectorAll("input[required]").forEach((i) => {
+                if (!validateField(i)) ok = false;
+              });
+              if (!ok) return;
+
+              // Confirm password check
+              const pw = form.querySelector('input[name="password"]').value;
+              const cpw = form.querySelector(
+                'input[name="confirmPassword"]'
+              ).value;
+              if (pw !== cpw) {
+                const cpwInput = form.querySelector(
+                  'input[name="confirmPassword"]'
+                ).value;
+                setError(
+                  form.querySelector('input[name="confirmPassword"]'),
+                  "Passwords do not match. Please re-enter your password"
+                );
+                return;
+              }
+
+              // Build payload from form fields
+              const role =
+                form.querySelector('input[name="role"]').value ||
+                userTypeSelect.value;
+              const fd = new FormData(form);
+              const payload = { role };
+              fd.forEach((v, k) => {
+                if (k === "confirmPassword" || k === "role") return;
+                payload[k] = typeof v === "string" ? v.trim() : v;
+              });
+
+              try {
+                const res = await fetch("/signup", {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    Accept: "application/json",
+                  },
+                  body: JSON.stringify(payload),
+                });
+                const data = await res.json().catch(() => ({}));
+
+                if (res.ok && data.success) {
+                  window.location.href = "/login";
+                } else {
+                  const msg =
+                    data.message || "Signup failed. Please try again.";
+                  // Try to set field-specific error when possible; fallback to alert
+                  if (/email/i.test(msg)) {
+                    const emailInput = form.querySelector(
+                      'input[name="email"]'
+                    );
+                    if (emailInput) setError(emailInput, msg);
+                    else alert(msg);
+                  } else if (/phone/i.test(msg)) {
+                    const phoneInput = form.querySelector(
+                      'input[name="phone"]'
+                    );
+                    if (phoneInput) setError(phoneInput, msg);
+                    else alert(msg);
+                  } else if (/name/i.test(msg)) {
+                    const nameInput = form.querySelector(
+                      'input[name="name"], input[name="businessName"], input[name="workshopName"]'
+                    );
+                    if (nameInput) setError(nameInput, msg);
+                    else alert(msg);
+                  } else {
+                    alert(msg);
+                  }
+                }
+              } catch (err) {
+                console.error("Signup error:", err);
+                alert("An error occurred during registration.");
+              }
+            });
           });
         });
       })();

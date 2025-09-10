@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -84,8 +83,24 @@
           <h2>Services Offered</h2>
           <ul class="service-list" id="serviceList"></ul>
           <div class="service-input-container" style="display: none">
-            <input type="text" id="newService" placeholder="New Service Name" />
-            <input type="number" id="newServiceCost" placeholder="Cost" />
+            <input
+              type="text"
+              id="newService"
+              placeholder="New Service Name"
+              aria-describedby="newServiceErr"
+            />
+            <div id="newServiceErr" class="error"></div>
+
+            <input
+              type="number"
+              id="newServiceCost"
+              placeholder="Cost"
+              inputmode="decimal"
+              min="0.01"
+              step="0.01"
+              aria-describedby="newServiceCostErr"
+            />
+            <div id="newServiceCostErr" class="error"></div>
             <button
               type="button"
               class="btn add-service-btn"
@@ -187,7 +202,8 @@
 
         // Name validation
         if (!name.value.trim()) {
-          document.getElementById("nameError").textContent = "Full Name is required";
+          document.getElementById("nameError").textContent =
+            "Full Name is required";
           name.classList.add("error-border");
           document.getElementById("nameError").style.display = "block";
           isValid = false;
@@ -202,12 +218,14 @@
 
         // Phone validation
         if (!phone.value.trim()) {
-          document.getElementById("phoneError").textContent = "Phone Number is required";
+          document.getElementById("phoneError").textContent =
+            "Phone Number is required";
           phone.classList.add("error-border");
           document.getElementById("phoneError").style.display = "block";
           isValid = false;
         } else if (!/^\d{10}$/.test(phone.value.trim())) {
-          document.getElementById("phoneError").textContent = "Phone number should contain 10 digits";
+          document.getElementById("phoneError").textContent =
+            "Phone number should contain 10 digits";
           phone.classList.add("error-border");
           document.getElementById("phoneError").style.display = "block";
           isValid = false;
@@ -218,7 +236,8 @@
 
         // District validation
         if (!district.value.trim()) {
-          document.getElementById("districtError").textContent = "District is required";
+          document.getElementById("districtError").textContent =
+            "District is required";
           district.classList.add("error-border");
           document.getElementById("districtError").style.display = "block";
           isValid = false;
@@ -239,7 +258,8 @@
         const serviceItems = document.querySelectorAll(".service-item");
         const servicesOffered = Array.from(serviceItems).map((item) => ({
           name: item.querySelector(".service-name").value.trim(),
-          cost: parseFloat(item.querySelector(".service-cost").value.trim()) || 0,
+          cost:
+            parseFloat(item.querySelector(".service-cost").value.trim()) || 0,
         }));
         try {
           const res = await fetch("/profile/update", {
@@ -279,11 +299,72 @@
         document
           .querySelectorAll(".service-item .delete-btn")
           .forEach((btn) => (btn.style.display = "inline-block"));
+        // Show account delete button only in edit mode
+        const accDelBtn = document.getElementById("delete-account-btn");
+        if (accDelBtn) accDelBtn.style.display = "inline-block";
+        // Initialize new service validation and disable Add until valid
+        const nameEl = document.getElementById("newService");
+        const costEl = document.getElementById("newServiceCost");
+        const addBtn = document.querySelector(".add-service-btn");
+        if (addBtn) addBtn.disabled = true;
+        if (nameEl) {
+          nameEl.addEventListener("input", () =>
+            validateNewServiceInputs(true)
+          );
+          nameEl.addEventListener("blur", () => validateNewServiceInputs(true));
+        }
+        if (costEl) {
+          costEl.addEventListener("input", () =>
+            validateNewServiceInputs(true)
+          );
+          costEl.addEventListener("blur", () => validateNewServiceInputs(true));
+        }
       }
       function cancelEdit() {
+        // Hide account delete button again
+        const accDelBtn = document.getElementById("delete-account-btn");
+        if (accDelBtn) accDelBtn.style.display = "none";
         location.reload();
       }
+      function validateNewServiceInputs(showMessages = false) {
+        const nameEl = document.getElementById("newService");
+        const costEl = document.getElementById("newServiceCost");
+        const errName = document.getElementById("newServiceErr");
+        const errCost = document.getElementById("newServiceCostErr");
+        const addBtn = document.querySelector(".add-service-btn");
+
+        const name = (nameEl.value || "").trim();
+        const costStr = (costEl.value || "").trim();
+        const cost = parseFloat(costStr);
+
+        const nameOk = /^[A-Za-z0-9\s.-]{2,}$/.test(name);
+        const costOk = costStr !== "" && !isNaN(cost) && cost > 0;
+
+        if (!nameOk && showMessages) {
+          nameEl.classList.add("error-border");
+          errName.textContent =
+            "Enter at least 2 characters (letters, numbers, spaces, . or -)";
+          errName.style.display = "block";
+        } else {
+          nameEl.classList.remove("error-border");
+          errName.style.display = "none";
+        }
+
+        if (!costOk && showMessages) {
+          costEl.classList.add("error-border");
+          errCost.textContent = "Enter a valid cost greater than 0";
+          errCost.style.display = "block";
+        } else {
+          costEl.classList.remove("error-border");
+          errCost.style.display = "none";
+        }
+
+        if (addBtn) addBtn.disabled = !(nameOk && costOk);
+        return nameOk && costOk;
+      }
+
       function addService() {
+        if (!validateNewServiceInputs(true)) return;
         const n = document.getElementById("newService").value.trim();
         const c = parseFloat(
           document.getElementById("newServiceCost").value.trim()
@@ -295,8 +376,11 @@
           document.getElementById("serviceList").appendChild(li);
           document.getElementById("newService").value = "";
           document.getElementById("newServiceCost").value = "";
+          // Reset and disable Add again until valid
+          const addBtn = document.querySelector(".add-service-btn");
+          if (addBtn) addBtn.disabled = true;
         } else {
-          alert("Please enter both a service name and cost.");
+          alert("Please enter both a valid service name and cost.");
         }
       }
       function removeService(btn) {

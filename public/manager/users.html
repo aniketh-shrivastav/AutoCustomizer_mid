@@ -44,17 +44,6 @@
       .suspended-user {
         background-color: #f8d7da !important;
       }
-      .btn-restore {
-        background-color: #3498db;
-        color: #fff;
-        padding: 5px 10px;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-      }
-      .btn-restore:hover {
-        background-color: #2980b9;
-      }
     </style>
   </head>
   <body>
@@ -93,6 +82,118 @@
         <button class="filter-btn" data-role="manager">Managers</button>
       </div>
 
+      <!-- Add Manager UI -->
+      <div class="add-manager" style="margin: 10px 0 20px">
+        <button id="toggleAddManager" class="btn btn-view">
+          + Add Manager
+        </button>
+        <form
+          id="addManagerForm"
+          style="display: none; margin-top: 12px; max-width: 560px"
+        >
+          <div style="display: flex; gap: 10px; flex-wrap: wrap">
+            <input
+              id="mgrName"
+              placeholder="Full name"
+              required
+              aria-describedby="mgrNameErr"
+              style="
+                flex: 1;
+                min-width: 200px;
+                padding: 8px;
+                border: 1px solid #ccc;
+                border-radius: 8px;
+              "
+            />
+            <input
+              id="mgrEmail"
+              type="email"
+              placeholder="Email"
+              required
+              aria-describedby="mgrEmailErr"
+              style="
+                flex: 1;
+                min-width: 220px;
+                padding: 8px;
+                border: 1px solid #ccc;
+                border-radius: 8px;
+              "
+            />
+          </div>
+          <div
+            style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px"
+          >
+            <small
+              id="mgrNameErr"
+              style="color: #e74c3c; min-height: 16px; flex: 1"
+            ></small>
+            <small
+              id="mgrEmailErr"
+              style="color: #e74c3c; min-height: 16px; flex: 1"
+            ></small>
+          </div>
+          <div
+            style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px"
+          >
+            <input
+              id="mgrPhone"
+              placeholder="Phone (10 digits)"
+              inputmode="numeric"
+              pattern="\d{10}"
+              aria-describedby="mgrPhoneErr"
+              style="
+                flex: 1;
+                min-width: 200px;
+                padding: 8px;
+                border: 1px solid #ccc;
+                border-radius: 8px;
+              "
+            />
+            <input
+              id="mgrPassword"
+              type="password"
+              placeholder="Password (min 6)"
+              minlength="6"
+              required
+              aria-describedby="mgrPasswordErr"
+              style="
+                flex: 1;
+                min-width: 220px;
+                padding: 8px;
+                border: 1px solid #ccc;
+                border-radius: 8px;
+              "
+            />
+          </div>
+          <div
+            style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px"
+          >
+            <small
+              id="mgrPhoneErr"
+              style="color: #e74c3c; min-height: 16px; flex: 1"
+            ></small>
+            <small
+              id="mgrPasswordErr"
+              style="color: #e74c3c; min-height: 16px; flex: 1"
+            ></small>
+          </div>
+          <div style="margin-top: 10px; display: flex; gap: 8px">
+            <button
+              type="submit"
+              id="createManagerBtn"
+              class="btn btn-approve"
+              disabled
+            >
+              Create Manager
+            </button>
+            <button type="button" id="cancelAddManager" class="btn btn-suspend">
+              Cancel
+            </button>
+          </div>
+          <div id="addManagerMsg" class="status" style="margin-top: 6px"></div>
+        </form>
+      </div>
+
       <div
         id="error"
         style="
@@ -107,6 +208,7 @@
     </div>
 
     <script>
+      let allUsers = [];
       async function fetchUsers() {
         const resp = await fetch("/manager/api/users", {
           headers: { Accept: "application/json" },
@@ -135,22 +237,26 @@
                 u.role === "manager"
                   ? "<span>Not Allowed</span>"
                   : !u.suspended
-                  ? `<button class="btn-suspend" data-action="suspend" data-user-id="${u._id}">Suspend</button>`
-                  : `<button class="btn-restore" data-action="restore" data-user-id="${u._id}">Restore</button>`;
+                  ? `<button class="btn btn-suspend" data-action="suspend" data-user-id="${u._id}">Suspend</button>`
+                  : `<button class="btn btn-restore" data-action="restore" data-user-id="${u._id}">Restore</button>`;
+              const statusBadge = u.suspended
+                ? '<span class="badge badge-danger">Suspended</span>'
+                : '<span class="badge badge-success">Active</span>';
               return `<tr class="${u.suspended ? "suspended-user" : ""}">
                     <td>${u._id}</td>
                     <td>${u.name || ""}</td>
                     <td>${u.email || ""}</td>
+                    <td>${statusBadge}</td>
                     <td>${actions}</td>
                   </tr>`;
             })
             .join("");
           if (!rows)
-            rows = '<tr><td colspan="4">No users in this category.</td></tr>';
+            rows = '<tr><td colspan="5">No users in this category.</td></tr>';
           section.innerHTML = `<h3>${
             role.charAt(0).toUpperCase() + role.slice(1).replace("-", " ")
           }</h3>
-          <table class="user-table"><thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Actions</th></tr></thead><tbody>${rows}</tbody></table>`;
+          <div class="table-responsive"><table class="user-table"><thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Status</th><th>Actions</th></tr></thead><tbody>${rows}</tbody></table></div>`;
           container.appendChild(section);
         });
       }
@@ -244,20 +350,164 @@
 
       async function init() {
         try {
-          const users = await fetchUsers();
+          allUsers = await fetchUsers();
           document.getElementById("loading").style.display = "none";
           document.getElementById("userTables").style.display = "block";
-          buildUserSections(users);
+          buildUserSections(allUsers);
           showRole("all");
           attachFilterButtons();
           attachSearch();
-          attachActions(users);
+          attachActions(allUsers);
         } catch (err) {
           document.getElementById("loading").style.display = "none";
           displayError(err.message || "Failed to load users");
         }
       }
 
+      // Add Manager handlers
+      document
+        .getElementById("toggleAddManager")
+        .addEventListener("click", () => {
+          const form = document.getElementById("addManagerForm");
+          form.style.display = form.style.display === "none" ? "block" : "none";
+        });
+      document
+        .getElementById("cancelAddManager")
+        .addEventListener("click", () => {
+          const form = document.getElementById("addManagerForm");
+          form.style.display = "none";
+        });
+
+      // Real-time DOM validation for Add Manager
+      const mgrNameEl = document.getElementById("mgrName");
+      const mgrEmailEl = document.getElementById("mgrEmail");
+      const mgrPhoneEl = document.getElementById("mgrPhone");
+      const mgrPassEl = document.getElementById("mgrPassword");
+      const btnCreate = document.getElementById("createManagerBtn");
+      const errName = document.getElementById("mgrNameErr");
+      const errEmail = document.getElementById("mgrEmailErr");
+      const errPhone = document.getElementById("mgrPhoneErr");
+      const errPass = document.getElementById("mgrPasswordErr");
+
+      const nameRegex = /^[A-Za-z\s.-]{2,}$/;
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+      function setFieldValidity(input, errorEl, isValid, message) {
+        if (isValid) {
+          errorEl.textContent = "";
+          input.style.borderColor = "#ccc";
+          input.setAttribute("aria-invalid", "false");
+        } else {
+          errorEl.textContent = message;
+          input.style.borderColor = "#e74c3c";
+          input.setAttribute("aria-invalid", "true");
+        }
+      }
+
+      function validateManagerForm() {
+        // Sanitize phone to digits
+        if (mgrPhoneEl.value) {
+          mgrPhoneEl.value = mgrPhoneEl.value.replace(/\D/g, "").slice(0, 10);
+        }
+
+        const nameOk = nameRegex.test(mgrNameEl.value.trim());
+        setFieldValidity(
+          mgrNameEl,
+          errName,
+          nameOk,
+          "Enter a valid name (letters, spaces, . -)"
+        );
+
+        const emailOk = emailRegex.test(mgrEmailEl.value.trim());
+        setFieldValidity(mgrEmailEl, errEmail, emailOk, "Enter a valid email");
+
+        const phoneVal = mgrPhoneEl.value.trim();
+        const phoneOk = phoneVal === "" || /^\d{10}$/.test(phoneVal);
+        setFieldValidity(
+          mgrPhoneEl,
+          errPhone,
+          phoneOk,
+          "Phone must be 10 digits"
+        );
+
+        const passOk = (mgrPassEl.value || "").length >= 6;
+        setFieldValidity(
+          mgrPassEl,
+          errPass,
+          passOk,
+          "Password must be 6+ characters"
+        );
+
+        const allOk = nameOk && emailOk && phoneOk && passOk;
+        btnCreate.disabled = !allOk;
+        return allOk;
+      }
+
+      [mgrNameEl, mgrEmailEl, mgrPhoneEl, mgrPassEl].forEach((el) => {
+        el.addEventListener("input", validateManagerForm);
+        el.addEventListener("blur", validateManagerForm);
+      });
+
+      document
+        .getElementById("addManagerForm")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          if (!validateManagerForm()) return;
+          const msg = document.getElementById("addManagerMsg");
+          msg.textContent = "";
+          const name = document.getElementById("mgrName").value.trim();
+          const email = document.getElementById("mgrEmail").value.trim();
+          const phone = document.getElementById("mgrPhone").value.trim();
+          const password = document.getElementById("mgrPassword").value;
+          msg.style.color = "#333";
+          msg.textContent = "Creating manager...";
+          try {
+            const resp = await fetch("/manager/users/create-manager", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Accept: "application/json",
+              },
+              body: JSON.stringify({ name, email, phone, password }),
+            });
+            const data = await resp.json().catch(() => ({}));
+            if (!resp.ok || !data.success) {
+              throw new Error(data.message || "Create failed");
+            }
+            // Update local list and UI
+            allUsers.push(data.user);
+            buildUserSections(allUsers);
+            // Switch to Managers tab so it’s visible immediately
+            document
+              .querySelectorAll(".filter-btn")
+              .forEach((b) => b.classList.remove("active"));
+            const mgrBtn = document.querySelector(
+              '.filter-btn[data-role="manager"]'
+            );
+            if (mgrBtn) mgrBtn.classList.add("active");
+            showRole("manager");
+            applySearchFilter();
+            msg.style.color = "green";
+            msg.textContent = "Manager created successfully.";
+            // Optional: clear fields
+            document.getElementById("mgrPassword").value = "";
+            validateManagerForm();
+          } catch (err) {
+            msg.style.color = "red";
+            msg.textContent = err.message || "Error creating manager";
+          }
+        });
+
+      function highlightActiveNav() {
+        const links = document.querySelectorAll(".navbar nav a");
+        const path = window.location.pathname;
+        links.forEach((a) => {
+          const href = a.getAttribute("href");
+          if (href === path) a.classList.add("active");
+        });
+      }
+
+      highlightActiveNav();
       init();
     </script>
   </body>

@@ -122,6 +122,18 @@
         font-size: 14px;
         margin-top: 10px;
       }
+      .error {
+        color: #e63946; /* softer red */
+        font-weight: 500;
+        font-size: 0.9rem;
+        margin-top: 4px;
+        font-family: "Inter", sans-serif;
+      }
+
+      input.invalid {
+        border: 2px solid #e63946;
+        box-shadow: 0 0 4px rgba(230, 57, 70, 0.3);
+      }
     </style>
   </head>
   <body>
@@ -214,6 +226,7 @@
       </div>
     </div>
     <script>
+      // --- Load profile from server ---
       async function loadProfile() {
         try {
           const res = await fetch("/customer/api/profile", {
@@ -238,28 +251,170 @@
         }
       }
 
-      const formEl = document.getElementById("profileForm");
+      // --- Elements ---
+      const form = document.getElementById("profileForm");
+      const name = document.getElementById("name");
+      const phone = document.getElementById("phone");
+      const address = document.getElementById("address");
+      const district = document.getElementById("district");
+      const carModel = document.getElementById("carModel");
+      const payments = document.getElementById("payments");
       const status = document.getElementById("statusMsg");
-      const nameEl = document.getElementById("name");
-      const phoneEl = document.getElementById("phone");
-      const addressEl = document.getElementById("address");
-      const districtEl = document.getElementById("district");
-      const carModelEl = document.getElementById("carModel");
-      const paymentsEl = document.getElementById("payments");
 
-      formEl.addEventListener("submit", async (e) => {
+      // --- Error helper functions ---
+      function showError(input, message) {
+        let errorDiv = input.parentElement.querySelector(".error");
+        if (!errorDiv) {
+          errorDiv = document.createElement("div");
+          errorDiv.className = "error";
+          input.parentElement.appendChild(errorDiv);
+        }
+        errorDiv.textContent = message;
+        input.classList.add("invalid");
+      }
+
+      function clearError(input) {
+        const errorDiv = input.parentElement.querySelector(".error");
+        if (errorDiv) errorDiv.textContent = "";
+        input.classList.remove("invalid");
+      }
+
+      // --- Validation functions ---
+      function validateName() {
+        const v = name.value.trim();
+        const re = /^[A-Za-z\s]{3,}$/;
+        if (!re.test(v)) {
+          showError(
+            name,
+            "Name should contain only letters and spaces (min 3 chars)."
+          );
+          return false;
+        }
+        clearError(name);
+        return true;
+      }
+
+      function validatePhone() {
+        const raw = phone.value.trim();
+        const digits = raw.replace(/\D/g, "");
+        if (
+          digits.length === 10 ||
+          (digits.length === 12 && digits.startsWith("91"))
+        ) {
+          clearError(phone);
+          return true;
+        }
+        showError(
+          phone,
+          "Enter a valid 10-digit phone number. You may include +91 or spaces."
+        );
+        return false;
+      }
+
+      function validateAddress() {
+        const v = address.value.trim();
+        if (v.length < 5) {
+          showError(address, "Address is too short (min 5 characters).");
+          return false;
+        }
+        clearError(address);
+        return true;
+      }
+
+      function validateDistrict() {
+        const v = district.value.trim();
+        const re = /^[A-Za-z\s]{2,}$/;
+        if (!re.test(v)) {
+          showError(
+            district,
+            "District should contain only letters and spaces (no special characters)."
+          );
+          return false;
+        }
+        clearError(district);
+        return true;
+      }
+
+      function validateCarModel() {
+        const v = carModel.value.trim();
+        const re = /^[A-Za-z0-9\s\-\/\.]{1,}$/;
+        if (v.length === 0) {
+          showError(carModel, "Car model cannot be empty.");
+          return false;
+        }
+        if (!re.test(v)) {
+          showError(carModel, "Car model contains invalid characters.");
+          return false;
+        }
+        clearError(carModel);
+        return true;
+      }
+
+      function validatePayments() {
+        const v = payments.value.trim();
+        if (v.length === 0) {
+          showError(payments, "Payment method cannot be empty.");
+          return false;
+        }
+        const re = /^[A-Za-z0-9\s\-\&\,\.]{1,}$/;
+        if (!re.test(v)) {
+          showError(payments, "Payment method contains invalid characters.");
+          return false;
+        }
+        clearError(payments);
+        return true;
+      }
+
+      // --- Live validation ---
+      [
+        { el: name, fn: validateName },
+        { el: phone, fn: validatePhone },
+        { el: address, fn: validateAddress },
+        { el: district, fn: validateDistrict },
+        { el: carModel, fn: validateCarModel },
+        { el: payments, fn: validatePayments },
+      ].forEach((item) => {
+        item.el.addEventListener("input", item.fn);
+        item.el.addEventListener("blur", item.fn);
+      });
+
+      // --- Form submission with validation ---
+      form.addEventListener("submit", async (e) => {
         e.preventDefault();
+
+        document
+          .querySelectorAll(".error")
+          .forEach((el) => (el.textContent = ""));
+        document
+          .querySelectorAll("input")
+          .forEach((el) => el.classList.remove("invalid"));
+
+        const ok =
+          validateName() &
+          validatePhone() &
+          validateAddress() &
+          validateDistrict() &
+          validateCarModel() &
+          validatePayments();
+
+        if (!ok) {
+          const firstInvalid = document.querySelector(".invalid");
+          if (firstInvalid) firstInvalid.focus();
+          return;
+        }
+
         status.textContent = "Saving...";
         status.style.color = "#333";
+
         const formData = {
-          name: nameEl.value.trim(),
-          phone: phoneEl.value.trim(),
-          address: addressEl.value.trim(),
-          district: districtEl.value.trim(),
-          carModel: carModelEl.value.trim(),
-          payments: paymentsEl.value.trim(),
+          name: name.value.trim(),
+          phone: phone.value.trim(),
+          address: address.value.trim(),
+          district: district.value.trim(),
+          carModel: carModel.value.trim(),
+          payments: payments.value.trim(),
         };
-        console.debug("[profile] submitting", formData);
+
         try {
           const res = await fetch("/customer/profile", {
             method: "POST",
@@ -288,9 +443,10 @@
         }
       });
 
-      document
-        .getElementById("logoutBtn")
-        .addEventListener("click", () => (window.location.href = "/logout"));
+      // --- Logout & Delete ---
+      document.getElementById("logoutBtn").addEventListener("click", () => {
+        window.location.href = "/logout";
+      });
 
       document
         .getElementById("deleteBtn")
@@ -301,7 +457,6 @@
             )
           )
             return;
-          const status = document.getElementById("statusMsg");
           status.textContent = "Deleting...";
           status.style.color = "#333";
           try {
@@ -327,6 +482,7 @@
           }
         });
 
+      // --- Load profile on page ready ---
       loadProfile();
     </script>
   </body>
