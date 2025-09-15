@@ -92,3 +92,42 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 });
 
+
+document.addEventListener("DOMContentLoaded", function () {
+  console.log("DOM fully loaded");
+  const serviceLabels = JSON.parse(document.getElementById('service-labels').textContent);
+  const serviceCounts = JSON.parse(document.getElementById('service-counts').textContent);
+  console.log("Labels:", serviceLabels);
+  console.log("Counts:", serviceCounts);
+
+  const pieCtx = document.getElementById('servicePieChart').getContext('2d');
+
+  new Chart(pieCtx, {
+    type: 'pie',
+    data: {
+      labels: serviceLabels,
+      datasets: [{
+        label: 'Service Distribution',
+        data: serviceCounts,
+        backgroundColor: [
+          '#1abc9c',
+          '#3498db',
+          '#9b59b6',
+          '#f1c40f',
+          '#e74c3c',
+          '#2ecc71',
+          '#e67e22'
+        ],
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: {
+          position: 'bottom'
+        }
+      }
+    }
+  });
