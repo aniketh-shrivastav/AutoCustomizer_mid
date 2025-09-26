@@ -96,14 +96,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
   
 
+
 function toggleSidebar() {
   const sidebar = document.getElementById("sidebar");
   sidebar.classList.toggle("active");
 }
-
-
-function toggleNavLinks() {
-  const navLinks = document.getElementById("navLinks");
-  navLinks.classList.toggle("active");
-}
-console.log("Dashboard JS loaded");
