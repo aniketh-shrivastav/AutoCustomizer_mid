@@ -44,24 +44,44 @@ const isSeller = (req, res, next) => {
   res.status(403).send("Access Denied: Sellers Only");
 };
 
-// --- Dashboard (unchanged) ---
-router.get("/dashboard", isAuthenticated, isSeller, (req, res) => {
-  const dashboardData = {
-    totalSales: 150,
-    totalEarnings: 12000,
-    totalOrders: 80,
-    stockAlerts: [
-      { product: "Car Spoiler", stock: 2 },
-      { product: "LED Headlights", stock: 1 },
-    ],
-    recentOrders: [
-      { orderId: "ORD001", customer: "Alice", status: "Shipped" },
-      { orderId: "ORD002", customer: "Bob", status: "Processing" },
-      { orderId: "ORD003", customer: "Charlie", status: "Delivered" },
-    ],
-  };
+// --- Dashboard JSON API (for static HTML hydration) ---
+router.get("/api/dashboard", isAuthenticated, isSeller, async (req, res) => {
+  try {
+    // Placeholder static data (can be replaced with real DB queries)
+    const dashboardData = {
+      totalSales: 150,
+      totalEarnings: 12000,
+      totalOrders: 80,
+      stockAlerts: [
+        { product: "Car Spoiler", stock: 2 },
+        { product: "LED Headlights", stock: 1 },
+      ],
+      recentOrders: [
+        { orderId: "ORD001", customer: "Alice", status: "Shipped" },
+        { orderId: "ORD002", customer: "Bob", status: "Processing" },
+        { orderId: "ORD003", customer: "Charlie", status: "Delivered" },
+      ],
+    };
 
-  res.render("Seller/dashboard", { dashboard: dashboardData });
+    // Derive status distribution counts
+    const statusDistribution = dashboardData.recentOrders.reduce((acc, o) => {
+      acc[o.status] = (acc[o.status] || 0) + 1;
+      return acc;
+    }, {});
+
+    res.json({ success: true, ...dashboardData, statusDistribution });
+  } catch (err) {
+    console.error("Seller dashboard API error", err);
+    res
+      .status(500)
+      .json({ success: false, message: "Failed to load dashboard" });
+  }
+});
+
+// --- Dashboard static file route (replaces EJS) ---
+router.get("/dashboard", isAuthenticated, isSeller, (req, res) => {
+  const filePath = path.join(__dirname, "../public/seller/dashboard.html");
+  return res.sendFile(filePath);
 });
 
 // --- Profile Settings (unchanged) ---
