@@ -206,20 +206,35 @@ router.get("/customerCommunication", serviceOnly, (req, res) => {
   res.render("service/customerCommunication");
 });
 router.get("/reviews", serviceOnly, async (req, res) => {
+  const filePath = path.join(__dirname, "../public/service/reviews.html");
+  return res.sendFile(filePath);
+});
+
+// JSON API for reviews (for static HTML hydration)
+router.get("/api/reviews", serviceOnly, async (req, res) => {
   try {
-    // Get reviews for the currently logged-in service provider
     const reviews = await ServiceBooking.find({
       providerId: req.session.user.id,
       rating: { $exists: true },
       review: { $exists: true },
     })
-      .populate("customerId", "name profileImage") // populate name and optional image
-      .sort({ createdAt: -1 }); // optional: show latest first
+      .populate("customerId", "name profileImage")
+      .sort({ createdAt: -1 })
+      .lean();
 
-    res.render("service/reviews", { reviews });
+    const shaped = reviews.map((r) => ({
+      id: r._id,
+      customerName: r.customerId?.name || "Unknown",
+      customerImage: r.customerId?.profileImage || "",
+      rating: r.rating,
+      reviewText: r.review || "",
+      createdAt: r.createdAt,
+    }));
+
+    res.json({ success: true, reviews: shaped });
   } catch (error) {
-    console.error("Failed to load reviews:", error);
-    res.status(500).send("Error loading reviews");
+    console.error("Reviews API error:", error);
+    res.status(500).json({ success: false, message: "Failed to load reviews" });
   }
 });
 
