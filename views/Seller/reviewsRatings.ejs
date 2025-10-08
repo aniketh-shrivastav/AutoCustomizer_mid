@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reviews & Ratings</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet"> <!-- Google Fonts -->
+    <link href="/Css/CStyle.css" rel="stylesheet">
+    <style>
+        /* General Styles */
+body {
+    font-family: 'Poppins', sans-serif;
+    background: linear-gradient(135deg, #f5f7fa, #c3cfe2); /* Subtle gradient background */
+    color: #333;
+    margin: 0;
+    padding: 0;
+    line-height: 1.6;
+}
+
+header {
+    background: linear-gradient(135deg, #6a11cb, #2575fc); /* Vibrant gradient */
+    color: white;
+    padding: 30px 20px;
+    text-align: center;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+header h1 {
+    margin: 0;
+    font-size: 2.5em;
+    font-weight: 600;
+}
+
+main {
+    padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* Rating Summary Section */
+.rating-summary {
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    padding: 25px;
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+.rating-summary h2 {
+    margin-top: 0;
+    font-size: 1.8em;
+    color: #6a11cb;
+    font-weight: 600;
+}
+
+.stars {
+    margin-top: 10px;
+}
+
+.star {
+    font-size: 1.5em;
+    color: #ffc107; /* Gold color for stars */
+}
+
+/* Filter Form Section */
+.filter-form {
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    padding: 25px;
+    margin-bottom: 30px;
+}
+
+.filter-form h2 {
+    margin-top: 0;
+    font-size: 1.5em;
+    color: #6a11cb;
+    font-weight: 600;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.filter-form label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+    color: #6a11cb;
+}
+
+.filter-form select, .filter-form button {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 1em;
+    transition: all 0.3s ease;
+}
+
+.filter-form select {
+    background-color: #f9f9f9;
+}
+
+.filter-form select:focus {
+    border-color: #6a11cb;
+    outline: none;
+    box-shadow: 0 0 5px rgba(106, 17, 203, 0.5);
+}
+
+.filter-form button {
+    background-color: #6a11cb;
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background-color 0.3s ease;
+}
+
+.filter-form button:hover {
+    background-color: #2575fc;
+}
+
+/* Reviews Section */
+.reviews-section {
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    padding: 25px;
+}
+
+.review-card {
+    border-bottom: 1px solid #eee;
+    padding: 20px 0;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.review-card:last-child {
+    border-bottom: none;
+}
+
+.review-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.review-card h3 {
+    margin: 0;
+    font-size: 1.2em;
+    color: #6a11cb;
+}
+
+.review-card h4 {
+    margin: 5px 0;
+    font-size: 1em;
+    color: #2575fc;
+}
+
+.review-card .rating {
+    margin: 5px 0;
+    font-weight: 500;
+    color: #ffc107; /* Gold color for rating */
+}
+
+.review-card .comment {
+    margin: 5px 0;
+    color: #555;
+}
+
+.no-reviews {
+    text-align: center;
+    color: #777;
+}
+
+/* Footer Styles */
+footer {
+    background: linear-gradient(135deg, #6a11cb, #2575fc); /* Vibrant gradient */
+    color: white;
+    text-align: center;
+    padding: 15px;
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    box-shadow: 0 -4px 6px rgba(0, 0, 0, 0.1);
+}
+
+footer p {
+    margin: 0;
+    font-size: 1em;
+    font-weight: 500;
+}
+    </style>
+</head>
+<body>
+
+    <%- include('../partials/navbar') %>
+
+
+    <header>
+        <h1>AutoCustomizer Reviews & Ratings</h1>
+    </header>
+
+    <main>
+        <!-- Average Rating Display -->
+        <section class="rating-summary">
+            <h2>Average Rating: <%= averageRating %> / 5</h2>
+            <div class="stars">
+                <% for (let i = 0; i < Math.floor(averageRating); i++) { %>
+                    <span class="star">&#9733;</span> <!-- Filled star -->
+                <% } %>
+                <% if (averageRating % 1 !== 0) { %>
+                    <span class="star">&#9734;</span> <!-- Half star -->
+                <% } %>
+                <% for (let i = Math.ceil(averageRating); i < 5; i++) { %>
+                    <span class="star">&#9734;</span> <!-- Empty star -->
+                <% } %>
+            </div>
+        </section>
+
+        <!-- Filter Form -->
+        <section class="filter-form">
+            <h2>Filter Reviews</h2>
+            <form action="/Seller/reviews/filter" method="GET">
+                <div class="form-group">
+                    <label for="productFilter">Filter by Product:</label>
+                    <select name="product" id="productFilter" required>
+                        <option value="" disabled selected>Select a product</option>
+                        <% products.forEach(product => { %>
+                            <option value="<%= product.name %>"><%= product.name %></option>
+                        <% }) %>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="ratingFilter">Filter by Rating:</label>
+                    <select id="ratingFilter" name="rating">
+                        <option value="all">All Ratings</option>
+                        <option value="5">5 Stars</option>
+                        <option value="4">4 Stars</option>
+                        <option value="3">3 Stars</option>
+                        <option value="2">2 Stars</option>
+                        <option value="1">1 Star</option>
+                    </select>
+                </div>
+                <button type="submit">Filter</button>
+            </form>
+        </section>
+
+        <!-- Display Filtered Reviews -->
+        <section class="reviews-section">
+            <% if (filteredReviews && filteredReviews.length > 0) { %>
+                <% filteredReviews.forEach(review => { %>
+                    <div class="review-card">
+                        <h3>Customer: <%= review.customerName %></h3>
+                        <h4>Product: <%= review.product %></h4>
+                        <p class="rating">Rating: <%= review.rating %> / 5</p>
+                        <p class="comment">Review: "<%= review.comment %>"</p>
+                    </div>
+                <% }) %>
+            <% } else { %>
+                <p class="no-reviews">No reviews found for this product with the selected rating.</p>
+            <% } %>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 AutoCustomizer | All Rights Reserved</p>
+    </footer>
+</body>
+</html>

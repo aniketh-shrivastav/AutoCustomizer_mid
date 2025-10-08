@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Book a Service</title>
+    <link rel="stylesheet" href="/styles/styles.css" />
+  </head>
+  <body>
+    <header>
+      <div class="logo">
+        <img src="/images/logo.png" alt="AutoCustomizer Logo" />
+      </div>
+      <nav>
+        <ul class="nav-links">
+          <li><a href="/">Home</a></li>
+          <li><a href="/customer/index.html">Products</a></li>
+          <li><a href="/customer/booking.html" class="active">Services</a></li>
+          <li><a href="/customer/history.html">Order History</a></li>
+          <li>
+            <a href="/customer/cart.html" class="cart-link"
+              ><img src="/images/cart-icon.png" alt="Cart" />
+              <span>Cart</span></a
+            >
+          </li>
+          <li><a href="/customer/profile.html">Profile</a></li>
+          <li><a href="/logout">Logout</a></li>
+        </ul>
+      </nav>
+    </header>
+
+    <main>
+      <h1>Service Booking</h1>
+      <h2>Select your preferred services</h2>
+
+      <form id="booking-form">
+        <label for="district"
+          >Select District:(Services Available in which districts)</label
+        >
+        <select id="district" required>
+          <option value="">Loading districts...</option>
+        </select>
+
+        <label for="service-provider"
+          >Service Provider:(Go through max service providers so that you get a
+          range of services)</label
+        >
+        <select id="service-provider" required disabled>
+          <option value="">Select Service Provider</option>
+        </select>
+
+        <label for="service">Select Services:</label>
+        <select id="service" multiple required size="5" disabled></select>
+        <p
+          id="serviceCostDisplay"
+          style="margin: 10px 0; font-weight: bold"
+        ></p>
+
+        <label for="date"
+          >Select Date:(Preferred date when you want it to be done although not
+          guaranteed)</label
+        >
+        <input type="date" id="date" required />
+
+        <label for="car-model">Car Model:(Company and Model)</label>
+        <input
+          type="text"
+          id="car-model"
+          required
+          placeholder="Enter your car model"
+        />
+
+        <label for="phone">Phone Number:</label>
+        <input
+          type="tel"
+          id="phone"
+          required
+          placeholder="Enter 10-digit number"
+        />
+
+        <label for="address">Address:</label>
+        <textarea
+          id="address"
+          rows="4"
+          placeholder="Enter your address"
+          required
+        ></textarea>
+
+        <label for="description"
+          >Describe Your Service Needs:(Ensure you have Vehicle number else the
+          service will be rejected)</label
+        >
+        <textarea
+          id="description"
+          rows="4"
+          placeholder="Tell us more about your requirements..."
+          required
+        ></textarea>
+
+        <button type="submit">Book Now</button>
+      </form>
+
+      <div id="summary-box" style="margin-top: 20px"></div>
+    </main>
+
+    <footer>
+      <div class="footer-container">
+        <div class="footer-section">
+          <h3>Contact Us</h3>
+          <p>Email: support@autocustomizer.com</p>
+          <p>Phone: +123-456-7890</p>
+          <p>Address: 123 Auto Street, Custom City</p>
+        </div>
+        <div class="footer-section">
+          <h3>Follow Us</h3>
+          <div class="social-icons">
+            <a href="#"
+              ><img src="/images/facebook-icon.png" alt="Facebook"
+            /></a>
+            <a href="#"><img src="/images/twitter-icon.png" alt="Twitter" /></a>
+            <a href="#"
+              ><img src="/images/instagram-icon.png" alt="Instagram"
+            /></a>
+          </div>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; 2025 AutoCustomizer. All Rights Reserved.</p>
+      </div>
+    </footer>
+
+    <script>
+      let allProviders = [];
+      let serviceCostMap = {};
+
+      const serviceSelect = document.getElementById("service");
+      const districtSelect = document.getElementById("district");
+      const providerSelect = document.getElementById("service-provider");
+      const serviceCostDisplay = document.getElementById("serviceCostDisplay");
+      const bookingForm = document.getElementById("booking-form");
+      const summaryBox = document.getElementById("summary-box");
+      const phoneInput = document.getElementById("phone");
+      const carModelInput = document.getElementById("car-model");
+      const addressInput = document.getElementById("address");
+      const dateInput = document.getElementById("date");
+
+      // Set min date to +7 days
+      const today = new Date();
+      today.setDate(today.getDate() + 7);
+      dateInput.min = today.toISOString().split("T")[0];
+
+      function getSelectedServices() {
+        return Array.from(serviceSelect.selectedOptions).map((o) => o.value);
+      }
+
+      function updateCostDisplay() {
+        const selectedServices = getSelectedServices();
+        if (selectedServices.length > 0) {
+          const estimatedCosts = selectedServices.map(
+            (s) => `₹${serviceCostMap[s] || "N/A"}`
+          );
+          serviceCostDisplay.innerText = `Estimated Starting Cost(s): ${estimatedCosts.join(
+            ", "
+          )}`;
+        } else {
+          serviceCostDisplay.innerText = "";
+        }
+      }
+
+      async function loadBookingData() {
+        try {
+          const res = await fetch("/customer/api/booking", {
+            headers: { Accept: "application/json" },
+          });
+          if (res.status === 401) {
+            window.location.href = "/login";
+            return;
+          }
+          if (!res.ok) throw new Error("Failed to load booking data");
+          const data = await res.json();
+          allProviders = data.serviceProviders || [];
+          serviceCostMap = data.serviceCostMap || {};
+
+          // Populate districts
+          districtSelect.innerHTML =
+            '<option value="">Select District</option>' +
+            (data.uniqueDistricts || [])
+              .map((d) => `<option value="${d}">${d}</option>`)
+              .join("");
+        } catch (err) {
+          console.error("Booking load error:", err);
+          districtSelect.innerHTML = '<option value="">Failed to load</option>';
+          alert("Failed to load booking data. Please refresh.");
+        }
+      }
+
+      // District change → providers
+      districtSelect.addEventListener("change", () => {
+        const selectedDistrict = districtSelect.value;
+        providerSelect.innerHTML =
+          '<option value="">Select Service Provider</option>';
+        serviceSelect.innerHTML = "";
+        serviceSelect.disabled = true;
+        serviceCostDisplay.innerText = "";
+
+        if (!selectedDistrict) {
+          providerSelect.disabled = true;
+          return;
+        }
+
+        const filtered = allProviders.filter(
+          (p) => p.district === selectedDistrict
+        );
+        filtered.forEach((p) => {
+          providerSelect.innerHTML += `<option value="${p._id}" data-name="${p.name}">${p.name}</option>`;
+        });
+        providerSelect.disabled = filtered.length === 0;
+      });
+
+      // Provider change → services
+      providerSelect.addEventListener("change", () => {
+        const providerId = providerSelect.value;
+        const provider = allProviders.find((p) => p._id === providerId);
+        serviceSelect.innerHTML = "";
+        serviceSelect.disabled = true;
+        serviceCostDisplay.innerText = "";
+        if (!provider) return;
+        provider.servicesOffered.forEach((s) => {
+          serviceSelect.innerHTML += `<option value="${s.name}">${s.name}</option>`;
+        });
+        serviceSelect.disabled = false;
+      });
+
+      serviceSelect.addEventListener("change", updateCostDisplay);
+
+      bookingForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const selectedServices = getSelectedServices();
+        const selectedDistrict = districtSelect.value;
+        const selectedDate = dateInput.value;
+        const providerOption =
+          providerSelect.options[providerSelect.selectedIndex];
+        const phone = phoneInput.value.trim();
+        const description = document.getElementById("description").value.trim();
+        const carModel = carModelInput.value.trim();
+        const address = addressInput.value.trim();
+
+        const phoneRegex = /^\d{10}$/;
+        if (!phoneRegex.test(phone)) {
+          alert("Please enter a valid 10-digit phone number.");
+          return;
+        }
+        if (!providerOption || !providerOption.value) {
+          alert("Please select a service provider.");
+          return;
+        }
+        if (!selectedDate) {
+          alert("Please select a date for the booking.");
+          return;
+        }
+        if (!carModel || !address) {
+          alert("Please fill in all required fields.");
+          return;
+        }
+
+        // Calculate total cost
+        let totalCost = 0;
+        selectedServices.forEach((s) => {
+          totalCost += serviceCostMap[s] || 0;
+        });
+
+        summaryBox.innerHTML = `
+        <div>
+          <h3>Booking Summary</h3>
+          <p><strong>Car Model:</strong> ${carModel}</p>
+          <p><strong>Services:</strong> ${selectedServices.join(", ")}</p>
+          <p><strong>Provider:</strong> ${providerOption.text}</p>
+          <p><strong>District:</strong> ${selectedDistrict}</p>
+          <p><strong>Date:</strong> ${selectedDate}</p>
+          <p><strong>Estimated Cost:</strong> ₹${totalCost}</p>
+          <p><strong>Phone:</strong> ${phone}</p>
+          <p><strong>Address:</strong> ${address}</p>
+          <p><strong>Description:</strong> ${description}</p>
+          <button id="confirm-booking">Confirm Booking</button>
+        </div>`;
+      });
+
+      document.addEventListener("click", async (e) => {
+        if (e.target && e.target.id === "confirm-booking") {
+          try {
+            const response = await fetch("/bookings/create-booking", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Accept: "application/json",
+              },
+              body: JSON.stringify({
+                providerId: providerSelect.value,
+                selectedServices: getSelectedServices(),
+                date: dateInput.value,
+                phone: phoneInput.value.trim(),
+                carModel: carModelInput.value.trim(),
+                address: addressInput.value.trim(),
+                description: document
+                  .getElementById("description")
+                  .value.trim(),
+                district: districtSelect.value,
+              }),
+            });
+            const result = await response.json();
+            if (response.ok) {
+              alert("Booking successfully submitted!");
+              window.location.href = "/customer/booking.html";
+            } else {
+              alert("Error: " + (result.error || "Unknown error"));
+            }
+          } catch (err) {
+            console.error("Booking submission error:", err);
+            alert("Failed to submit booking.");
+          }
+        }
+      });
+
+      loadBookingData();
+    </script>
+  </body>
+</html>

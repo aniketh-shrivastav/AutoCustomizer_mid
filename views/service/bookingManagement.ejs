@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Management</title>
+    <link rel="stylesheet" href="/styles/bookingManagement.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <%- include("../partials/serviceHeaders") %>
+
+    <div class="sidebar" id="sidebar">
+        <!-- <a href="#" class="close-btn" onclick="toggleSidebar()">&times; Close</a> -->
+        <a href="/service/dashboardService"><i class="fas fa-tachometer-alt"></i> </a>
+        <a href="/service/profilSettings"><i class="fas fa-user-cog"></i> </a>
+        <a href="/service/bookingManagement"><i class="fas fa-calendar-alt"></i> </a>
+        <a href="/service/customerCommunication"><i class="fas fa-comments"></i></a>
+        <a href="/service/earnings" class="active"><i class="fas fa-money-bill-wave"></i> </a>
+        <a href="/service/reviews"><i class="fas fa-star"></i> </a>
+    </div>
+
+    <div class="order-container">
+        <!-- 📌 Service Provider Instructions -->
+        <div class="instructions" style="background: #fff4e5; border: 1px solid #ffa500; padding: 10px; margin-bottom: 15px; border-radius: 8px;">
+            <h3>🔔 Please follow these guidelines before taking any action:</h3>
+            <ul style="padding-left: 20px;">
+                <li>📌 <strong>Description must include the vehicle number</strong>. If not present, <strong>reject</strong> the order.</li>
+                <li>📞 <strong>Always call the customer</strong> before confirming, rejecting, or changing the price of an order.</li>
+                <li>📦 If the order includes a service <strong>with a product</strong>, <strong>wait for the product to arrive</strong> before confirming.</li>
+                <li>📍 Ensure the <strong>customer’s address is within your service range</strong> before proceeding.</li>
+            </ul>
+        </div>
+        
+        
+        
+        <div class="order-header">
+            <button class="tab active">Open</button>
+            <button class="tab">Confirmed</button>
+            <button class="tab">Ready</button>
+            <button class="tab">Rejected</button>
+        </div>
+
+        <div class="filter-section">
+            <input type="text" id="searchInput" placeholder="Search by Customer ID or Name" class="search-input">
+            <select class="dropdown">
+                <option>Newest Order Sent</option>
+                <option>Oldest Order Sent</option>
+            </select>
+            <button class="filter-btn">Filter</button>
+        </div>
+
+        <table class="order-table">
+            <thead>
+                <tr>
+                    <th></th>
+                    <th>Service ID</th>
+                    <th>Service</th>
+                    <th>Description</th>
+                    <th>Car Model</th>
+                    <th>Customer Name</th>
+                    <th>Customer email</th>
+                    <th>Phone Number</th>
+                    <th>Address</th>
+                    <th>District</th>
+                    <th>Status</th>
+                    <th>Order Sent</th>
+                    <th>Total Cost</th> <!-- 🆕 Add this -->
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% bookings.forEach(order => { %>
+                    <tr>
+                        <td><input type="checkbox" class="order-checkbox" data-order-id="<%= order._id %>"></td>
+                        <td><%= order._id %></td>
+                        <td><%= order.selectedServices.join(", ") %></td>
+                        <td><%= order.description %></td>
+                        <td><%= order.carModel %></td>
+                        <td><%= order.customerId.name %></td>
+                        <td><%= order.customerId.email %></td>
+                        <td><%= order.phone %></td>
+                        <td><%= order.address %></td>
+                        <td><%= order.district %></td>
+                        <td><%= order.status %></td>
+                        <td><%= order.createdAt.toLocaleDateString() %></td>
+                        <td>
+                            <% if (order.status === 'Open') { %>
+                              <form action="/service/updateCost/<%= order._id %>" method="POST">
+                                <input 
+                                  type="number" 
+                                  name="totalCost" 
+                                  value="<%= order.totalCost %>" 
+                                  min="0" 
+                                  required 
+                                  style="width: 80px;">
+                                <button type="submit" style="padding: 2px 5px;">💾</button>
+                              </form>
+                            <% } else { %>
+                              ₹<%= order.totalCost %>
+                            <% } %>
+                          </td>
+                        <td>
+                            <% if (order.status === 'Confirmed') { %>
+                                <button class="btn btn-ready" data-order-id="<%= order._id %>">Mark as Ready</button>
+                            <% } else { %>
+                                <!-- Optional: show text or leave empty -->
+                                <span>—</span>
+                            <% } %>
+                        </td>
+                    </tr>
+                <% }) %>
+            </tbody>
+        </table>
+
+        <div class="action-buttons">
+            <button class="confirm-btn">✅ Confirm</button>
+            <button class="reject-btn">❌ Reject</button>
+        </div>
+    </div>
+
+    <script src="/scripts/bookingManagement.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Make cost editable
+            /*document.querySelectorAll('.order-table tbody tr').forEach(row => {
+                const costCell = row.children[12]; // 13th column (index starts from 0)
+                const originalCost = costCell.innerText.replace('₹', '').trim();
+                
+                const input = document.createElement('input');
+                input.type = 'number';
+                input.value = originalCost;
+                input.min = 0;
+                input.className = 'cost-input';
+                input.style.width = '80px';
+                
+                costCell.innerHTML = '';
+                costCell.appendChild(input);*/
+            });
+        
+            // Handle "Confirm" and "Reject" buttons
+            document.querySelector('.confirm-btn').addEventListener('click', () => handleAction('Confirmed'));
+            document.querySelector('.reject-btn').addEventListener('click', () => handleAction('Rejected'));
+        
+            // Handle "Mark as Ready" buttons
+            document.querySelectorAll('.btn-ready').forEach(button => {
+                button.addEventListener('click', async () => {
+                    const orderId = button.getAttribute('data-order-id');
+                    await updateStatus(orderId, 'Ready');
+                    location.reload(); // reload to reflect changes
+                });
+            });
+        
+            async function handleAction(newStatus) {
+                const selectedCheckboxes = document.querySelectorAll('.order-checkbox:checked');
+                if (selectedCheckboxes.length === 0) {
+                    alert('Please select at least one order.');
+                    return;
+                }
+        
+                for (const checkbox of selectedCheckboxes) {
+                    const orderId = checkbox.getAttribute('data-order-id');
+                    const row = checkbox.closest('tr');
+                    const costInput = row.querySelector('.cost-input');
+                    const updatedCost = costInput.value;
+        
+                    await updateBooking(orderId, newStatus, updatedCost);
+                }
+        
+                alert('Orders updated successfully!');
+                location.reload();
+            }
+        
+            async function updateBooking(orderId, status, totalCost) {
+                try {
+                    const response = await fetch('/service/updateBooking', {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ orderId, status, totalCost })
+                    });
+        
+                    if (!response.ok) {
+                        throw new Error('Failed to update booking.');
+                    }
+                } catch (error) {
+                    console.error(error);
+                    alert('Error updating booking.');
+                }
+            }
+        
+            async function updateStatus(orderId, status) {
+                try {
+                    const response = await fetch('/service/updateBooking', {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ orderId, status })
+                    });
+        
+                    if (!response.ok) {
+                        throw new Error('Failed to update booking.');
+                    }
+                } catch (error) {
+                    console.error(error);
+                    alert('Error updating booking.');
+                }
+            };
+        </script>
+</body>
+</html>

@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Signup | AutoCustomizer</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <% if (error) { %>
+        <script>
+            alert("<%= error %>");
+        </script>
+    <% } %>
+
+    <div class="container">
+        <div class="auth-container">
+            <div class="brand-section">
+                <div class="brand-content">
+                    <h1>AutoCustomizer</h1>
+                    <p>Your one-stop platform for all car customization needs</p>
+                    <img src="https://images.unsplash.com/photo-1603584173870-7f23fdae1b7a?auto=format&fit=crop&q=80" alt="Car customization" class="brand-image">
+                </div>
+            </div>
+
+            <div class="auth-section">
+                <h2>Create an Account</h2>
+                
+                <label for="userType">Select User Type</label>
+                <select id="userType">
+                    <option value="customer">Customer</option>
+                    <option value="seller">Seller</option>
+                    <option value="service-provider">Service Provider</option>
+                </select>
+
+                <!-- Customer Signup -->
+                <form id="customerSignup" action="/signup" method="POST" class="auth-form signup-form">
+                    <input type="hidden" name="role" value="customer">
+                    <div class="form-group"><input type="text" name="name" placeholder="Full Name" required></div>
+                    <div class="form-group"><input type="email" name="email" placeholder="Email Address" required></div>
+                    <div class="form-group"><input type="tel" name="phone" placeholder="Phone Number" required></div>
+                    <div class="form-group"><input type="password" name="password" placeholder="Password" required></div>
+                    <div>
+                        <label class="form-group" for="confirmPassword">Retype Password</label>
+                        <input type="password" name="confirmPassword" required />
+                      </div>
+                    <button type="submit" class="submit-btn">Register as Customer</button>
+                </form>
+
+                <!-- Seller Signup -->
+                <form id="sellerSignup" action="/signup" method="POST" class="auth-form signup-form hidden">
+                    <input type="hidden" name="role" value="seller">
+                    <div class="form-group"><input type="text" name="businessName" placeholder="Business Name" required></div>
+                    <div class="form-group"><input type="email" name="email" placeholder="Business Email" required></div>
+                    <div class="form-group"><input type="tel" name="phone" placeholder="Business Phone" required></div>
+                    <div class="form-group"><input type="password" name="password" placeholder="Password" required></div>
+                    <div>
+                        <label class="form-group" for="confirmPassword">Retype Password</label>
+                        <input type="password" name="confirmPassword" required />
+                      </div>
+                    <button type="submit" class="submit-btn">Register as Seller</button>
+                </form>
+
+                <!-- Service Provider Signup -->
+                <form id="serviceProviderSignup" action="/signup" method="POST" class="auth-form signup-form hidden">
+                    <input type="hidden" name="role" value="service-provider">
+                    <div class="form-group"><input type="text" name="workshopName" placeholder="Workshop Name" required></div>
+                    <div class="form-group"><input type="email" name="email" placeholder="Workshop Email" required></div>
+                    <div class="form-group"><input type="tel" name="phone" placeholder="Workshop Phone" required></div>
+                    <div class="form-group"><input type="password" name="password" placeholder="Password" required></div>
+                    <div>
+                        <label class="form-group" for="confirmPassword">Retype Password</label>
+                        <input type="password" name="confirmPassword" required />
+                      </div>
+                    <button type="submit" class="submit-btn">Register as Service Provider</button>
+                </form>
+
+                <!-- Manager Signup -->
+                <form id="managerSignup" action="/signup" method="POST" class="auth-form signup-form hidden">
+                    <input type="hidden" name="role" value="manager">
+                    <div class="form-group"><input type="text" name="name" placeholder="Full Name" required></div>
+                    <div class="form-group"><input type="email" name="email" placeholder="Manager Email" required></div>
+                    <div class="form-group"><input type="tel" name="phone" placeholder="Phone Number" required></div>
+                    <div class="form-group"><input type="password" name="password" placeholder="Password" required></div>
+                    <div class="form-group"><input type="password" name="confirmPassword" placeholder="Retype Password" required></div>
+                    <button type="submit" class="submit-btn">Register as Manager</button>
+                </form>
+
+                <p>Already have an account? <a href="/login">Login here</a></p>
+            </div>
+        </div>
+    </div>
+
+    <script src="/script.js"></script>
+</body>
+</html>

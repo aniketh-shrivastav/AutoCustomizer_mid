@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order & Booking History</title>
+    <link rel="stylesheet" href="/styles/styles.css">
+</head>
+<body>
+    <header>
+        <div class="logo">
+            <img src="/public/images3/logo2.jpg" alt="AutoCustomizer Logo"> <!-- Replace with actual logo -->
+        </div>
+  <%- include("../partials/customerHeaders") %>
+    </header>
+
+    <main>
+      <h2>Upcoming Orders</h2>
+      <ul id="upcoming-orders" class="parts-list">
+        <% if (upcomingOrders.length === 0) { %>
+          <p class="no-items">No upcoming orders found.</p>
+        <% } else { %>
+          <% upcomingOrders.forEach(order => { %>
+            <li class="history-item">
+              <div class="item-details">
+                <h3>Order ID: <%= order._id %></h3>
+                <p><strong>Placed on:</strong> <%= new Date(order.placedAt).toLocaleDateString() %></p>
+                <p><strong>Status:</strong>
+                  <% if (["pending", "confirmed", "shipped"].includes(order.orderStatus)) { %>
+                    <span style="color: orange;"><%= order.orderStatus %></span>
+                  <% } else { %>
+                    <span style="color: green;"><%= order.orderStatus %></span>
+                  <% } %>
+                </p>
+                <p><strong>Total Amount:</strong> ₹<%= order.totalAmount %></p>
+                <p><strong>Items:</strong></p>
+                <ul>
+                  <% order.items.forEach(item => { %>
+                    <li><%= item.name %> x <%= item.quantity %> (₹<%= item.price %>)</li>
+                  <% }) %>
+                </ul>
+                <% if (order.orderStatus === 'pending') { %>
+                  <form method="POST" action="/customer/cancel-order/<%= order._id %>" onsubmit="return confirm('Are you sure you want to cancel this order?');">
+                    <button type="submit" class="cancel-btn">Cancel Order</button>
+                  </form>
+                <% } %>
+              </div>
+            </li>
+          <% }) %>
+        <% } %>
+      </ul>
+
+      <h2>Past Orders</h2>
+<ul id="past-orders" class="parts-list">
+  <% if (pastOrders.length === 0) { %>
+    <p class="no-items">No past orders found.</p>
+  <% } else { %>
+    <% pastOrders.forEach(order => { %>
+      <li class="history-item">
+        <div class="item-details">
+          <h3>Order ID: <%= order._id %></h3>
+          <p><strong>Placed on:</strong> <%= new Date(order.placedAt).toLocaleDateString() %></p>
+          <p><strong>Status:</strong> <%= order.orderStatus %></p>
+          <p><strong>Total Amount:</strong> ₹<%= order.totalAmount %></p>
+          <p><strong>Items:</strong></p>
+          <ul>
+            <% order.items.forEach(item => { %>
+              <li><%= item.name %> x <%= item.quantity %> (₹<%= item.price %>)</li>
+            <% }) %>
+          </ul>
+          <a href="/customer/order-receipt/<%= order._id %>" target="_blank" class="rate-btn">
+            Download Receipt
+          </a>
+        </div>
+      </li>
+    <% }) %>
+  <% } %>  <!-- ✅ Close the else block -->
+</ul>
+
+        <h2>Upcoming Services</h2>
+        <ul id="upcoming-services" class="parts-list">
+          <% const upcoming = bookings.filter(b => b.status === 'Open' || b.status === 'Confirmed'); %>
+          <% if (upcoming.length === 0) { %>
+            <p class="no-items">No upcoming services found.</p>
+          <% } else { %>
+            <% upcoming.forEach(service => { %>
+              <li class="history-item">
+                <div class="item-details">
+                  <h3><%= service.selectedServices.join(", ") %></h3>
+                  <p><strong>Service ID:</strong><%= service._id%></p>
+                  <p><strong>Service Provider:</strong> <%= service.providerId.name %> | <%= service.providerId.phone %></p>
+                  <p><strong>Booked on:</strong> <%= service.createdAt.toLocaleDateString() %></p>
+                  <p><strong>Car Model:</strong> <%= service.carModel %></p>
+                  <p><strong>Description:</strong> <%= service.description %></p>
+                  <p><strong>Cost:</strong> ₹<%= service.totalCost %></p>
+                  <p><strong>Status:</strong>
+                    <% if (service.status === 'Open') { %>
+                      <span style="color: orange;">Waiting for Confirmation</span>
+                      <% if (service.status === 'Open') { %>
+                        <form method="POST" action="/customer/cancel-service/<%= service._id %>" onsubmit="return confirm('Cancel this service request?');">
+                          <button type="submit" class="cancel-btn">Cancel Service</button>
+                        </form>
+                      <% } %>
+                    <% } else { %>
+                      <span style="color: green;">Confirmed</span>
+                    <% } %>
+                  </p>
+                </div>
+              </li>
+            <% }) %>
+          <% } %>
+        </ul>
+        
+        <h2>Past Services</h2>
+<ul id="past-services" class="parts-list">
+  <% const past = bookings.filter(b => b.status === 'Ready' || b.status === 'Rejected'); %>
+  <% if (past.length === 0) { %>
+    <p class="no-items">No past services found.</p>
+  <% } else { %>
+    <% past.forEach(service => { %>
+      <li class="history-item">
+        <div class="item-details">
+          <h3><%= service.selectedServices.join(", ") %></h3>
+          <p><strong>Service ID:</strong> <%= service._id %></p>
+          <p><strong>Service Provider:</strong> <%= service.providerId.name %> | <%= service.providerId.phone %></p>
+          <p><strong>Booked on:</strong> <%= service.createdAt.toLocaleDateString() %></p>
+          <p><strong>Car Model:</strong> <%= service.carModel %></p>
+          <p><strong>Description:</strong> <%= service.description %></p>
+          <p><strong>Cost:</strong> ₹<%= service.totalCost %></p>
+          
+          <p><strong>Status:</strong> 
+            <% if (service.status === 'Ready') { %>
+              <span style="color: green;">Completed</span>
+            <% } else { %>
+              <span style="color: red;">Rejected</span>
+            <% } %>
+          </p>
+
+          <% if (service.status === 'Ready') { %>
+            <% if (!service.rating) { %>
+              <button class="rate-btn" onclick="openRatingModal('<%= service._id %>')">Rate</button>
+            <% } else { %>
+              <p><strong>Your Rating:</strong> <%= service.rating %>/5</p>
+              <% if (service.review) { %>
+                <p><strong>Comment:</strong> <%= service.review %></p>
+              <% } %>
+            <% } %>
+          <% } %>
+
+          <!-- Download Receipt Button -->
+          <a href="/customer/service-receipt/<%= service._id %>" target="_blank" class="rate-btn">
+            Download Receipt
+          </a>
+        </div>
+      </li>
+    <% }) %>
+  <% } %>
+</ul>
+    </main>
+
+    <footer>
+        <div class="footer-container">
+            <div class="footer-section">
+                <h3>Contact Us</h3>
+                <p>Email: support@autocustomizer.com</p>
+                <p>Phone: +123-456-7890</p>
+                <p>Address: 123 Auto Street, Custom City</p>
+            </div>
+            <div class="footer-section">
+                <h3>Follow Us</h3>
+                <div class="social-icons">
+                    <a href="#"><img src="/images/facebook-icon.png" alt="Facebook"></a>
+                    <a href="#"><img src="/images/twitter-icon.png" alt="Twitter"></a>
+                    <a href="#"><img src="/images/instagram-icon.png" alt="Instagram"></a>
+                </div>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2025 AutoCustomizer. All Rights Reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Rating Modal -->
+<div id="ratingModal" class="modal" style="display:none;">
+  <div class="modal-content">
+    <span class="close" onclick="closeRatingModal()">&times;</span>
+    <h3>Rate This Service</h3>
+    <form id="ratingForm">
+      <input type="hidden" name="bookingId" id="bookingId">
+      <label for="rating">Rating (1 to 5):</label>
+      <input type="number" name="rating" id="rating" min="1" max="5" required><br><br>
+      <label for="review">Comment (optional):</label><br>
+      <textarea name="review" id="review" rows="4" cols="40"></textarea><br><br>
+      <button type="submit" class="rate-btn">Submit Rating</button>
+    </form>
+  </div>
+</div>
+
+    <script src="/scripts/customerHistory.js"></script>
+
+    <style>
+        /* Additional styles specific to history page */
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            margin-bottom: 15px;
+            transition: var(--transition);
+        }
+        
+        .item-details {
+            flex: 1;
+        }
+        
+        .item-details h3 {
+            font-size: 18px;
+            margin-bottom: 8px;
+            color: var(--text-dark);
+        }
+        
+        .item-details p {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .review-btn, .rate-btn, .complete-btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: var(--transition);
+        }
+        
+        .rate-btn {
+            background: var(--warning-color);
+        }
+        
+        .complete-btn {
+            background: var(--success-color);
+        }
+        
+        .review-btn:hover, .rate-btn:hover, .complete-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .no-items {
+            text-align: center;
+            color: #888;
+            padding: 20px;
+            font-style: italic;
+        }
+        
+        /* Responsive */
+        @media screen and (max-width: 768px) {
+            .history-item {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .item-details {
+                margin-bottom: 15px;
+            }
+        }
+
+        .modal {
+          position: fixed;
+          z-index: 999;
+          left: 0; top: 0; width: 100%; height: 100%;
+          background-color: rgba(0,0,0,0.4);
+          display: flex; align-items: center; justify-content: center;
+        }
+        .modal-content {
+          background-color: #fff;
+          padding: 20px;
+          border-radius: 8px;
+          width: 400px;
+          box-shadow: 0 0 10px #000;
+        }
+        .close {
+          float: right;
+          font-size: 24px;
+          cursor: pointer;
+        }
+    </style>
+</body>
+</html>

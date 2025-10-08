@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Management - Admin</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="/styles/admin-consistent.css">
+    <style>
+        .filter-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .filter-btn {
+            padding: 10px 15px;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            border-radius: 5px;
+            background-color: black;
+            color: white;
+        }
+        .filter-btn.active {
+            background-color: #2ecc71;
+            color: white;
+        }
+        .search-box {
+            padding: 8px;
+            width: 250px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .user-section {
+            display: none;
+        }
+        .user-section.active {
+            display: block;
+        }
+        /* Styling for suspended users */
+        .suspended-user {
+            background-color: #f8d7da !important;
+        }
+
+        .btn-restore {
+            background-color: #3498db;
+            color: white;
+            padding: 5px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .btn-restore:hover {
+            background-color: #2980b9;
+        }        
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <div class="navbar">
+        <div class="logo">
+            <h2>Manager's Panel</h2>
+        </div>
+        <%- include("../partials/managerHeader") %>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <h2>User Management</h2>
+
+        <!-- Filter Buttons & Search -->
+        <div class="filter-container">
+            <input type="text" id="searchInput" class="search-box" placeholder="Search users...">
+            <button class="filter-btn active" onclick="filterUsers('all')">All Users</button>
+            <button class="filter-btn" onclick="filterUsers('customer')">Customers</button>
+            <button class="filter-btn" onclick="filterUsers('seller')">Sellers</button>
+            <button class="filter-btn" onclick="filterUsers('service-provider')">Service Providers</button>
+            <button class="filter-btn" onclick="filterUsers('manager')">Managers</button>
+        </div>
+
+        <!-- User Tables -->
+        <div id="userTables">
+            <% ["customer", "seller", "service-provider", "manager"].forEach(role => { %>
+                <div class="user-section <%= role %>-section" data-role="<%= role %>">
+                    <h3><%= role.charAt(0).toUpperCase() + role.slice(1).replace("-", " ") %></h3>
+                    <table class="user-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% users.filter(user => user.role === role).forEach(user => { %>
+                                <tr class="<%= user.suspended ? 'suspended-user' : '' %>">
+                                    <td><%= user._id %></td>
+                                    <td><%= user.name %></td>
+                                    <td><%= user.email %></td>
+                                    <td>
+    <% if (user.role !== 'manager') { %>
+        <% if (!user.suspended) { %>
+            <button class="btn-suspend" data-user-id="<%= user._id %>">Suspend</button>
+        <% } else { %>
+            <button class="btn-restore" data-user-id="<%= user._id %>">Restore</button>
+        <% } %>
+    <% } else { %>
+        <span>Not Allowed</span>
+    <% } %>
+</td>
+                                </tr>
+                            <% }) %>
+                        </tbody>
+                    </table>
+                </div>
+            <% }) %>
+        </div>
+
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            // Search filter
+            document.getElementById("searchInput").addEventListener("keyup", function () {
+                const filter = this.value.toLowerCase();
+                document.querySelectorAll(".user-table tbody tr").forEach(row => {
+                    row.style.display = row.innerText.toLowerCase().includes(filter) ? "" : "none";
+                });
+            });
+    
+            // Global filter function
+            window.filterUsers = function (role) {
+                document.querySelectorAll(".filter-btn").forEach(btn => btn.classList.remove("active"));
+                document.querySelector(`[onclick="filterUsers('${role}')"]`).classList.add("active");
+    
+                document.querySelectorAll(".user-section").forEach(section => {
+                    if (role === "all") {
+                        section.classList.add("active"); // Show all sections
+                    } else {
+                        section.classList.remove("active");
+                        if (section.dataset.role === role) {
+                            section.classList.add("active");
+                        }
+                    }
+                });
+            };
+    
+            // Suspend button functionality
+            document.querySelectorAll(".btn-suspend").forEach(button => {
+                button.addEventListener("click", async () => {
+                    const userId = button.dataset.userId; // This should be _id from MongoDB
+            
+                    const confirmSuspend = confirm("Are you sure you want to suspend this user?");
+                    if (!confirmSuspend) return;
+            
+                    try {
+                        const response = await fetch(`/manager/users/suspend/${userId}`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" }
+                        });
+            
+                        const data = await response.json();
+                        if (data.success) {
+                            alert("User suspended successfully");
+                            location.reload();
+                        } else {
+                            alert("Error: " + data.message);
+                        }
+                    } catch (error) {
+                        alert("An error occurred while suspending the user.");
+                        console.error("Suspend error:", error);
+                    }
+                });
+            });
+    
+            // Set initial view
+            filterUsers("all");
+        });
+
+        // Restore button functionality
+document.querySelectorAll(".btn-restore").forEach(button => {
+    button.addEventListener("click", async () => {
+        const userId = button.dataset.userId;
+
+        const confirmRestore = confirm("Are you sure you want to restore this user?");
+        if (!confirmRestore) return;
+
+        try {
+            const response = await fetch(`/manager/users/restore/${userId}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" }
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                alert("User restored successfully");
+                location.reload();
+            } else {
+                alert("Error: " + data.message);
+            }
+        } catch (error) {
+            alert("An error occurred while restoring the user.");
+            console.error("Restore error:", error);
+        }
+    });
+});
+    </script>
+
+</body>
+</html>

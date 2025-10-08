@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile Settings | AutoCustomizer</title>
+    <link href="/Css/CStyle.css" rel="stylesheet">
+  <style>
+    /* General Styles */
+body {
+    font-family: 'Poppins', sans-serif;
+    background: linear-gradient(135deg, #f5f7fa, #c3cfe2); /* Subtle gradient background */
+    color: #333;
+    margin: 0;
+    padding: 0;
+    line-height: 1.6;
+}
+
+/* Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+header {
+    background: linear-gradient(135deg, #6a11cb, #2575fc); /* Vibrant gradient */
+    color: white;
+    padding: 30px 20px;
+    text-align: center;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+header h1 {
+    margin: 0;
+    font-size: 2.5em;
+    font-weight: 600;
+}
+
+main {
+    padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* Profile Section Styles */
+.profile-section {
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    padding: 25px;
+    margin: 30px auto;
+    max-width: 600px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.profile-section:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+/* Form Styles */
+.profile-form .form-group {
+    margin-bottom: 20px;
+}
+
+.profile-form label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #6a11cb;
+}
+
+.profile-form input,
+.profile-form textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-family: 'Poppins', sans-serif;
+    font-size: 1em;
+    transition: border 0.3s ease, box-shadow 0.3s ease;
+}
+
+.profile-form input:focus,
+.profile-form textarea:focus {
+    outline: none;
+    border-color: #6a11cb;
+    box-shadow: 0 0 0 2px rgba(106, 17, 203, 0.2);
+}
+
+.profile-form textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.profile-form button {
+    background: linear-gradient(135deg, #6a11cb, #2575fc);
+    color: white;
+    border: none;
+    padding: 15px;
+    width: 100%;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 1em;
+    transition: background 0.3s ease, transform 0.3s ease;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.profile-form button:hover {
+    background: linear-gradient(135deg, #5c0fb3, #2169e8);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+}
+
+.profile-form button:active {
+    transform: translateY(0);
+}
+
+/* Footer Styles */
+footer {
+    background: linear-gradient(135deg, #6a11cb, #2575fc); /* Vibrant gradient */
+    color: white;
+    text-align: center;
+    padding: 15px;
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    box-shadow: 0 -4px 6px rgba(0, 0, 0, 0.1);
+}
+
+footer p {
+    margin: 0;
+    font-size: 1em;
+    font-weight: 500;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .profile-section {
+        padding: 20px;
+        margin: 20px 15px;
+    }
+    
+    header h1 {
+        font-size: 2em;
+    }
+}
+  </style>
+</head>
+<body>
+
+    <%- include('../partials/navbar') %>
+
+    <header>
+        <h1>Profile Settings</h1>
+    </header>
+
+    <main>
+        <section class="profile-section">
+            <form action="/Seller/profileSettings" method="POST" class="profile-form">
+                <div class="form-group">
+                    <label for="storeName">Store Name:</label>
+                    <input 
+                        type="text" 
+                        id="storeName" 
+                        name="storeName" 
+                        value="<%= profile.storeName %>" 
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="ownerName">Owner Name:</label>
+                    <input 
+                        type="text" 
+                        id="ownerName" 
+                        name="ownerName" 
+                        value="<%= profile.ownerName %>"
+                        required 
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="contactEmail">Contact Email:</label>
+                    <input 
+                        type="email" 
+                        id="contactEmail" 
+                        name="contactEmail" 
+                        value="<%= profile.contactEmail %>" 
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="phone">Phone Number:</label>
+                    <input 
+                        type="tel" 
+                        id="phone" 
+                        name="phone" 
+                        value="<%= profile.phone %>" 
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="address">Store Address:</label>
+                    <textarea 
+                        id="address" 
+                        name="address" 
+                        rows="3"
+                        required
+                    ><%= profile.address %></textarea>
+                </div>
+
+
+                <button type="submit">Update Profile</button>
+            </form>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 AutoCustomizer | All Rights Reserved</p>
+    </footer>
+
+    <script>
+        document.querySelector('.profile-form').addEventListener('submit', function (event) {
+            if (!validateForm()) {
+                event.preventDefault(); // Prevent form submission if validation fails
+            }
+        });
+    
+        function validateForm() {
+            const storeName = document.getElementById('storeName');
+            const ownerName = document.getElementById('ownerName');
+            const contactEmail = document.getElementById('contactEmail');
+            const phone = document.getElementById('phone');
+    
+            // Trim values for empty space check
+            const fields = [
+                { field: storeName, name: 'Store Name' },
+                { field: ownerName, name: 'Owner Name' }
+            ];
+    
+            for (const item of fields) {
+                if (!item.field.value.trim()) {
+                    alert(`${item.name} cannot be empty or filled with spaces.`);
+                    return false;
+                }
+            }
+    
+            // Phone number validation (exactly 10 digits)
+            const phoneRegex = /^\d{10}$/;
+            if (!phoneRegex.test(phone.value)) {
+                alert('Phone number must be exactly 10 digits.');
+                return false;
+            }
+    
+            // Email validation (only lowercase letters)
+            const emailRegex = /^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,4}$/;
+            if (!emailRegex.test(contactEmail.value)) {
+                alert('Email must be in lowercase and a valid format.');
+                return false;
+            }
+    
+            return true;
+        }
+    </script>    
+</body>
+</html>

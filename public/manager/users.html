@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>User Management - Admin</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
+    />
+    <link rel="stylesheet" href="/styles/admin-consistent.css" />
+    <style>
+      .filter-container {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 20px;
+      }
+      .filter-btn {
+        padding: 10px 15px;
+        border: none;
+        cursor: pointer;
+        font-weight: bold;
+        border-radius: 5px;
+        background-color: black;
+        color: white;
+      }
+      .filter-btn.active {
+        background-color: #2ecc71;
+        color: #fff;
+      }
+      .search-box {
+        padding: 8px;
+        width: 250px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+      }
+      .user-section {
+        display: none;
+      }
+      .user-section.active {
+        display: block;
+      }
+      .suspended-user {
+        background-color: #f8d7da !important;
+      }
+      .btn-restore {
+        background-color: #3498db;
+        color: #fff;
+        padding: 5px 10px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      .btn-restore:hover {
+        background-color: #2980b9;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="navbar">
+      <div class="logo"><h2>Manager's Panel</h2></div>
+      <nav>
+        <ul>
+          <li><a href="/manager/dashboard.html">Dashboard</a></li>
+          <li>
+            <a class="active" href="/manager/users.html">User Management</a>
+          </li>
+          <li><a href="/manager/services.html">User Profiles</a></li>
+          <li><a href="/manager/orders.html">Orders & Bookings</a></li>
+          <li><a href="/manager/payments.html">Payments</a></li>
+          <li><a href="/manager/support.html">Support</a></li>
+          <li><a href="/logout">Logout</a></li>
+        </ul>
+      </nav>
+    </div>
+
+    <div class="main-content">
+      <h2>User Management</h2>
+      <div class="filter-container">
+        <input
+          type="text"
+          id="searchInput"
+          class="search-box"
+          placeholder="Search users..."
+        />
+        <button class="filter-btn active" data-role="all">All Users</button>
+        <button class="filter-btn" data-role="customer">Customers</button>
+        <button class="filter-btn" data-role="seller">Sellers</button>
+        <button class="filter-btn" data-role="service-provider">
+          Service Providers
+        </button>
+        <button class="filter-btn" data-role="manager">Managers</button>
+      </div>
+
+      <div
+        id="error"
+        style="
+          display: none;
+          color: #e74c3c;
+          font-weight: bold;
+          margin-bottom: 10px;
+        "
+      ></div>
+      <div id="loading">Loading users...</div>
+      <div id="userTables" style="display: none"></div>
+    </div>
+
+    <script>
+      async function fetchUsers() {
+        const resp = await fetch("/manager/api/users", {
+          headers: { Accept: "application/json" },
+        });
+        if (resp.status === 401 || resp.status === 403) {
+          window.location.href = "/login";
+          return [];
+        }
+        if (!resp.ok) throw new Error("Failed to load users");
+        const data = await resp.json();
+        return data.users || [];
+      }
+
+      function buildUserSections(users) {
+        const container = document.getElementById("userTables");
+        container.innerHTML = "";
+        const roles = ["customer", "seller", "service-provider", "manager"];
+        roles.forEach((role) => {
+          const section = document.createElement("div");
+          section.className = "user-section " + role + "-section";
+          section.dataset.role = role;
+          const filtered = users.filter((u) => u.role === role);
+          let rows = filtered
+            .map((u) => {
+              const actions =
+                u.role === "manager"
+                  ? "<span>Not Allowed</span>"
+                  : !u.suspended
+                  ? `<button class="btn-suspend" data-action="suspend" data-user-id="${u._id}">Suspend</button>`
+                  : `<button class="btn-restore" data-action="restore" data-user-id="${u._id}">Restore</button>`;
+              return `<tr class="${u.suspended ? "suspended-user" : ""}">
+                    <td>${u._id}</td>
+                    <td>${u.name || ""}</td>
+                    <td>${u.email || ""}</td>
+                    <td>${actions}</td>
+                  </tr>`;
+            })
+            .join("");
+          if (!rows)
+            rows = '<tr><td colspan="4">No users in this category.</td></tr>';
+          section.innerHTML = `<h3>${
+            role.charAt(0).toUpperCase() + role.slice(1).replace("-", " ")
+          }</h3>
+          <table class="user-table"><thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Actions</th></tr></thead><tbody>${rows}</tbody></table>`;
+          container.appendChild(section);
+        });
+      }
+
+      function applySearchFilter() {
+        const term = document.getElementById("searchInput").value.toLowerCase();
+        document.querySelectorAll(".user-table tbody tr").forEach((row) => {
+          row.style.display = row.innerText.toLowerCase().includes(term)
+            ? ""
+            : "none";
+        });
+      }
+
+      function showRole(role) {
+        document.querySelectorAll(".user-section").forEach((sec) => {
+          if (role === "all") {
+            sec.classList.add("active");
+          } else {
+            sec.classList.toggle("active", sec.dataset.role === role);
+          }
+        });
+      }
+
+      function attachFilterButtons() {
+        document.querySelectorAll(".filter-btn").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            document
+              .querySelectorAll(".filter-btn")
+              .forEach((b) => b.classList.remove("active"));
+            btn.classList.add("active");
+            showRole(btn.dataset.role);
+          });
+        });
+      }
+
+      function attachSearch() {
+        document
+          .getElementById("searchInput")
+          .addEventListener("keyup", applySearchFilter);
+      }
+
+      function attachActions(users) {
+        document
+          .getElementById("userTables")
+          .addEventListener("click", async (e) => {
+            const btn = e.target.closest("button[data-action]");
+            if (!btn) return;
+            const id = btn.getAttribute("data-user-id");
+            const action = btn.getAttribute("data-action");
+            const confirmMsg =
+              action === "suspend"
+                ? "Are you sure you want to suspend this user?"
+                : "Are you sure you want to restore this user?";
+            if (!confirm(confirmMsg)) return;
+            try {
+              const resp = await fetch(`/manager/users/${action}/${id}`, {
+                method: "POST",
+                headers: {
+                  Accept: "application/json",
+                  "Content-Type": "application/json",
+                },
+              });
+              if (resp.status === 401 || resp.status === 403) {
+                window.location.href = "/login";
+                return;
+              }
+              const data = await resp.json();
+              if (!resp.ok || !data.success)
+                throw new Error(data.message || "Action failed");
+              // Response does not include updated user object, so toggle manually
+              const idx = users.findIndex((u) => u._id === id);
+              if (idx !== -1) {
+                users[idx].suspended = action === "suspend";
+              }
+              buildUserSections(users);
+              showRole(
+                document.querySelector(".filter-btn.active").dataset.role
+              );
+              applySearchFilter();
+            } catch (err) {
+              displayError(err.message);
+            }
+          });
+      }
+
+      function displayError(msg) {
+        const el = document.getElementById("error");
+        el.textContent = msg;
+        el.style.display = "block";
+      }
+
+      async function init() {
+        try {
+          const users = await fetchUsers();
+          document.getElementById("loading").style.display = "none";
+          document.getElementById("userTables").style.display = "block";
+          buildUserSections(users);
+          showRole("all");
+          attachFilterButtons();
+          attachSearch();
+          attachActions(users);
+        } catch (err) {
+          document.getElementById("loading").style.display = "none";
+          displayError(err.message || "Failed to load users");
+        }
+      }
+
+      init();
+    </script>
+  </body>
+</html>

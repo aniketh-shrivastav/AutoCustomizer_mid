@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Shopping Cart</title>
+    <link rel="stylesheet" href="/styles/styles.css" />
+    <style>
+      /* Replicating original cart.ejs visual styling */
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      }
+      /* Remove custom blue header overrides to fall back to global dark gradient header in styles.css */
+      header .logo img {
+        height: 80px;
+      }
+      h2 {
+        margin-top: 10px;
+      }
+      main {
+        background: transparent !important;
+        box-shadow: none !important;
+        width: 100% !important;
+        max-width: none !important;
+        padding: 0 0 40px 0 !important;
+        margin: 0 auto;
+      }
+      .cart-container {
+        max-width: 900px;
+        margin: 20px auto;
+        padding: 20px;
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      }
+      .cart-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px;
+        margin-bottom: 12px;
+        border: 1px solid #e0e0e0;
+        border-radius: 10px;
+        background: #f9f9f9;
+      }
+      .cart-item img {
+        width: 80px;
+        height: 80px;
+        object-fit: contain;
+        border-radius: 8px;
+      }
+      .item-details {
+        flex: 1;
+        text-align: left;
+        margin-left: 20px;
+      }
+      .quantity-controls {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .quantity-controls button {
+        padding: 4px 10px;
+        font-size: 16px;
+        background: #007bff;
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      .quantity-controls button:hover {
+        filter: brightness(0.9);
+      }
+      .quantity-controls span {
+        min-width: 24px;
+        display: inline-block;
+        text-align: center;
+      }
+      .empty-cart {
+        text-align: center;
+        font-size: 20px;
+        color: #888;
+        margin-top: 40px;
+      }
+      #buyproducts-btn,
+      #checkout-btn {
+        padding: 10px 20px;
+        font-size: 16px;
+        background: #007bff;
+        color: #fff;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+      #buyproducts-btn:hover,
+      #checkout-btn:hover {
+        background: #0069d5;
+      }
+      .payment-container,
+      .checkout-container {
+        max-width: 600px;
+        margin: 30px auto;
+        padding: 20px;
+        background: #fff;
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      }
+      .checkout-options button,
+      #confirm-payment {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        font-size: 16px;
+        margin: 10px 5px;
+        cursor: pointer;
+        color: #fff;
+      }
+      #place-order {
+        background: #28a745;
+      }
+      #place-order:hover {
+        filter: brightness(0.9);
+      }
+      #confirm-payment {
+        background: #ff9800;
+      }
+      #confirm-payment:hover {
+        filter: brightness(0.95);
+      }
+      .payment-method {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+      .payment-method label {
+        display: flex;
+        align-items: center;
+        padding: 5px 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+      .payment-method input {
+        margin-right: 8px;
+      }
+      /* Badge retained */
+      .cart-link {
+        position: relative;
+      }
+      .cart-link .badge {
+        position: absolute;
+        top: -6px;
+        right: -10px;
+        background: #ff3b3b;
+        color: #fff;
+        border-radius: 50%;
+        padding: 2px 6px;
+        font-size: 12px;
+        display: none;
+      }
+      /* Active link handled globally; no custom pill here to keep consistency */
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="logo">
+        <img src="/images3/logo2.jpg" alt="AutoCustomizer Logo" />
+      </div>
+      <nav>
+        <ul class="nav-links">
+          <li><a href="/">Home</a></li>
+          <li><a href="/customer/index.html">Products</a></li>
+          <li><a href="/customer/booking.html">Services</a></li>
+          <li><a href="/customer/history.html">Order History</a></li>
+          <li>
+            <a href="/customer/cart.html" class="cart-link"
+              ><img src="/images/cart-icon.png" alt="Cart" /><span>Cart</span
+              ><span class="badge" id="cart-count"></span
+            ></a>
+          </li>
+          <li><a href="/customer/profile.html">Profile</a></li>
+          <li><a href="/logout">Logout</a></li>
+        </ul>
+      </nav>
+    </header>
+
+    <main>
+      <h2>Your Cart Items</h2>
+      <div class="underline"></div>
+      <div id="cart-root"></div>
+      <div style="text-align: center; margin: 30px 0 10px">
+        <a href="/customer/index.html"
+          ><button id="buyproducts-btn">Buy Products</button></a
+        >
+      </div>
+      <div
+        id="checkout-trigger"
+        style="text-align: center; margin: 10px 0 30px; display: none"
+      >
+        <button id="checkout-btn">Proceed to Checkout</button>
+      </div>
+
+      <div
+        class="payment-container"
+        id="payment-selection"
+        style="display: none"
+      >
+        <h2>Order Summary</h2>
+        <div id="order-summary"></div>
+        <h2>Select Payment Method</h2>
+        <div id="saved-payments" class="payment-method"></div>
+        <label
+          ><input type="radio" name="payment-method" value="cod" /> Cash on
+          Delivery</label
+        ><br />
+        <button id="confirm-payment">Confirm Payment Method</button>
+      </div>
+
+      <div
+        class="checkout-container"
+        id="checkout-section"
+        style="display: none"
+      >
+        <h2>Choose an Option</h2>
+        <div class="checkout-options">
+          <button id="place-order">Place Order</button>
+        </div>
+      </div>
+    </main>
+
+    <script>
+      async function loadCart() {
+        try {
+          const res = await fetch("/customer/api/cart", {
+            headers: { Accept: "application/json" },
+          });
+          if (!res.ok) throw new Error("Failed to load cart");
+          const data = await res.json();
+          renderCart(data.items);
+          updateBadge(data.items);
+        } catch (e) {
+          document.getElementById("cart-root").innerHTML =
+            '<p class="empty-cart">Failed to load cart.</p>';
+          console.error(e);
+        }
+      }
+
+      function renderCart(items) {
+        if (!items || items.length === 0) {
+          document.getElementById("cart-root").innerHTML =
+            '<p class="empty-cart">Your cart is empty.</p>';
+          document.getElementById("checkout-trigger").style.display = "none";
+          return;
+        }
+        document.getElementById("checkout-trigger").style.display = "block";
+        const container = document.createElement("div");
+        container.className = "cart-container";
+        container.innerHTML = items
+          .map(
+            (it) => `
+        <div class="cart-item" data-id="${it.productId}">
+          <img src="${it.image}" alt="${it.name}">
+          <div class="item-details">
+            <strong>${it.name}</strong><br>₹${it.price}
+          </div>
+          <div class="quantity-controls">
+            <button data-action="decrease">-</button>
+            <span>${it.quantity}</span>
+            <button data-action="increase">+</button>
+          </div>
+        </div>
+      `
+          )
+          .join("");
+        document.getElementById("cart-root").innerHTML = "";
+        document.getElementById("cart-root").appendChild(container);
+      }
+
+      function updateBadge(items) {
+        const count = items.reduce((sum, i) => sum + i.quantity, 0);
+        const badge = document.getElementById("cart-count");
+        if (count > 0) {
+          badge.style.display = "inline-block";
+          badge.textContent = count;
+        } else {
+          badge.style.display = "none";
+        }
+      }
+
+      // Delegate quantity buttons
+      document.addEventListener("click", async (e) => {
+        const btn = e.target.closest(".quantity-controls button");
+        if (!btn) return;
+        const itemEl = btn.closest(".cart-item");
+        const productId = itemEl.getAttribute("data-id");
+        const action = btn.getAttribute("data-action");
+        try {
+          const res = await fetch(`/api/cart/update/${window.__USER_ID__}`, {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json",
+            },
+            body: JSON.stringify({ productId, action }),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.message || "Update failed");
+          loadCart();
+        } catch (err) {
+          alert(err.message);
+        }
+      });
+
+      document
+        .getElementById("checkout-btn")
+        .addEventListener("click", buildSummary);
+
+      function buildSummary() {
+        document.getElementById("payment-selection").style.display = "block";
+        const itemEls = document.querySelectorAll(".cart-item");
+        let total = 0;
+        let html = "";
+        itemEls.forEach((el) => {
+          const name = el.querySelector(".item-details strong").innerText;
+          const price = parseFloat(
+            el.querySelector(".item-details").innerText.replace(/[^0-9]/g, "")
+          );
+          const qty = parseInt(
+            el.querySelector(".quantity-controls span").innerText
+          );
+          const sub = price * qty;
+          total += sub;
+          html += `<p><strong>${name}</strong> — ₹${price} x ${qty} = ₹${sub}</p>`;
+        });
+        html += `<h3 style="margin-top:20px;">Total: ₹${total}</h3>`;
+        document.getElementById("order-summary").innerHTML = html;
+      }
+
+      document
+        .getElementById("confirm-payment")
+        .addEventListener("click", () => {
+          const selected = document.querySelector(
+            'input[name="payment-method"]:checked'
+          );
+          if (!selected) return alert("Please select a payment method.");
+          document.getElementById("payment-selection").style.display = "none";
+          document.getElementById("checkout-section").style.display = "block";
+          alert(
+            "Payment method confirmed! Please proceed to place your order."
+          );
+        });
+
+      document
+        .getElementById("place-order")
+        .addEventListener("click", async () => {
+          try {
+            const res = await fetch("/customer/create-order", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Accept: "application/json",
+              },
+            });
+            if (!res.ok) throw new Error("Order failed");
+            alert("Order placed successfully!");
+            location.href = "/customer/history.html";
+          } catch (err) {
+            alert(err.message);
+          }
+        });
+
+      // Expose user id: fetch user via cart API first call
+      window.__USER_ID__ = undefined;
+      (async () => {
+        const res = await fetch("/customer/api/cart");
+        if (res.ok) {
+          const data = await res.json();
+          window.__USER_ID__ = data.user.id;
+          renderCart(data.items);
+          updateBadge(data.items);
+        } else {
+          document.getElementById("cart-root").innerHTML =
+            '<p class="empty-cart">Failed to load cart.</p>';
+        }
+      })();
+    </script>
+  </body>
+</html>

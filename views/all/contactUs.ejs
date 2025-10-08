@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact Form</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="/styles/all.css">
+    <style>
+        .bg-container{
+            background-image: radial-gradient(#4b4a4a, #2d2b2b);
+            height: 100vh;
+            font-family: Arial, sans-serif; padding: 20px;
+            color: white;
+        }
+        form { max-width: 400px; margin: auto;}
+        label, input, textarea { display: block; width: 100%; margin-bottom: 10px; }
+        .review-container {border-style: none; border-radius: 20px ;
+            background-color: rgb(51, 49, 49);  }
+        button { background-color:  #1E1E2D; color: white; padding: 10px; border: none; cursor: pointer; height: 40px; border-radius: 5px; width: 40%; margin-top: 12px;}
+    </style>
+</head>
+<body>
+    <div class="bg-container">
+        <%- include("../partials/allHeaders") %>
+        <div class="container">
+            <div class="row">
+                <div class="col-12 col-md-8 col-lg-6 p-3 m-md-auto mt-5 mt-md-4 mt-lg-5 shadow review-container">
+                    <div class="text-center mt-3">
+                        <h2>Contact Us</h2>
+                    </div>
+                    <form method="POST" action="/contactus">
+                        <label for="name">Name:</label>
+                        <input type="text" id="name" name="name" required>
+                        
+                        <label for="email">Email:</label>
+                        <input type="email" id="email" name="email" class="text-secondary" required>
+                        
+                        <label for="subject">Subject:</label>
+                        <input type="text" id="subject" name="subject" required>
+                        
+                        <label for="message">Message:(please include order Id or Booking Id if necessary)</label>
+                        <textarea id="message" name="message" required></textarea>
+                        
+                        <button class="mb-3" type="submit">Submit</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+    const form = document.querySelector("form");
+
+    form.addEventListener("submit", function(event) {
+        const nameInput = document.getElementById("name");
+    const emailInput = document.getElementById("email");
+    const trimmedName = nameInput.value.trim();
+    const nameRegex = /^[A-Za-z\s.-]+$/;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+        if (!nameRegex.test(nameInput.value)) {
+            alert("Name should not contain numbers or special characters.");
+            event.preventDefault();
+            return;
+        }
+
+        if (!trimmedName || !nameRegex.test(trimmedName)) {
+        alert("Name must contain letters and cannot be empty or just spaces.");
+        event.preventDefault();
+        return;
+    }
+
+    if (!emailRegex.test(emailInput.value)) {
+    alert("Please enter a valid email in the format: example@domain.com");
+    event.preventDefault();
+    return;
+}
+
+if (/[A-Z]/.test(emailInput.value)) {
+    alert("Email must not contain uppercase letters.");
+    event.preventDefault();
+    return;
+}
+    });
+});
+
+document.addEventListener("DOMContentLoaded", function () {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('submitted') === 'true') {
+            alert("Thank you! Your message has been submitted.");
+        }
+
+        // Optional: remove query from URL after alert
+        if (window.history.replaceState) {
+            const cleanUrl = window.location.origin + window.location.pathname;
+            window.history.replaceState(null, null, cleanUrl);
+        }
+    });
+    </script>    
+</body>
+</html>

@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoCustomizer | Car Parts Marketplace</title>
+    <link rel="stylesheet" href="/styles/all.css">
+</head>
+<body>
+
+    <!-- Navigation Bar -->
+    <%- include("../partials/allHeaders") %>
+
+    <!-- Header Section -->
+    <header>
+        <h1>Welcome to AutoCustomizer</h1>
+        <p>The ultimate marketplace connecting car enthusiasts, quality parts sellers, and expert service providers.</p>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+       <img src="/public/images2/car-customization.png" alt="Car Customization">
+    
+        <div class="hero-content">
+            <h2>Your Car, Your Style!</h2>
+            <p>Whether you're looking to customize your car, sell premium parts, or offer your expert services - AutoCustomizer is your platform.</p>
+            <div class="cta-buttons">
+            
+                    <% if (user) { %>
+                      <a href="/customer/index" class="btn">Browse Products</a>
+                    <% } else { %>
+                      <a href="/login" class="btn">Browse Products</a>
+                    <% } %>
+                  
+                    <% if (user) { %>
+                        <a href="/customer/booking" class="btn">Book a Service</a>
+                      <% } else { %>
+                        <a href="/login" class="btn">Book a Service</a>
+                      <% } %>
+                <a href="/signup" class="btn seller-btn">Sell Products</a>
+                <a href="/signup" class="btn provider-btn">Offer Services</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- User Types Section -->
+    <section class="user-types">
+        <h2>AutoCustomizer For Everyone</h2>
+        
+        <div class="user-type-container">
+            <div class="user-type">
+                <h3>Car Owners</h3>
+                <p>Find premium parts and expert services to customize your vehicle exactly how you want it.</p>
+                <a href="/signup" class="btn small">Get Started</a>
+            </div>
+            
+            <div class="user-type">
+                <h3>Parts Sellers</h3>
+                <p>Reach thousands of car enthusiasts looking for quality parts. Manage inventory, sales, and grow your business.</p>
+                <a href="/signup" class="btn small">Start Selling</a>
+            </div>
+            
+            <div class="user-type">
+                <h3>Service Providers</h3>
+                <p>Showcase your expertise, get booked online, and expand your customer base through our platform.</p>
+                <a href="/signup" class="btn small">Offer Services</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features">
+        <div class="feature">
+            <img src="/public/images2/products.png" alt="Car Parts">
+            <h3>Wide Range of Car Parts</h3>
+            <p>Find or sell the best quality car parts & accessories for all customization needs.</p>
+        </div>
+        <div class="feature">
+            <img src="/public/images2/service.png" alt="Car Service">
+            <h3>Top Service Providers</h3>
+            <p>Choose from or join our network of expert service providers for car wrapping, tuning, and more.</p>
+        </div>
+        <div class="feature">
+            <img src="/public/images2/easy-booking.png" alt="Easy Booking">
+            <h3>Easy Platform for All</h3>
+            <p>Shop with ease, book services instantly, or manage your seller/provider business through our intuitive dashboard.</p>
+        </div>
+    </section>
+
+    <!-- Seller/Provider Benefits Section -->
+    <section class="benefits">
+        <h2>Why Join AutoCustomizer as a Business Partner?</h2>
+        <div class="benefits-container">
+            <div class="benefit">
+                <h3>Targeted Audience</h3>
+                <p>Connect directly with car enthusiasts actively looking for your products and services.</p>
+            </div>
+            <div class="benefit">
+                <h3>Business Tools</h3>
+                <p>Access inventory management, scheduling, analytics, and payment processing tools.</p>
+            </div>
+            <div class="benefit">
+                <h3>Growth Opportunity</h3>
+                <p>Expand your reach and grow your business through our marketplace platform.</p>
+            </div>
+            <div class="benefit">
+                <h3>Seamless Experience</h3>
+                <p>Our platform handles the technical details so you can focus on your core business.</p>
+            </div>
+        </div>
+        <a href="/faq" class="btn large">Learn More About Our Business Solutions</a>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        
+       
+        <p>&copy; 2025 AutoCustomizer. All rights reserved.</p>
+    </footer>
+
+</body>
+</html>

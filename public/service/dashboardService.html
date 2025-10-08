@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Service Provider Dashboard</title>
+    <link rel="stylesheet" href="/styles/dashboardService.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+    />
+  </head>
+  <body>
+    <div class="navbar">
+      <div class="logo-brand">
+        <img src="/public/images3/logo2.jpg" alt="Logo" class="logo" />
+        <strong>AutoCustomizer</strong>
+      </div>
+      <div class="nav-links" id="navLinks">
+        <a href="/service/dashboardService.html">Dashboard</a>
+        <a href="/service/profileSettings">Profile</a>
+        <a href="/service/bookingManagement">Bookings</a>
+        <a href="/service/customerCommunication">Communication</a>
+        <a href="/service/earnings">Earnings</a>
+        <a href="/service/reviews">Reviews</a>
+        <a href="/logout">Logout</a>
+      </div>
+      <div class="menu-btn" onclick="toggleNavLinks()">☰</div>
+    </div>
+
+    <div class="sidebar" id="sidebar">
+      <a class="close-btn" onclick="toggleSidebar()">Close ×</a>
+      <a href="/service/dashboardService.html"
+        ><i class="fas fa-tachometer-alt"></i> Dashboard</a
+      >
+      <a href="/service/profileSettings"
+        ><i class="fas fa-user-cog"></i> Profile</a
+      >
+      <a href="/service/bookingManagement"
+        ><i class="fas fa-calendar-alt"></i> Bookings</a
+      >
+      <a href="/service/customerCommunication"
+        ><i class="fas fa-comments"></i> Communication</a
+      >
+      <a href="/service/earnings"
+        ><i class="fas fa-money-bill-wave"></i> Earnings</a
+      >
+      <a href="/service/reviews"><i class="fas fa-star"></i> Reviews</a>
+      <a href="/logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
+    </div>
+
+    <div class="dashboard-container">
+      <div class="dashboard-header">
+        <h2>Welcome! Here's your daily overview.</h2>
+      </div>
+      <div class="cards" id="metricCards">
+        <div class="card">
+          <div class="card-icon"><i class="fas fa-rupee-sign"></i></div>
+          <div class="card-content">
+            <h2>Total Earnings</h2>
+            <p class="amount" id="earningsValue">₹0</p>
+            <p class="subtext">After 20% commission</p>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-icon"><i class="fas fa-tools"></i></div>
+          <div class="card-content">
+            <h2>Confirmed Services</h2>
+            <p class="amount" id="ongoingValue">0</p>
+            <p class="subtext">Currently active</p>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-icon"><i class="fas fa-check-circle"></i></div>
+          <div class="card-content">
+            <h2>Ready for Delivery</h2>
+            <p class="amount" id="completedValue">0</p>
+            <p class="subtext">Total completed</p>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-icon"><i class="fas fa-smile"></i></div>
+          <div class="card-content">
+            <h2>Customer Satisfaction</h2>
+            <p class="amount" id="ratingValue">N/A/5</p>
+            <p class="subtext" id="reviewsValue">Based on 0 reviews</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="charts">
+        <div class="chart-card chart-wrapper">
+          <h2>Service Distribution</h2>
+          <canvas id="servicePieChart"></canvas>
+        </div>
+        <div class="chart-card">
+          <h2>Monthly Earnings Overview (Weekly Basis)</h2>
+          <div class="chart-wrapper" style="height: 300px">
+            <canvas id="earningsBarChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="recent-activity">
+        <h2>Recent Activity</h2>
+        <ul class="activity-list" id="activityList">
+          <li>
+            <i class="fas fa-info-circle"></i
+            ><span>Loading recent activity...</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+      function toggleSidebar() {
+        document.getElementById("sidebar").classList.toggle("active");
+      }
+      function toggleNavLinks() {
+        document.getElementById("navLinks").classList.toggle("active");
+      }
+
+      async function loadDashboard() {
+        try {
+          const res = await fetch("/service/api/dashboard", {
+            headers: { Accept: "application/json" },
+          });
+          if (res.status === 401) {
+            window.location.href = "/login";
+            return;
+          }
+          if (!res.ok) throw new Error("Failed to fetch dashboard");
+          const data = await res.json();
+          const { serviceLabels, serviceCounts, totals } = data;
+          document.getElementById("earningsValue").textContent =
+            "₹" + (totals.earnings || 0);
+          document.getElementById("ongoingValue").textContent =
+            totals.ongoing || 0;
+          document.getElementById("completedValue").textContent =
+            totals.completed || 0;
+          document.getElementById("ratingValue").textContent =
+            (totals.avgRating || "N/A") + "/5";
+          document.getElementById("reviewsValue").textContent =
+            "Based on " + (totals.totalReviews || 0) + " reviews";
+
+          // Pie chart
+          const pieCtx = document
+            .getElementById("servicePieChart")
+            .getContext("2d");
+          new Chart(pieCtx, {
+            type: "pie",
+            data: {
+              labels: serviceLabels,
+              datasets: [
+                {
+                  data: serviceCounts,
+                  backgroundColor: [
+                    "#1abc9c",
+                    "#3498db",
+                    "#9b59b6",
+                    "#f1c40f",
+                    "#e74c3c",
+                    "#2ecc71",
+                    "#e67e22",
+                  ],
+                },
+              ],
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: true,
+              plugins: { legend: { position: "bottom" } },
+            },
+          });
+
+          // Bar chart (placeholder - could be replaced with real earnings breakdown API)
+          const barCtx = document
+            .getElementById("earningsBarChart")
+            .getContext("2d");
+          new Chart(barCtx, {
+            type: "bar",
+            data: {
+              labels: ["Week 1", "Week 2", "Week 3", "Week 4"],
+              datasets: [
+                {
+                  label: "Earnings",
+                  data: [1500, 2200, 1800, 2500],
+                  backgroundColor: "#1abc9c",
+                },
+              ],
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  title: { display: true, text: "Earnings (₹)" },
+                },
+                x: { title: { display: true, text: "Weeks" } },
+              },
+              plugins: {
+                title: {
+                  display: true,
+                  text: "Monthly Earnings Overview (Weekly Basis)",
+                },
+              },
+            },
+          });
+
+          // Recent activity placeholder; can be enhanced with a future API
+          const activityList = document.getElementById("activityList");
+          activityList.innerHTML = "";
+          const samples = [
+            {
+              icon: "fa-check-circle",
+              text: "Completed: Brake Repair for Karthick",
+              time: "2 hours ago",
+            },
+            {
+              icon: "fa-tools",
+              text: "Started: Oil Change for Suresh",
+              time: "4 hours ago",
+            },
+            {
+              icon: "fa-star",
+              text: "New Review: 5 stars from Harish",
+              time: "1 day ago",
+            },
+          ];
+          samples.forEach((a) => {
+            const li = document.createElement("li");
+            li.innerHTML = `<i class="fas ${a.icon}"></i><span>${a.text}</span><span class="time">${a.time}</span>`;
+            activityList.appendChild(li);
+          });
+        } catch (err) {
+          console.error("Dashboard load error", err);
+        }
+      }
+      loadDashboard();
+    </script>
+  </body>
+</html>

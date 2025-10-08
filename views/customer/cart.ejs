@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shopping Cart</title>
+  <link rel="stylesheet" href="/styles/styles.css">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f5f5f5;
+      margin: 0;
+      padding: 0;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px 20px;
+      background-color: #007bff;
+      color: white;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    .home-button {
+      text-decoration: none;
+      background-color: white;
+      color: #007bff;
+      padding: 8px 15px;
+      font-weight: bold;
+      border-radius: 5px;
+      border: 2px solid #007bff;
+      transition: all 0.3s ease;
+    }
+
+    .home-button:hover {
+      background-color: #007bff;
+      color: white;
+      border: 2px solid white;
+    }
+
+    h2 {
+      text-align: center;
+      font-size: 28px;
+      margin-top: 20px;
+      color: #333;
+    }
+
+    .underline {
+      width: 100px;
+      height: 3px;
+      background: #007bff;
+      margin: 8px auto 20px auto;
+      border-radius: 2px;
+    }
+
+    .cart-container {
+      max-width: 900px;
+      margin: 20px auto;
+      padding: 20px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .cart-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px;
+      margin-bottom: 12px;
+      border: 1px solid #e0e0e0;
+      border-radius: 10px;
+      background-color: #f9f9f9;
+    }
+
+    .cart-item img {
+      width: 80px;
+      height: 80px;
+      object-fit: contain;
+      border-radius: 8px;
+    }
+
+    .item-details {
+      flex: 1;
+      text-align: left;
+      margin-left: 20px;
+    }
+
+    .quantity-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .quantity-controls button {
+      padding: 4px 10px;
+      font-size: 16px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .quantity-controls span {
+      min-width: 24px;
+      display: inline-block;
+      text-align: center;
+    }
+
+    .remove-button {
+      color: #ff3b3b;
+      border: none;
+      background: none;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .empty-cart {
+      text-align: center;
+      font-size: 20px;
+      color: #888;
+      margin-top: 40px;
+    }
+
+    .payment-container, .checkout-container {
+      max-width: 600px;
+      margin: 30px auto;
+      padding: 20px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    .checkout-options button, #confirm-payment {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+      margin: 10px 5px;
+      cursor: pointer;
+      color: white;
+    }
+
+    #place-order {
+      background: #28a745;
+    }
+
+    #book-service {
+      background: #007bff;
+    }
+
+    #confirm-payment {
+      background: #ff9800;
+    }
+
+    .payment-method {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .payment-method label {
+      display: flex;
+      align-items: center;
+      padding: 5px 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .payment-method input {
+      margin-right: 8px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">
+      <img src="/public/images3/logo2.jpg" alt="AutoCustomizer Logo" style="height: 50px;">
+    </div>
+    <%- include("../partials/customerHeaders") %>
+  </header>
+
+  <main>
+    <h2>Your Cart Items</h2>
+    <div class="underline"></div>
+
+    <% if (items.length === 0) { %>
+      <p class="empty-cart">Your cart is empty.</p>
+    <% } else { %>
+      <div class="cart-container">
+        <% items.forEach(item => { %>
+          <div class="cart-item" data-id="<%= item.productId %>">
+            <img src="<%= item.image %>" alt="<%= item.name %>">
+            <div class="item-details">
+              <strong><%= item.name %></strong><br>
+              ₹<%= item.price %>
+            </div>
+            <div class="quantity-controls">
+              <button onclick="updateQuantity('<%= item.productId %>', 'decrease')">-</button>
+              <span><%= item.quantity %></span>
+              <button onclick="updateQuantity('<%= item.productId %>', 'increase')">+</button>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+    <% } %>
+     <div style="text-align: center; margin: 20px;">
+      <a href="/customer/index">
+      <button id="buyproducts-btn" style="padding: 10px 20px; font-size: 16px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">
+        Buy Products
+      </button>
+      </a>
+    </div>
+    <% if (items.length > 0) { %>
+      <div style="text-align: center; margin: 20px;">
+        <button id="checkout-btn" style="padding: 10px 20px; font-size: 16px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">
+          Proceed to Checkout
+        </button>
+      </div>
+    <% } %>    
+    <div class="payment-container" id="payment-selection" style="display: none;">
+      <h2>Order Summary</h2>
+      <div id="order-summary">
+        <!-- Items and total will be populated by JS -->
+      </div>
+      <h2>Select Payment Method</h2>
+      <div id="saved-payments" class="payment-method"></div>
+      <label><input type="radio" name="payment-method" value="cod"> Cash on Delivery</label>
+      <br>
+      <button id="confirm-payment">Confirm Payment Method</button>
+    </div>
+
+    <div class="checkout-container" id="checkout-section" style="display: none;">
+      <h2>Choose an Option</h2>
+      <div class="checkout-options">
+        <button id="place-order">Place Order</button>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const userId = "<%= user.id %>";
+
+    function updateQuantity(productId, action) {
+      fetch(`/api/cart/update/${userId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId, action })
+      })
+      .then(async res => {
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.message || "Failed to update cart quantity");
+        }
+        location.reload();
+      })
+      .catch(err => {
+        alert(err.message); // This will show "Not enough stock available" now
+        console.error(err);
+      });
+    }
+
+function removeItem(productId) {
+  fetch(`/api/cart/remove/${userId}`, {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ productId })
+  })
+  .then(res => res.json())
+  .then(() => location.reload())
+  .catch(err => alert("Failed to remove item"));
+}
+
+document.getElementById("place-order").addEventListener("click", () => {
+  fetch("/customer/create-order", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" }
+  })
+  .then(async res => {
+    if (!res.ok) throw new Error(`Failed to place order: ${res.status}`);
+    try {
+      const data = await res.json();
+      alert("Order placed successfully!");
+      location.href = "/customer/history"; 
+    } catch (e) {
+      // In case no JSON response (e.g., 204 No Content)
+      alert("Order placed successfully!");
+      location.href = "/customer/history"; 
+    }
+  })
+  .catch(err => {
+    alert("Error placing order");
+    console.error(err);
+  });
+});
+
+document.getElementById("checkout-btn").addEventListener("click", () => {
+  // Step 1: Show payment + order summary
+  document.getElementById("payment-selection").style.display = "block";
+
+  // Grab cart items and compute summary
+  const cartItems = document.querySelectorAll(".cart-item");
+  let summaryHTML = "";
+  let totalCost = 0;
+
+  cartItems.forEach(item => {
+    const name = item.querySelector(".item-details strong").innerText;
+    const priceText = item.querySelector(".item-details").innerText.match(/₹(\d+)/);
+    const price = priceText ? parseFloat(priceText[1]) : 0;
+    const quantity = parseInt(item.querySelector(".quantity-controls span").innerText);
+
+    const itemTotal = price * quantity;
+    totalCost += itemTotal;
+
+    summaryHTML += `
+      <p><strong>${name}</strong> — ₹${price} x ${quantity} = ₹${itemTotal}</p>
+    `;
+  });
+
+  summaryHTML += `<h3 style="margin-top: 20px;">Total: ₹${totalCost}</h3>`;
+  document.getElementById("order-summary").innerHTML = summaryHTML;
+}); // ✅ fixed: removed extra ")"
+
+document.getElementById("confirm-payment").addEventListener("click", () => {
+  const selectedPayment = document.querySelector('input[name="payment-method"]:checked');
+  if (!selectedPayment) {
+    alert("Please select a payment method.");
+    return;
+  }
+
+  document.getElementById("payment-selection").style.display = "none";
+  document.getElementById("checkout-section").style.display = "block";
+
+  alert("Payment method confirmed! Please proceed to place your order.");
+});
+  </script>
+  <script src="/scripts/cart.js"></script>
+</body>
+</html>

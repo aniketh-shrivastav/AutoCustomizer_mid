@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Payments | Admin Panel</title>
+  <link rel="stylesheet" href="/styles/admin-consistent.css">
+  <style>
+    .tab-button {
+      padding: 10px 20px;
+      margin-right: 10px;
+      border: none;
+      cursor: pointer;
+      background: #ddd;
+    }
+    .tab-button.active {
+      background: #2ecc71;
+      color: white;
+    }
+    .tab-content {
+      display: none;
+      margin-top: 20px;
+    }
+    .tab-content.active {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navbar -->
+  <div class="navbar">
+    <div class="logo">
+      <h2>Manager's Panel</h2>
+    </div>
+    <%- include("../partials/managerHeader") %>
+  </div>
+
+  <!-- Main -->
+  <div class="main-content container" style="margin-top: 60px;">
+    <h1>Payments Overview</h1>
+
+    <!-- Tabs -->
+    <div>
+      <button class="tab-button active" onclick="showTab('ordersTab', this)">Orders</button>
+      <button class="tab-button" onclick="showTab('servicesTab', this)">Service Orders</button>
+    </div>
+
+    <!-- Orders Tab -->
+    <div id="ordersTab" class="tab-content active">
+      <table class="order-table">
+        <thead>
+          <tr>
+            <th>Order ID</th>
+            <th>Customer</th>
+            <th>Seller(s)</th>
+            <th>Products</th>
+            <th>Total Cost</th>
+            <th>Commission (20%)</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% orders.forEach(order => { %>
+            <tr>
+              <td><%= order._id %></td>
+              <td><%= order.userId.name %></td>
+              <td>
+                <% 
+                  const sellers = [...new Set(order.items.map(i => i.seller.name))]; 
+                  %>
+                <%= sellers.join(", ") %>
+              </td>
+              <td>
+                <% order.items.forEach(item => { %>
+                  <div><%= item.name %> (x<%= item.quantity %>)</div>
+                <% }) %>
+              </td>
+              <td>₹<%= order.totalAmount.toFixed(2) %></td>
+              <td>₹<%= (order.totalAmount * 0.2).toFixed(2) %></td>
+              <td><%= order.placedAt.toDateString() %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Services Tab -->
+    <div id="servicesTab" class="tab-content">
+      <table class="order-table">
+        <thead>
+          <tr>
+            <th>Booking ID</th>
+            <th>Customer</th>
+            <th>Provider</th>
+            <th>Services</th>
+            <th>Total Cost</th>
+            <th>Commission (20%)</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% serviceOrders.forEach(order => { %>
+            <tr>
+              <td><%= order._id %></td>
+              <td><%= order.customerId.name %></td>
+              <td><%= order.providerId.name %></td>
+              <td><%= order.selectedServices.join(", ") %></td>
+              <td>₹<%= order.totalCost || "N/A" %></td>
+              <td>₹<%= order.totalCost ? (order.totalCost * 0.2).toFixed(2) : "N/A" %></td>
+              <td><%= order.date.toDateString() %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    function showTab(tabId, button) {
+      document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+      document.getElementById(tabId).classList.add('active');
+
+      document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+      button.classList.add('active');
+    }
+  </script>
+
+</body>
+</html>

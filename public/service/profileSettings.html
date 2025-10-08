@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Profile Settings</title>
+    <link rel="stylesheet" href="/styles/profileSettings.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+    />
+  </head>
+  <body>
+    <nav class="navbar">
+      <div class="logo-brand">
+        <img src="/public/images3/logo2.jpg" alt="Logo" class="logo" />
+        <span class="brand">AutoCustomizer</span>
+      </div>
+      <a href="#" class="menu-btn" onclick="toggleSidebar()">☰</a>
+      <div class="nav-links" id="navLinks">
+        <a href="/service/dashboardService.html">Dashboard</a>
+        <a href="/service/profileSettings.html" class="active"
+          >Profile Settings</a
+        >
+        <a href="/service/bookingManagement">Booking Management</a>
+        <a href="/service/reviews">Reviews & Ratings</a>
+        <a href="/logout">Logout</a>
+      </div>
+    </nav>
+
+    <div class="sidebar" id="sidebar">
+      <a class="close-btn" onclick="toggleSidebar()">Close ×</a>
+      <a href="/service/dashboardService.html"
+        ><i class="fas fa-tachometer-alt"></i> Dashboard</a
+      >
+      <a href="/service/profileSettings.html"
+        ><i class="fas fa-user-cog"></i> Profile Settings</a
+      >
+      <a href="/service/bookingManagement"
+        ><i class="fas fa-calendar-alt"></i> Booking Management</a
+      >
+      <a href="/service/reviews"
+        ><i class="fas fa-star"></i> Reviews & Ratings</a
+      >
+      <a href="/logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
+    </div>
+
+    <div class="profile-container">
+      <div class="profile-pic-container">
+        <img
+          src="/public/images3/image5.jpg"
+          alt="Profile Picture"
+          class="profile-pic"
+        />
+      </div>
+      <h1>Profile Settings</h1>
+
+      <form id="profileForm" onsubmit="event.preventDefault(); saveChanges();">
+        <label>Name:</label>
+        <input type="text" id="name" disabled />
+        <label>Email:</label>
+        <input type="email" id="email" disabled />
+        <label>Phone:</label>
+        <input type="tel" id="phone" disabled />
+        <label>District:</label>
+        <input type="text" id="district" disabled />
+
+        <button
+          type="button"
+          class="btn edit-pass-btn"
+          onclick="togglePasswordField()"
+          style="display: none"
+        >
+          Edit Password
+        </button>
+        <div
+          class="password-container"
+          id="passwordField"
+          style="display: none"
+        >
+          <label>New Password:</label>
+          <input type="password" id="password" />
+        </div>
+
+        <div class="services-container">
+          <h2>Services Offered</h2>
+          <ul class="service-list" id="serviceList"></ul>
+          <div class="service-input-container" style="display: none">
+            <input type="text" id="newService" placeholder="New Service Name" />
+            <input type="number" id="newServiceCost" placeholder="Cost" />
+            <button
+              type="button"
+              class="btn add-service-btn"
+              onclick="addService()"
+              style="display: none"
+            >
+              Add Service
+            </button>
+          </div>
+        </div>
+
+        <div class="buttons">
+          <button type="button" class="btn edit-btn" onclick="enableEdit()">
+            Edit
+          </button>
+          <button
+            type="button"
+            class="btn save-btn"
+            id="saveBtn"
+            onclick="saveChanges()"
+            style="display: none"
+          >
+            Save
+          </button>
+          <button
+            type="button"
+            class="btn cancel-btn"
+            id="cancelBtn"
+            onclick="cancelEdit()"
+            style="display: none"
+          >
+            Cancel
+          </button>
+        </div>
+      </form>
+
+      <div class="delete-account-section">
+        <h3>Danger Zone</h3>
+        <p>
+          Once you delete your account, there is no going back. Please be
+          certain.
+        </p>
+        <button id="delete-account-btn" class="delete-btn" disabled>
+          Delete My Account
+        </button>
+      </div>
+    </div>
+
+    <script>
+      function toggleSidebar() {
+        document.getElementById("sidebar").classList.toggle("active");
+      }
+      function toggleNavLinks() {
+        document.getElementById("navLinks").classList.toggle("active");
+      }
+
+      let currentUserId = null;
+      async function loadProfile() {
+        try {
+          const res = await fetch("/service/api/profile", {
+            headers: { Accept: "application/json" },
+          });
+          if (res.status === 401) {
+            window.location.href = "/login";
+            return;
+          }
+          if (!res.ok) throw new Error("Failed to load profile");
+          const data = await res.json();
+          if (!data.success)
+            throw new Error(data.message || "Profile load failed");
+          const u = data.user;
+          currentUserId = u.id;
+          document.getElementById("name").value = u.name || "";
+          document.getElementById("email").value = u.email || "";
+          document.getElementById("phone").value = u.phone || "";
+          document.getElementById("district").value = u.district || "";
+          const list = document.getElementById("serviceList");
+          list.innerHTML = "";
+          (u.servicesOffered || []).forEach((s) => {
+            const li = document.createElement("li");
+            li.className = "service-item";
+            li.innerHTML = `<input type="text" class="service-name" value="${s.name}" required disabled><input type="number" class="service-cost" value="${s.cost}" required disabled><button class="delete-btn" onclick="removeService(this)" style="display:none">Delete</button>`;
+            list.appendChild(li);
+          });
+          document.getElementById("delete-account-btn").disabled = false;
+        } catch (err) {
+          console.error(err);
+          alert("Could not load profile");
+        }
+      }
+
+      async function saveChanges() {
+        const name = document.getElementById("name").value.trim();
+        const phone = document.getElementById("phone").value.trim();
+        const district = document.getElementById("district").value.trim();
+        const serviceItems = document.querySelectorAll(".service-item");
+        const servicesOffered = Array.from(serviceItems).map((item) => ({
+          name: item.querySelector(".service-name").value.trim(),
+          cost:
+            parseFloat(item.querySelector(".service-cost").value.trim()) || 0,
+        }));
+        try {
+          const res = await fetch("/profile/update", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json",
+            },
+            body: JSON.stringify({ name, phone, district, servicesOffered }),
+          });
+          const out = await res.json();
+          if (!out.success) throw new Error(out.message || "Update failed");
+          alert("Profile updated successfully!");
+          location.reload();
+        } catch (err) {
+          console.error(err);
+          alert(err.message);
+        }
+      }
+
+      function enableEdit() {
+        ["name", "email", "phone", "district"].forEach(
+          (id) => (document.getElementById(id).disabled = false)
+        );
+        document.querySelector(".edit-btn").style.display = "none";
+        document.getElementById("saveBtn").style.display = "inline-block";
+        document.getElementById("cancelBtn").style.display = "inline-block";
+        document.querySelector(".edit-pass-btn").style.display = "inline-block";
+        document.querySelector(".service-input-container").style.display =
+          "block";
+        document.querySelector(".add-service-btn").style.display =
+          "inline-block";
+        document
+          .querySelectorAll(
+            ".service-item .service-name, .service-item .service-cost"
+          )
+          .forEach((inp) => (inp.disabled = false));
+        document
+          .querySelectorAll(".service-item .delete-btn")
+          .forEach((btn) => (btn.style.display = "inline-block"));
+      }
+      function cancelEdit() {
+        location.reload();
+      }
+      function togglePasswordField() {
+        const pf = document.getElementById("passwordField");
+        pf.style.display = pf.style.display === "none" ? "block" : "none";
+      }
+      function addService() {
+        const n = document.getElementById("newService").value.trim();
+        const c = parseFloat(
+          document.getElementById("newServiceCost").value.trim()
+        );
+        if (n && !isNaN(c)) {
+          const li = document.createElement("li");
+          li.className = "service-item";
+          li.innerHTML = `<input type="text" class="service-name" value="${n}" required><input type="number" class="service-cost" value="${c}" required><button class="delete-btn" onclick="removeService(this)">Delete</button>`;
+          document.getElementById("serviceList").appendChild(li);
+          document.getElementById("newService").value = "";
+          document.getElementById("newServiceCost").value = "";
+        } else {
+          alert("Please enter both a service name and cost.");
+        }
+      }
+      function removeService(btn) {
+        btn.parentElement.remove();
+      }
+
+      document.addEventListener("DOMContentLoaded", () => {
+        loadProfile();
+        document
+          .getElementById("delete-account-btn")
+          .addEventListener("click", async () => {
+            if (!currentUserId) return;
+            if (
+              confirm(
+                "Are you sure you want to permanently delete your account? This action cannot be undone."
+              )
+            ) {
+              try {
+                const res = await fetch(
+                  `/service/profile/delete/${currentUserId}`,
+                  { method: "DELETE", headers: { Accept: "application/json" } }
+                );
+                const out = await res.json();
+                if (!out.success)
+                  throw new Error(out.message || "Delete failed");
+                alert("Account deleted successfully.");
+                window.location.href = "/";
+              } catch (err) {
+                console.error(err);
+                alert(err.message);
+              }
+            }
+          });
+      });
+    </script>
+  </body>
+</html>

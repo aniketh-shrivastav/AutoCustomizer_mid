@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Support Center</title>
+    <link rel="stylesheet" href="/styles/admin-consistent.css" />
+    <style>
+      /* Mirror original support.ejs card layout */
+      .support-wrapper {
+        margin-top: 1.5rem;
+      }
+      .tickets-grid {
+        /* becomes stats-grid like original but responsive */
+        display: grid;
+        gap: 1.25rem;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        margin-top: 1rem;
+      }
+      .stat-card {
+        background: #f9f9f9;
+      }
+      .stat-card h3 {
+        margin-bottom: 0.5rem;
+      }
+      .ticket-meta {
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        margin-top: 0.25rem;
+      }
+      .respond-btn {
+        background: var(--primary-color);
+        color: #fff;
+        border: none;
+        padding: 6px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 600;
+        margin-top: 0.5rem;
+      }
+      .respond-btn:hover {
+        background: var(--secondary-color);
+      }
+      .respond-btn[disabled] {
+        background: #888;
+        cursor: default;
+      }
+      .empty {
+        margin-top: 1rem;
+        font-style: italic;
+        color: var(--text-secondary);
+      }
+      .error {
+        color: var(--danger-color);
+        font-weight: 600;
+        margin-top: 1rem;
+      }
+      .filters {
+        margin-top: 1rem;
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .filters input {
+        padding: 8px 12px;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        min-width: 300px;
+      }
+      .chart-wrapper h2 {
+        margin-bottom: 0.75rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="navbar">
+      <div class="logo"><h2>Manager's Panel</h2></div>
+      <nav>
+        <ul>
+          <li><a href="/manager/dashboard.html">Dashboard</a></li>
+          <li><a href="/manager/users.html">User Management</a></li>
+          <li><a href="/manager/services.html">User Profiles</a></li>
+          <li><a href="/manager/orders.html">Orders & Bookings</a></li>
+          <li><a href="/manager/payments.html">Payments</a></li>
+          <li><a class="active" href="/manager/support.html">Support</a></li>
+          <li><a href="/logout">Logout</a></li>
+        </ul>
+      </nav>
+    </div>
+
+    <div class="main-content">
+      <h1>Support Center</h1>
+      <div class="support-wrapper charts-container">
+        <div class="chart-wrapper" style="width: 100%">
+          <h2>Contact Form Submissions</h2>
+          <div class="filters">
+            <input
+              type="text"
+              id="searchBox"
+              placeholder="Search (name, email, subject)..."
+            />
+          </div>
+          <div id="status" class="ticket-meta">Loading tickets...</div>
+          <div id="tickets" class="tickets-grid"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let allTickets = [];
+
+      function ticketCard(t) {
+        const verified = t.verifiedUser
+          ? '<span style="color:green;font-weight:bold;">(Verified User)</span>'
+          : '<span style="color:gray;">(Guest)</span>';
+        return `<div class="stat-card" data-id="${t._id}" data-name="${(
+          t.name || ""
+        ).toLowerCase()}" data-email="${(
+          t.email || ""
+        ).toLowerCase()}" data-subject="${(t.subject || "").toLowerCase()}">
+        <h3>#${t._id.slice(-6)}</h3>
+        <p><strong>Name:</strong> ${t.name || "N/A"}</p>
+        <p><strong>Email:</strong> ${t.email || "N/A"} ${verified}</p>
+        <p><strong>Subject:</strong> ${t.subject || "N/A"}</p>
+        <p><strong>Message:</strong> ${t.message || ""}</p>
+        <button class="respond-btn" data-action="respond" data-id="${
+          t._id
+        }">Responded</button>
+      </div>`;
+      }
+
+      function renderTickets(list) {
+        const wrap = document.getElementById("tickets");
+        if (!list.length) {
+          wrap.innerHTML = '<p class="empty">No support tickets available.</p>';
+          return;
+        }
+        wrap.innerHTML = list.map(ticketCard).join("");
+      }
+
+      function applySearch() {
+        const term = document
+          .getElementById("searchBox")
+          .value.trim()
+          .toLowerCase();
+        if (!term) {
+          renderTickets(allTickets);
+          return;
+        }
+        const filtered = allTickets.filter(
+          (t) =>
+            (t.name || "").toLowerCase().includes(term) ||
+            (t.email || "").toLowerCase().includes(term) ||
+            (t.subject || "").toLowerCase().includes(term)
+        );
+        renderTickets(filtered);
+      }
+
+      async function loadTickets() {
+        const status = document.getElementById("status");
+        try {
+          const res = await fetch("/manager/api/support", {
+            headers: { Accept: "application/json" },
+          });
+          if (res.status === 401 || res.status === 403) {
+            window.location.href = "/login";
+            return;
+          }
+          if (!res.ok) throw new Error("Failed");
+          const data = await res.json();
+          allTickets = data.submissions || [];
+          status.textContent = `${allTickets.length} ticket(s)`;
+          renderTickets(allTickets);
+        } catch (err) {
+          console.error(err);
+          status.className = "error";
+          status.textContent = "Error loading support tickets.";
+        }
+      }
+
+      async function respond(id, btn) {
+        btn.disabled = true;
+        try {
+          const res = await fetch(`/support/respond/${id}`, {
+            method: "DELETE",
+          });
+          if (!res.ok) throw new Error("Failed");
+          // Remove from local array & re-render
+          allTickets = allTickets.filter((t) => t._id !== id);
+          applySearch();
+        } catch (err) {
+          console.error(err);
+          btn.disabled = false;
+          alert("Failed to mark as responded");
+        }
+      }
+
+      document.addEventListener("click", (e) => {
+        if (e.target.matches('[data-action="respond"]')) {
+          const id = e.target.getAttribute("data-id");
+          respond(id, e.target);
+        }
+      });
+
+      document
+        .getElementById("searchBox")
+        .addEventListener("input", applySearch);
+
+      loadTickets();
+    </script>
+  </body>
+</html>
