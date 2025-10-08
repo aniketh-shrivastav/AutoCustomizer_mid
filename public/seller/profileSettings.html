@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Profile Settings | AutoCustomizer</title>
+    <link href="/Css/CStyle.css" rel="stylesheet" />
+    <link href="/Css/sellerBase.css" rel="stylesheet" />
+    <style>
+      body {
+        font-family: "Poppins", sans-serif;
+        background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
+        margin: 0;
+      }
+      header {
+        background: linear-gradient(135deg, #6a11cb, #2575fc);
+        color: #fff;
+        padding: 30px 20px;
+        text-align: center;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+      header h1 {
+        margin: 0;
+        font-size: 2.5em;
+        font-weight: 600;
+      }
+      /* Let shared seller-main class control width */
+      main {
+        padding: 20px;
+        margin: 0 auto;
+      }
+      .profile-section {
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        padding: 25px;
+        max-width: 800px;
+        margin: 30px auto;
+        transition: 0.3s;
+      }
+      .profile-section:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+      }
+      .profile-form .form-group {
+        margin-bottom: 20px;
+      }
+      .profile-form label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: #6a11cb;
+      }
+      .profile-form input,
+      .profile-form textarea {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        font-family: "Poppins", sans-serif;
+        font-size: 1em;
+        transition: border 0.3s, box-shadow 0.3s;
+      }
+      .profile-form input:focus,
+      .profile-form textarea:focus {
+        outline: none;
+        border-color: #6a11cb;
+        box-shadow: 0 0 0 2px rgba(106, 17, 203, 0.2);
+      }
+      .profile-form textarea {
+        resize: vertical;
+        min-height: 80px;
+      }
+      .profile-form button {
+        background: linear-gradient(135deg, #6a11cb, #2575fc);
+        color: #fff;
+        border: none;
+        padding: 15px;
+        width: 100%;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 1em;
+        transition: 0.3s;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+      .profile-form button:hover {
+        background: linear-gradient(135deg, #5c0fb3, #2169e8);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+      }
+      footer {
+        background: linear-gradient(135deg, #6a11cb, #2575fc);
+        color: #fff;
+        text-align: center;
+        padding: 15px;
+        position: fixed;
+        bottom: 0;
+        width: 100%;
+        box-shadow: 0 -4px 6px rgba(0, 0, 0, 0.1);
+      }
+      @media (max-width: 768px) {
+        .profile-section {
+          margin: 20px 15px;
+        }
+        header h1 {
+          font-size: 2em;
+        }
+      }
+    </style>
+  </head>
+  <body class="seller-page">
+    <nav class="navbar">
+      <div class="brand">AutoCustomizer</div>
+      <ul>
+        <li><a href="/seller/dashboard.html">Dashboard</a></li>
+        <li>
+          <a href="/seller/profileSettings.html" class="active"
+            >Profile Settings</a
+          >
+        </li>
+        <li><a href="/seller/productmanagement">Products</a></li>
+        <li><a href="/seller/orders.html">Orders</a></li>
+        <li><a href="/seller/earnings-payouts">Earnings</a></li>
+        <li><a href="/seller/reviews">Reviews</a></li>
+        <li><a href="/logout">Logout</a></li>
+      </ul>
+    </nav>
+    <header><h1>Profile Settings</h1></header>
+    <main class="seller-main">
+      <section class="profile-section">
+        <form id="profileForm" class="profile-form" novalidate>
+          <div class="form-group">
+            <label for="storeName">Store Name:</label>
+            <input type="text" id="storeName" name="storeName" required />
+          </div>
+          <div class="form-group">
+            <label for="ownerName">Owner Name:</label>
+            <input type="text" id="ownerName" name="ownerName" required />
+          </div>
+          <div class="form-group">
+            <label for="contactEmail">Contact Email:</label>
+            <input
+              type="email"
+              id="contactEmail"
+              name="contactEmail"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="phone">Phone Number:</label>
+            <input type="tel" id="phone" name="phone" required />
+          </div>
+          <div class="form-group">
+            <label for="address">Store Address:</label>
+            <textarea id="address" name="address" rows="3" required></textarea>
+          </div>
+          <button type="submit">Update Profile</button>
+        </form>
+        <p
+          id="statusMsg"
+          style="text-align: center; margin-top: 15px; font-weight: 600"
+        ></p>
+      </section>
+    </main>
+    <footer class="seller-footer">
+      <p>&copy; 2025 AutoCustomizer | All Rights Reserved</p>
+    </footer>
+    <script>
+      async function loadProfile() {
+        try {
+          const res = await fetch("/seller/api/profileSettings", {
+            headers: { Accept: "application/json" },
+          });
+          if (res.status === 401) {
+            window.location = "/login";
+            return;
+          }
+          const data = await res.json();
+          if (!data.success) throw new Error(data.message || "Failed");
+          const p = data.profile;
+          storeName.value = p.storeName || "";
+          ownerName.value = p.ownerName || "";
+          contactEmail.value = p.contactEmail || "";
+          phone.value = p.phone || "";
+          address.value = p.address || "";
+        } catch (e) {
+          console.error(e);
+          document.getElementById("statusMsg").textContent =
+            "Failed to load profile";
+          document.getElementById("statusMsg").style.color = "red";
+        }
+      }
+
+      function validateForm() {
+        if (!storeName.value.trim()) {
+          alert("Store Name required");
+          return false;
+        }
+        if (!ownerName.value.trim()) {
+          alert("Owner Name required");
+          return false;
+        }
+        const phoneRegex = /^\d{10}$/;
+        if (!phoneRegex.test(phone.value)) {
+          alert("Phone must be 10 digits");
+          return false;
+        }
+        const emailRegex = /^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,4}$/;
+        if (!emailRegex.test(contactEmail.value)) {
+          alert("Email invalid or not lowercase");
+          return false;
+        }
+        return true;
+      }
+
+      document
+        .getElementById("profileForm")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          if (!validateForm()) return;
+          const body = {
+            storeName: storeName.value,
+            ownerName: ownerName.value,
+            contactEmail: contactEmail.value,
+            phone: phone.value,
+            address: address.value,
+          };
+          try {
+            const res = await fetch("/seller/api/profileSettings", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(body),
+            });
+            const out = await res.json();
+            const msg = document.getElementById("statusMsg");
+            if (!out.success) {
+              msg.textContent = out.message || "Update failed";
+              msg.style.color = "red";
+              return;
+            }
+            msg.textContent = "Profile updated successfully";
+            msg.style.color = "green";
+          } catch (err) {
+            console.error(err);
+            alert("Update failed");
+          }
+        });
+
+      document.addEventListener("DOMContentLoaded", loadProfile);
+    </script>
+  </body>
+</html>

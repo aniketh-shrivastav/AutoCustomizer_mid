@@ -86,35 +86,11 @@ router.get("/dashboard", isAuthenticated, isSeller, (req, res) => {
 
 // --- Profile Settings (unchanged) ---
 router.get("/profileSettings", isAuthenticated, isSeller, async (req, res) => {
-  try {
-    const sellerProfile = await SellerProfile.findOne({
-      sellerId: req.session.user.id,
-    }).populate("sellerId", "name email phone");
-    if (!sellerProfile) {
-      return res.render("Seller/profileSettings", {
-        profile: {
-          storeName: req.session.user.name,
-          ownerName: "",
-          contactEmail: req.session.user.email,
-          phone: req.session.user.phone,
-          address: "",
-        },
-      });
-    }
-
-    res.render("Seller/profileSettings", {
-      profile: {
-        storeName: sellerProfile.sellerId.name,
-        ownerName: sellerProfile.ownerName,
-        contactEmail: sellerProfile.sellerId.email,
-        phone: sellerProfile.sellerId.phone,
-        address: sellerProfile.address,
-      },
-    });
-  } catch (error) {
-    console.error("Error fetching seller profile:", error);
-    res.status(500).send("Error loading profile settings.");
-  }
+  const filePath = path.join(
+    __dirname,
+    "../public/seller/profileSettings.html"
+  );
+  return res.sendFile(filePath);
 });
 
 router.post("/profileSettings", isAuthenticated, isSeller, async (req, res) => {
@@ -151,6 +127,87 @@ router.post("/profileSettings", isAuthenticated, isSeller, async (req, res) => {
   }
 });
 
+// JSON API: Get seller profile settings
+router.get(
+  "/api/profileSettings",
+  isAuthenticated,
+  isSeller,
+  async (req, res) => {
+    try {
+      const sellerProfile = await SellerProfile.findOne({
+        sellerId: req.session.user.id,
+      }).populate("sellerId", "name email phone");
+
+      if (!sellerProfile) {
+        return res.json({
+          success: true,
+          profile: {
+            storeName: req.session.user.name,
+            ownerName: "",
+            contactEmail: req.session.user.email,
+            phone: req.session.user.phone || "",
+            address: "",
+          },
+        });
+      }
+      res.json({
+        success: true,
+        profile: {
+          storeName: sellerProfile.sellerId.name,
+          ownerName: sellerProfile.ownerName || "",
+          contactEmail: sellerProfile.sellerId.email,
+          phone: sellerProfile.sellerId.phone || "",
+          address: sellerProfile.address || "",
+        },
+      });
+    } catch (err) {
+      console.error("Profile settings GET API error", err);
+      res.status(500).json({ success: false, message: "Server error" });
+    }
+  }
+);
+
+// JSON API: Update seller profile settings
+router.post(
+  "/api/profileSettings",
+  isAuthenticated,
+  isSeller,
+  async (req, res) => {
+    try {
+      const { storeName, contactEmail, phone, ownerName, address } = req.body;
+
+      if (!storeName?.trim() || !ownerName?.trim()) {
+        return res
+          .status(400)
+          .json({ success: false, message: "Store and Owner name required" });
+      }
+      const phoneRegex = /^\d{10}$/;
+      if (phone && !phoneRegex.test(phone)) {
+        return res
+          .status(400)
+          .json({ success: false, message: "Phone must be 10 digits" });
+      }
+
+      await User.findByIdAndUpdate(req.session.user.id, {
+        name: storeName,
+        email: contactEmail,
+        phone: phone,
+      });
+
+      await SellerProfile.findOneAndUpdate(
+        { sellerId: req.session.user.id },
+        { ownerName, address, sellerId: req.session.user.id },
+        { new: true, upsert: true }
+      );
+
+      res.json({ success: true, message: "Profile updated" });
+    } catch (err) {
+      console.error("Profile settings POST API error", err);
+      res.status(500).json({ success: false, message: "Server error" });
+    }
+  }
+);
+
 // --- Orders (unchanged) ---
 const ordersFilePath = path.join(__dirname, "../data", "orders.json");
 const getOrders = () => JSON.parse(fs.readFileSync(ordersFilePath, "utf8"));
@@ -158,17 +215,40 @@ const saveOrders = (orders) =>
   fs.writeFileSync(ordersFilePath, JSON.stringify(orders, null, 2), "utf8");
 
 router.get("/orders", isAuthenticated, isSeller, async (req, res) => {
+  const filePath = path.join(__dirname, "../public/seller/orders.html");
+  return res.sendFile(filePath);
+});
+
+// JSON API for seller orders (static HTML hydration)
+router.get("/api/orders", isAuthenticated, isSeller, async (req, res) => {
   try {
     const sellerId = req.session.user.id;
-
     const orders = await Order.find({ "items.seller": sellerId })
       .populate("userId", "name email")
-      .sort({ placedAt: -1 });
-
-    res.render("Seller/orderManagement", { orders });
+      .sort({ placedAt: -1 })
+      .lean();
+    const shaped = [];
+    orders.forEach((order) => {
+      (order.items || []).forEach((item) => {
+        if (String(item.seller) === String(sellerId)) {
+          shaped.push({
+            orderId: order._id,
+            customerName: order.userId?.name || "Unknown",
+            customerEmail: order.userId?.email || "",
+            productName: item.name,
+            quantity: item.quantity,
+            deliveryAddress: order.deliveryAddress,
+            district: order.district,
+            status: order.orderStatus,
+            placedAt: order.placedAt,
+          });
+        }
+      });
+    });
+    res.json({ success: true, orders: shaped });
   } catch (err) {
-    console.error(err);
-    res.status(500).send("Error loading orders");
+    console.error("Seller orders API error", err);
+    res.status(500).json({ success: false, message: "Failed to load orders" });
   }
 });
 

@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Order Management | AutoCustomizer</title>
+    <link href="/Css/CStyle.css" rel="stylesheet" />
+    <link href="/newstyle.css" rel="stylesheet" />
+    <link href="/Css/sellerBase.css" rel="stylesheet" />
+  </head>
+  <body class="seller-page">
+    <nav class="navbar">
+      <div class="brand">AutoCustomizer</div>
+      <ul>
+        <li><a href="/seller/dashboard.html">Dashboard</a></li>
+        <li><a href="/seller/profileSettings">Profile Settings</a></li>
+        <li><a href="/seller/productmanagement">Products</a></li>
+        <li><a href="/seller/orders.html" class="active">Orders</a></li>
+        <li><a href="/seller/earnings-payouts">Earnings</a></li>
+        <li><a href="/seller/reviews">Reviews</a></li>
+        <li><a href="/logout">Logout</a></li>
+      </ul>
+    </nav>
+
+    <header>
+      <h1>Order Management</h1>
+    </header>
+
+    <main class="seller-main">
+      <div
+        class="container"
+        style="
+          background: #fff;
+          border-radius: 12px;
+          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+          padding: 20px;
+        "
+      >
+        <h2 style="margin-top: 0; color: #6a11cb">Orders</h2>
+        <div style="overflow-x: auto">
+          <table
+            id="ordersTable"
+            style="width: 100%; border-collapse: collapse"
+          >
+            <thead>
+              <tr>
+                <th style="padding: 10px; background: #6a11cb; color: #fff">
+                  Order ID
+                </th>
+                <th style="padding: 10px; background: #6a11cb; color: #fff">
+                  Customer
+                </th>
+                <th style="padding: 10px; background: #6a11cb; color: #fff">
+                  Product
+                </th>
+                <th style="padding: 10px; background: #6a11cb; color: #fff">
+                  Qty
+                </th>
+                <th style="padding: 10px; background: #6a11cb; color: #fff">
+                  Delivery Address
+                </th>
+                <th style="padding: 10px; background: #6a11cb; color: #fff">
+                  Status
+                </th>
+                <th style="padding: 10px; background: #6a11cb; color: #fff">
+                  Action
+                </th>
+              </tr>
+            </thead>
+            <tbody id="ordersBody">
+              <tr>
+                <td colspan="7" style="text-align: center; padding: 20px">
+                  Loading...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+
+    <footer class="seller-footer">
+      <p>&copy; 2025 AutoCustomizer | All Rights Reserved</p>
+    </footer>
+
+    <script>
+      function statusBadge(status) {
+        const cls = status.toLowerCase();
+        return `<span class="status ${cls}" style="padding:6px 12px;border-radius:16px;color:#fff;display:inline-block;background:${badgeColor(
+          cls
+        )};font-size:0.85rem;">${status}</span>`;
+      }
+      function badgeColor(s) {
+        switch (s) {
+          case "pending":
+            return "#FFC107";
+          case "confirmed":
+            return "#7e57c2";
+          case "shipped":
+            return "#2196F3";
+          case "delivered":
+            return "#4CAF50";
+          case "cancelled":
+            return "#e53935";
+          default:
+            return "#546e7a";
+        }
+      }
+
+      async function loadOrders() {
+        try {
+          const res = await fetch("/seller/api/orders", {
+            headers: { Accept: "application/json" },
+          });
+          if (res.status === 401) {
+            window.location = "/login";
+            return;
+          }
+          const data = await res.json();
+          const tbody = document.getElementById("ordersBody");
+          if (!data.success) throw new Error(data.message || "Failed");
+          if (!data.orders.length) {
+            tbody.innerHTML =
+              '<tr><td colspan="7" style="text-align:center;color:#888;padding:25px;">No orders available.</td></tr>';
+            return;
+          }
+          tbody.innerHTML = "";
+          data.orders.forEach((o) => {
+            const disabled =
+              o.status === "delivered" || o.status === "cancelled";
+            const row = document.createElement("tr");
+            row.innerHTML = `
+            <td style="padding:8px;border-bottom:1px solid #ddd;">${
+              o.orderId
+            }</td>
+            <td style="padding:8px;border-bottom:1px solid #ddd;">${
+              o.customerName
+            }</td>
+            <td style="padding:8px;border-bottom:1px solid #ddd;">${
+              o.productName
+            }</td>
+            <td style="padding:8px;border-bottom:1px solid #ddd;">${
+              o.quantity
+            }</td>
+            <td style="padding:8px;border-bottom:1px solid #ddd;">${
+              o.deliveryAddress
+            }</td>
+            <td style="padding:8px;border-bottom:1px solid #ddd;">${statusBadge(
+              o.status
+            )}</td>
+            <td style="padding:8px;border-bottom:1px solid #ddd;">
+              <div class="form-inline" style="background:transparent;padding:0;margin:0;">
+                <select data-order-id="${o.orderId}" ${
+              disabled ? "disabled" : ""
+            } style="padding:6px;border-radius:6px;">
+                  ${[
+                    "pending",
+                    "confirmed",
+                    "shipped",
+                    "delivered",
+                    "cancelled",
+                  ]
+                    .map(
+                      (s) =>
+                        `<option value="${s}" ${
+                          o.status === s ? "selected" : ""
+                        }>${capitalize(s)}</option>`
+                    )
+                    .join("")}
+                </select>
+                <button class="btn" data-update="${o.orderId}" ${
+              disabled ? "disabled" : ""
+            } style="margin-left:8px;">Update</button>
+              </div>
+            </td>`;
+            tbody.appendChild(row);
+          });
+          attachHandlers();
+        } catch (err) {
+          console.error(err);
+          document.getElementById("ordersBody").innerHTML =
+            '<tr><td colspan="7" style="text-align:center;color:red;padding:25px;">Failed to load orders.</td></tr>';
+        }
+      }
+
+      function capitalize(s) {
+        return s.charAt(0).toUpperCase() + s.slice(1);
+      }
+
+      function attachHandlers() {
+        document.querySelectorAll("button[data-update]").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            const orderId = btn.getAttribute("data-update");
+            const select = document.querySelector(
+              `select[data-order-id="${orderId}"]`
+            );
+            const newStatus = select.value;
+            try {
+              const res = await fetch(`/seller/orders/${orderId}/status`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ newStatus }),
+              });
+              const out = await res.json();
+              if (!out.success) {
+                alert("Failed to update status");
+                return;
+              }
+              // Update badge in row
+              const badgeCell = select.closest("tr").children[5];
+              badgeCell.innerHTML = statusBadge(newStatus);
+              if (["delivered", "cancelled"].includes(newStatus)) {
+                select.disabled = true;
+                btn.disabled = true;
+              }
+              alert("Order status updated successfully!");
+            } catch (e) {
+              console.error(e);
+              alert("Error updating order");
+            }
+          });
+        });
+      }
+
+      document.addEventListener("DOMContentLoaded", loadOrders);
+    </script>
+  </body>
+</html>
