@@ -102,78 +102,73 @@
     </div>
 
     <script>
-      // Validation (mirrors original EJS script)
-      document.addEventListener("DOMContentLoaded", function () {
-        const form = document.getElementById("contactForm");
-        form.addEventListener("submit", function (event) {
-          const nameInput = document.getElementById("name");
-          const emailInput = document.getElementById("email");
-          const trimmedName = nameInput.value.trim();
-          const nameRegex = /^[A-Za-z\s.-]+$/;
-          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    document.addEventListener("DOMContentLoaded", function() {
+      const form = document.querySelector("form");
+      const fields = {
+        name: document.getElementById("name"),
+        email: document.getElementById("email"),
+        subject: document.getElementById("subject"),
+        message: document.getElementById("message")
+      };
 
-          if (!nameRegex.test(nameInput.value)) {
-            alert("Name should not contain numbers or special characters.");
-            event.preventDefault();
-            return;
-          }
-          if (!trimmedName || !nameRegex.test(trimmedName)) {
-            alert(
-              "Name must contain letters and cannot be empty or just spaces."
-            );
-            event.preventDefault();
-            return;
-          }
-          if (!emailRegex.test(emailInput.value)) {
-            alert(
-              "Please enter a valid email in the format: example@domain.com"
-            );
-            event.preventDefault();
-            return;
-          }
-          if (/[A-Z]/.test(emailInput.value)) {
-            alert("Email must not contain uppercase letters.");
-            event.preventDefault();
-            return;
-          }
-        });
+      const nameRegex = /^[A-Za-z\s.-]+$/;
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+      Object.values(fields).forEach(f => {
+        const err = document.createElement("small");
+        err.classList.add("text-danger", "error-msg");
+        err.style.display = "none";
+        f.insertAdjacentElement("afterend", err);
+
+        f.addEventListener("blur", () => validateField(f));
       });
 
-      // Submission success alert via query flag (same behavior)
-      document.addEventListener("DOMContentLoaded", function () {
-        const params = new URLSearchParams(window.location.search);
-        if (params.get("submitted") === "true") {
-          alert("Thank you! Your message has been submitted.");
+      form.addEventListener("submit", function(event) {
+        let valid = true;
+        Object.values(fields).forEach(f => {
+          if (!validateField(f)) valid = false;
+        });
+        if (!valid) event.preventDefault();
+      });
+
+      function validateField(input) {
+        const value = input.value.trim();
+        const error = input.nextElementSibling;
+        let msg = "";
+
+        if (input.id === "name" && (!value || !nameRegex.test(value)))
+          msg = "Only letters and spaces allowed.";
+        else if (input.id === "email" && !emailRegex.test(value))
+          msg = "Enter a valid lowercase email.";
+        else if (input.id === "email" && /[A-Z]/.test(value))
+          msg = "Email must not contain uppercase letters.";
+        else if (input.id === "subject" && value.length < 3)
+          msg = "Subject must be at least 3 characters.";
+        else if (input.id === "message" && value.length < 10)
+          msg = "Message must be at least 10 characters.";
+
+        if (msg) {
+          input.style.border = "2px solid red";
+          error.textContent = msg;
+          error.style.display = "block";
+          return false;
+        } else {
+          input.style.border = "2px solid green";
+          error.style.display = "none";
+          return true;
         }
+      }
+
+      // Show success alert after redirect
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("submitted") === "true") {
+        alert("Thank you! Your message has been submitted.");
         if (window.history.replaceState) {
           const cleanUrl = window.location.origin + window.location.pathname;
           window.history.replaceState(null, null, cleanUrl);
         }
-      });
-
-      // Session nav adjustments + prefill name/email if logged in
-      (async function () {
-        try {
-          const res = await fetch("/api/session", {
-            headers: { Accept: "application/json" },
-          });
-          if (!res.ok) return;
-          const data = await res.json();
-          if (data.authenticated) {
-            document.getElementById("loginLink")?.remove();
-            document.getElementById("signupLink")?.remove();
-            if (data.user) {
-              const nameEl = document.getElementById("name");
-              const emailEl = document.getElementById("email");
-              if (nameEl && !nameEl.value) nameEl.value = data.user.name || "";
-              if (emailEl && !emailEl.value)
-                emailEl.value = data.user.email || "";
-            }
-          }
-        } catch (err) {
-          console.warn("Session check failed", err);
-        }
-      })();
+      }
+    });
     </script>
   </body>
 </html>
