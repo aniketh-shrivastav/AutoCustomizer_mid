@@ -40,6 +40,7 @@
         <select id="district" required>
           <option value="">Loading districts...</option>
         </select>
+        <span class="error-msg" data-for="district"></span>
 
         <label for="service-provider"
           >Service Provider:(Go through max service providers so that you get a
@@ -48,9 +49,11 @@
         <select id="service-provider" required disabled>
           <option value="">Select Service Provider</option>
         </select>
+        <span class="error-msg" data-for="service-provider"></span>
 
         <label for="service">Select Services:</label>
         <select id="service" multiple required size="5" disabled></select>
+        <span class="error-msg" data-for="service"></span>
         <p
           id="serviceCostDisplay"
           style="margin: 10px 0; font-weight: bold"
@@ -61,6 +64,7 @@
           guaranteed)</label
         >
         <input type="date" id="date" required />
+        <span class="error-msg" data-for="date"></span>
 
         <label for="car-model">Car Model:(Company and Model)</label>
         <input
@@ -69,6 +73,7 @@
           required
           placeholder="Enter your car model"
         />
+        <span class="error-msg" data-for="car-model"></span>
 
         <label for="phone">Phone Number:</label>
         <input
@@ -77,6 +82,7 @@
           required
           placeholder="Enter 10-digit number"
         />
+        <span class="error-msg" data-for="phone"></span>
 
         <label for="address">Address:</label>
         <textarea
@@ -85,6 +91,7 @@
           placeholder="Enter your address"
           required
         ></textarea>
+        <span class="error-msg" data-for="address"></span>
 
         <label for="description"
           >Describe Your Service Needs:(Ensure you have Vehicle number else the
@@ -96,6 +103,7 @@
           placeholder="Tell us more about your requirements..."
           required
         ></textarea>
+        <span class="error-msg" data-for="description"></span>
 
         <button type="submit">Book Now</button>
       </form>
@@ -129,6 +137,21 @@
       </div>
     </footer>
 
+    <style>
+      .error-msg {
+        display: block;
+        font-size: 0.8rem;
+        color: #e53935;
+        margin-top: 4px;
+        min-height: 14px;
+      }
+      input.invalid,
+      select.invalid,
+      textarea.invalid {
+        border-color: #e53935 !important;
+        box-shadow: 0 0 0 1px #e53935;
+      }
+    </style>
     <script>
       let allProviders = [];
       let serviceCostMap = {};
@@ -151,6 +174,125 @@
 
       function getSelectedServices() {
         return Array.from(serviceSelect.selectedOptions).map((o) => o.value);
+      }
+
+      // --- Inline validation helpers ---
+      function setError(el, msg) {
+        const id = el.id;
+        const span = document.querySelector(`.error-msg[data-for="${id}"]`);
+        if (span) span.textContent = msg || "";
+        el.classList.toggle("invalid", !!msg);
+        if (!msg) el.removeAttribute("aria-describedby");
+        else
+          el.setAttribute(
+            "aria-describedby",
+            span?.id || (span.id = id + "-err")
+          );
+      }
+
+      function validateDistrict() {
+        if (!districtSelect.value) {
+          setError(districtSelect, "Please select your district");
+          return false;
+        }
+        setError(districtSelect, "");
+        return true;
+      }
+      function validateProvider() {
+        if (!providerSelect.value) {
+          setError(providerSelect, "Please select a service provider");
+          return false;
+        }
+        setError(providerSelect, "");
+        return true;
+      }
+      function validateServices() {
+        const sel = getSelectedServices();
+        if (!sel.length) {
+          setError(serviceSelect, "Select at least one service");
+          return false;
+        }
+        setError(serviceSelect, "");
+        return true;
+      }
+      function validateDate() {
+        const val = dateInput.value;
+        if (!val) {
+          setError(dateInput, "Please select a date");
+          return false;
+        }
+        const chosen = new Date(val);
+        const min = new Date(dateInput.min);
+        if (chosen < min) {
+          setError(dateInput, "Date must be at least 7 days from today");
+          return false;
+        }
+        setError(dateInput, "");
+        return true;
+      }
+      function validatePhone() {
+        const val = phoneInput.value.trim();
+        if (!val) {
+          setError(phoneInput, "Phone number is required");
+          return false;
+        }
+        if (/\s/.test(val)) {
+          setError(phoneInput, "Phone cannot contain spaces");
+          return false;
+        }
+        if (!/^\d+$/.test(val)) {
+          setError(phoneInput, "Phone can only contain digits");
+          return false;
+        }
+        if (val.length !== 10) {
+          setError(phoneInput, "Phone number must be exactly 10 digits");
+          return false;
+        }
+        setError(phoneInput, "");
+        return true;
+      }
+      function validateCarModel() {
+        const val = carModelInput.value.trim();
+        if (!val) {
+          setError(carModelInput, "Car Model is required");
+          return false;
+        }
+        if (val.length < 2) {
+          setError(carModelInput, "Car Model seems too short");
+          return false;
+        }
+        setError(carModelInput, "");
+        return true;
+      }
+      function validateAddress() {
+        const val = addressInput.value.trim();
+        if (!val) {
+          setError(addressInput, "Address is required");
+          return false;
+        }
+        if (val.length < 10) {
+          setError(
+            addressInput,
+            "Please provide a more detailed address (min 10 chars)"
+          );
+          return false;
+        }
+        setError(addressInput, "");
+        return true;
+      }
+      function validateDescription() {
+        const el = document.getElementById("description");
+        const val = el.value.trim();
+        if (!val) {
+          setError(el, "Please describe your service needs");
+          return false;
+        }
+        if (val.length < 10) {
+          setError(el, "Description is too short (min 10 chars)");
+          return false;
+        }
+        setError(el, "");
+        return true;
       }
 
       function updateCostDisplay() {
@@ -205,6 +347,9 @@
 
         if (!selectedDistrict) {
           providerSelect.disabled = true;
+          setError(providerSelect, "");
+          setError(serviceSelect, "");
+          validateDistrict();
           return;
         }
 
@@ -215,6 +360,9 @@
           providerSelect.innerHTML += `<option value="${p._id}" data-name="${p.name}">${p.name}</option>`;
         });
         providerSelect.disabled = filtered.length === 0;
+        setError(providerSelect, "");
+        setError(serviceSelect, "");
+        validateDistrict();
       });
 
       // Provider change → services
@@ -229,12 +377,101 @@
           serviceSelect.innerHTML += `<option value="${s.name}">${s.name}</option>`;
         });
         serviceSelect.disabled = false;
+        validateProvider();
+        setError(serviceSelect, "");
       });
 
-      serviceSelect.addEventListener("change", updateCostDisplay);
+      serviceSelect.addEventListener("change", () => {
+        updateCostDisplay();
+        validateServices();
+      });
+
+      // Blur/Input validation bindings
+      [
+        districtSelect,
+        providerSelect,
+        serviceSelect,
+        dateInput,
+        phoneInput,
+        carModelInput,
+        addressInput,
+      ].forEach((el) => {
+        el.addEventListener("blur", () => {
+          switch (el.id) {
+            case "district":
+              validateDistrict();
+              break;
+            case "service-provider":
+              validateProvider();
+              break;
+            case "service":
+              validateServices();
+              break;
+            case "date":
+              validateDate();
+              break;
+            case "phone":
+              validatePhone();
+              break;
+            case "car-model":
+              validateCarModel();
+              break;
+            case "address":
+              validateAddress();
+              break;
+          }
+        });
+        el.addEventListener("input", () => {
+          if (!el.classList.contains("invalid")) return;
+          switch (el.id) {
+            case "district":
+              validateDistrict();
+              break;
+            case "service-provider":
+              validateProvider();
+              break;
+            case "service":
+              validateServices();
+              break;
+            case "date":
+              validateDate();
+              break;
+            case "phone":
+              validatePhone();
+              break;
+            case "car-model":
+              validateCarModel();
+              break;
+            case "address":
+              validateAddress();
+              break;
+          }
+        });
+      });
+      const descriptionEl = document.getElementById("description");
+      descriptionEl.addEventListener("blur", validateDescription);
+      descriptionEl.addEventListener("input", () => {
+        if (descriptionEl.classList.contains("invalid")) validateDescription();
+      });
 
       bookingForm.addEventListener("submit", (e) => {
         e.preventDefault();
+        const validations = [
+          validateDistrict(),
+          validateProvider(),
+          validateServices(),
+          validateDate(),
+          validatePhone(),
+          validateCarModel(),
+          validateAddress(),
+          validateDescription(),
+        ];
+        if (validations.some((v) => v === false)) {
+          const firstInvalid = bookingForm.querySelector(".invalid");
+          if (firstInvalid) firstInvalid.focus();
+          return;
+        }
+
         const selectedServices = getSelectedServices();
         const selectedDistrict = districtSelect.value;
         const selectedDate = dateInput.value;
@@ -244,24 +481,6 @@
         const description = document.getElementById("description").value.trim();
         const carModel = carModelInput.value.trim();
         const address = addressInput.value.trim();
-
-        const phoneRegex = /^\d{10}$/;
-        if (!phoneRegex.test(phone)) {
-          alert("Please enter a valid 10-digit phone number.");
-          return;
-        }
-        if (!providerOption || !providerOption.value) {
-          alert("Please select a service provider.");
-          return;
-        }
-        if (!selectedDate) {
-          alert("Please select a date for the booking.");
-          return;
-        }
-        if (!carModel || !address) {
-          alert("Please fill in all required fields.");
-          return;
-        }
 
         // Calculate total cost
         let totalCost = 0;
