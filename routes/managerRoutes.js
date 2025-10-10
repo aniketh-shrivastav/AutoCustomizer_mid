@@ -413,27 +413,32 @@ router.post(
   }
 );
 
-router.post("/users/restore/:id", isAuthenticated, isManager, async (req, res) => {
-  try {
-    const userId = req.params.id;
-    console.log("Restoring user with ID:", userId);
+router.post(
+  "/users/restore/:id",
+  isAuthenticated,
+  isManager,
+  async (req, res) => {
+    try {
+      const userId = req.params.id;
+      console.log("Restoring user with ID:", userId);
 
-    const user = await User.findById(userId);
-    if (!user) {
-      return res
-        .status(404)
-        .json({ success: false, message: "User not found" });
+      const user = await User.findById(userId);
+      if (!user) {
+        return res
+          .status(404)
+          .json({ success: false, message: "User not found" });
+      }
+
+      user.suspended = false; // Re-activate the user
+      await user.save();
+
+      res.json({ success: true, message: "User restored successfully" });
+    } catch (error) {
+      console.error("Error restoring user:", error);
+      res.status(500).json({ success: false, message: "Server error" });
     }
-
-    user.suspended = false; // Re-activate the user
-    await user.save();
-
-    res.json({ success: true, message: "User restored successfully" });
-  } catch (error) {
-    console.error("Error restoring user:", error);
-    res.status(500).json({ success: false, message: "Server error" });
   }
-});
+);
 
 // Create a new Manager user (manager-only)
 router.post(
@@ -459,7 +464,10 @@ router.post(
       if (password.length < 6) {
         return res
           .status(400)
-          .json({ success: false, message: "Password must be at least 6 characters" });
+          .json({
+            success: false,
+            message: "Password must be at least 6 characters",
+          });
       }
       if (phone && !/^\d{10}$/.test(String(phone).trim())) {
         return res
