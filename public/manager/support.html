@@ -111,8 +111,8 @@
 
       function ticketCard(t) {
         const verified = t.verifiedUser
-          ? '<span style="color:green;font-weight:bold;">(Verified User)</span>'
-          : '<span style="color:gray;">(Guest)</span>';
+          ? '<span class="badge badge-success">Verified</span>'
+          : '<span class="badge badge-secondary">Guest</span>';
         return `<div class="stat-card" data-id="${t._id}" data-name="${(
           t.name || ""
         ).toLowerCase()}" data-email="${(
@@ -206,6 +206,16 @@
         .getElementById("searchBox")
         .addEventListener("input", applySearch);
 
+      function highlightActiveNav() {
+        const links = document.querySelectorAll(".navbar nav a");
+        const path = window.location.pathname;
+        links.forEach((a) => {
+          const href = a.getAttribute("href");
+          if (href === path) a.classList.add("active");
+        });
+      }
+
+      highlightActiveNav();
       loadTickets();
     </script>
   </body>

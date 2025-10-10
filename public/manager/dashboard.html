@@ -6,75 +6,6 @@
     <title>Admin Dashboard (Static)</title>
     <link rel="stylesheet" href="/styles/admin-consistent.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
-    <style>
-      .product-tabs table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 15px;
-        font-size: 0.95rem;
-        background: #fff;
-        border-radius: 10px;
-        overflow: hidden;
-        box-shadow: 0 0 8px rgba(0, 0, 0, 0.05);
-      }
-      .product-tabs thead {
-        background: #007bff;
-        color: #fff;
-      }
-      .product-tabs th,
-      .product-tabs td {
-        padding: 12px 15px;
-        border-bottom: 1px solid #ddd;
-        text-align: left;
-      }
-      .product-tabs tr:nth-child(even) {
-        background: #f9f9f9;
-      }
-      .product-tabs tr:hover {
-        background: #0e9fe8;
-      }
-      .product-tabs button {
-        background: #007bff;
-        color: #fff;
-        padding: 6px 12px;
-        border: none;
-        border-radius: 6px;
-        margin-right: 5px;
-        cursor: pointer;
-        font-size: 0.85rem;
-      }
-      .product-tabs button:hover {
-        background: #0056b3;
-      }
-      .tabs {
-        margin-bottom: 10px;
-        display: flex;
-        gap: 10px;
-      }
-      .tab-btn {
-        padding: 10px 16px;
-        border: none;
-        border-radius: 12px;
-        background: #e0e0e0;
-        color: #333;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        font-weight: 500;
-      }
-      .tab-btn.active {
-        background: #007bff;
-        color: #fff;
-      }
-      nav ul {
-        list-style: none;
-        display: flex;
-        gap: 15px;
-      }
-      nav a {
-        color: #fff;
-        text-decoration: none;
-      }
-    </style>
   </head>
   <body>
     <div class="navbar">
@@ -188,9 +119,9 @@
 
       function tableRows(products, type) {
         if (!products || !products.length)
-          return "<p>No " + type + " products.</p>";
+          return '<p class="empty-state">No ' + type + " products.</p>";
         return (
-          `<table><thead><tr><th>Image</th><th>Name</th><th>Seller</th><th>Price</th><th>Category</th><th>Brand</th><th>Description</th><th>Stock</th><th>Actions</th></tr></thead><tbody>` +
+          `<div class="table-responsive"><table class="generic-table"><thead><tr><th>Image</th><th>Name</th><th>Seller</th><th>Price</th><th>Category</th><th>Brand</th><th>Description</th><th>Stock</th><th>Actions</th></tr></thead><tbody>` +
           products
             .map(
               (p) => `<tr>
@@ -210,7 +141,7 @@
     </tr>`
             )
             .join("") +
-          "</tbody></table>"
+          "</tbody></table></div>"
         );
       }
 
@@ -225,7 +156,9 @@
         return "";
       }
       function formBtn(id, action, label) {
-        return `<form method="POST" action="/manager/products/${id}/${action}?from=static" style="display:inline;"><button type="submit">${label}</button></form>`;
+        const cls =
+          action === "approve" ? "btn btn-approve" : "btn btn-suspend";
+        return `<form method="POST" action="/manager/products/${id}/${action}?from=static" style="display:inline;"><button type="submit" class="${cls}">${label}</button></form>`;
       }
 
       function renderProductTables(data) {
@@ -255,6 +188,15 @@
             });
           })
         );
+      }
+
+      function highlightActiveNav() {
+        const links = document.querySelectorAll(".navbar nav a");
+        const path = window.location.pathname;
+        links.forEach((a) => {
+          const href = a.getAttribute("href");
+          if (href === path) a.classList.add("active");
+        });
       }
 
       function drawCharts(userCounts) {
@@ -324,6 +266,7 @@
       }
 
       injectNav();
+      highlightActiveNav();
       loadDashboard();
     </script>
   </body>

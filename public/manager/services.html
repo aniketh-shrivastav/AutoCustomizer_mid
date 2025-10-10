@@ -421,6 +421,16 @@
           btn.addEventListener("click", () => filterByRole(btn.dataset.role))
         );
 
+      function highlightActiveNav() {
+        const links = document.querySelectorAll(".navbar nav a");
+        const path = window.location.pathname;
+        links.forEach((a) => {
+          const href = a.getAttribute("href");
+          if (href === path) a.classList.add("active");
+        });
+      }
+
+      highlightActiveNav();
       loadProfiles();
     </script>
   </body>

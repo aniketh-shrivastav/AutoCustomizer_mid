@@ -12,30 +12,6 @@
       .hidden {
         display: none;
       }
-      .btn-cancel {
-        background: #ff4444;
-        color: #fff;
-        border: none;
-        padding: 5px 10px;
-        cursor: pointer;
-        border-radius: 4px;
-      }
-      .btn-restore {
-        background: #28a745;
-        color: #fff;
-        border: none;
-        padding: 5px 10px;
-        cursor: pointer;
-        border-radius: 4px;
-      }
-      .status-cancelled {
-        color: #b91c1c;
-        font-weight: 600;
-      }
-      .status-active {
-        color: #065f46;
-        font-weight: 600;
-      }
       #loading {
         margin-top: 1rem;
       }
@@ -73,36 +49,40 @@
       <div id="loading">Loading data...</div>
 
       <div id="ordersTab" class="tab-panel">
-        <table class="order-table">
-          <thead>
-            <tr>
-              <th>Order ID</th>
-              <th>Seller</th>
-              <th>Customer</th>
-              <th>Products</th>
-              <th>Status</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody id="ordersBody"></tbody>
-        </table>
+        <div class="table-responsive">
+          <table class="order-table">
+            <thead>
+              <tr>
+                <th>Order ID</th>
+                <th>Seller</th>
+                <th>Customer</th>
+                <th>Products</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="ordersBody"></tbody>
+          </table>
+        </div>
       </div>
 
       <div id="servicesTab" class="tab-panel hidden">
-        <table class="order-table">
-          <thead>
-            <tr>
-              <th>Service ID</th>
-              <th>Service Type</th>
-              <th>Description</th>
-              <th>Customer</th>
-              <th>Provider</th>
-              <th>Status</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody id="servicesBody"></tbody>
-        </table>
+        <div class="table-responsive">
+          <table class="order-table">
+            <thead>
+              <tr>
+                <th>Service ID</th>
+                <th>Service Type</th>
+                <th>Description</th>
+                <th>Customer</th>
+                <th>Provider</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="servicesBody"></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -122,43 +102,41 @@
       function orderRow(order, item) {
         const seller = item.seller || {};
         const user = order.userId || {};
-        const statusCls =
+        const statusBadge =
           order.orderStatus === "cancelled"
-            ? "status-cancelled"
-            : "status-active";
+            ? '<span class="badge badge-danger">Cancelled</span>'
+            : '<span class="badge badge-success">Active</span>';
         const actionBtn =
           order.orderStatus === "cancelled"
-            ? `<button class="btn-restore" data-type="order" data-action="restore" data-id="${order._id}">Restore</button>`
-            : `<button class="btn-cancel" data-type="order" data-action="cancel" data-id="${order._id}">Cancel</button>`;
+            ? `<button class="btn btn-restore" data-type="order" data-action="restore" data-id="${order._id}">Restore</button>`
+            : `<button class="btn btn-suspend" data-type="order" data-action="cancel" data-id="${order._id}">Cancel</button>`;
         return `<tr data-order-id="${order._id}"><td>${order._id}</td><td>${
           seller.name || ""
         } (${seller.email || ""})</td><td>${user.name || ""} (${
           user.email || ""
         })</td><td><ul><li><strong>${item.name || ""}</strong> (x${
           item.quantity || 0
-        })</li></ul></td><td class="${statusCls}">${
-          order.orderStatus
-        }</td><td>${actionBtn}</td></tr>`;
+        })</li></ul></td><td>${statusBadge}</td><td>${actionBtn}</td></tr>`;
       }
 
       function bookingRow(b) {
         const customer = b.customerId || {};
         const provider = b.providerId || {};
-        const statusCls =
-          b.status === "Rejected" ? "status-cancelled" : "status-active";
+        const statusBadge =
+          b.status === "Rejected"
+            ? '<span class="badge badge-danger">Rejected</span>'
+            : '<span class="badge badge-success">Active</span>';
         const actionBtn =
           b.status === "Rejected"
-            ? `<button class="btn-restore" data-type="booking" data-action="restore" data-id="${b._id}">Restore</button>`
-            : `<button class="btn-cancel" data-type="booking" data-action="cancel" data-id="${b._id}">Cancel</button>`;
+            ? `<button class="btn btn-restore" data-type="booking" data-action="restore" data-id="${b._id}">Restore</button>`
+            : `<button class="btn btn-suspend" data-type="booking" data-action="cancel" data-id="${b._id}">Cancel</button>`;
         return `<tr data-booking-id="${b._id}"><td>${b._id}</td><td>${(
           b.selectedServices || []
         ).join(", ")}</td><td>${b.description || ""}</td><td>${
           customer.name || ""
         } (${customer.email || ""})</td><td>${provider.name || ""} (${
           provider.email || ""
-        })</td><td class="${statusCls}">${
-          b.status
-        }</td><td>${actionBtn}</td></tr>`;
+        })</td><td>${statusBadge}</td><td>${actionBtn}</td></tr>`;
       }
 
       function renderOrders(data) {
@@ -252,6 +230,16 @@
         }
       }
 
+      function highlightActiveNav() {
+        const links = document.querySelectorAll(".navbar nav a");
+        const path = window.location.pathname;
+        links.forEach((a) => {
+          const href = a.getAttribute("href");
+          if (href === path) a.classList.add("active");
+        });
+      }
+
+      highlightActiveNav();
       init();
     </script>
   </body>

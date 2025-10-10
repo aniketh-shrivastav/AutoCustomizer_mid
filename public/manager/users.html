@@ -44,17 +44,6 @@
       .suspended-user {
         background-color: #f8d7da !important;
       }
-      .btn-restore {
-        background-color: #3498db;
-        color: #fff;
-        padding: 5px 10px;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-      }
-      .btn-restore:hover {
-        background-color: #2980b9;
-      }
     </style>
   </head>
   <body>
@@ -135,22 +124,26 @@
                 u.role === "manager"
                   ? "<span>Not Allowed</span>"
                   : !u.suspended
-                  ? `<button class="btn-suspend" data-action="suspend" data-user-id="${u._id}">Suspend</button>`
-                  : `<button class="btn-restore" data-action="restore" data-user-id="${u._id}">Restore</button>`;
+                  ? `<button class="btn btn-suspend" data-action="suspend" data-user-id="${u._id}">Suspend</button>`
+                  : `<button class="btn btn-restore" data-action="restore" data-user-id="${u._id}">Restore</button>`;
+              const statusBadge = u.suspended
+                ? '<span class="badge badge-danger">Suspended</span>'
+                : '<span class="badge badge-success">Active</span>';
               return `<tr class="${u.suspended ? "suspended-user" : ""}">
                     <td>${u._id}</td>
                     <td>${u.name || ""}</td>
                     <td>${u.email || ""}</td>
+                    <td>${statusBadge}</td>
                     <td>${actions}</td>
                   </tr>`;
             })
             .join("");
           if (!rows)
-            rows = '<tr><td colspan="4">No users in this category.</td></tr>';
+            rows = '<tr><td colspan="5">No users in this category.</td></tr>';
           section.innerHTML = `<h3>${
             role.charAt(0).toUpperCase() + role.slice(1).replace("-", " ")
           }</h3>
-          <table class="user-table"><thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Actions</th></tr></thead><tbody>${rows}</tbody></table>`;
+          <div class="table-responsive"><table class="user-table"><thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Status</th><th>Actions</th></tr></thead><tbody>${rows}</tbody></table></div>`;
           container.appendChild(section);
         });
       }
@@ -258,6 +251,16 @@
         }
       }
 
+      function highlightActiveNav() {
+        const links = document.querySelectorAll(".navbar nav a");
+        const path = window.location.pathname;
+        links.forEach((a) => {
+          const href = a.getAttribute("href");
+          if (href === path) a.classList.add("active");
+        });
+      }
+
+      highlightActiveNav();
       init();
     </script>
   </body>
