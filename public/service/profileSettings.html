@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -9,6 +10,16 @@
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
     />
+    <style>
+      .error-border {
+        border: 2px solid red;
+      }
+      .error {
+        color: red;
+        display: none;
+        font-size: 0.8em;
+      }
+    </style>
   </head>
   <body>
     <nav class="navbar">
@@ -58,29 +69,16 @@
       <form id="profileForm" onsubmit="event.preventDefault(); saveChanges();">
         <label>Name:</label>
         <input type="text" id="name" disabled />
+        <div id="nameError" class="error"></div>
         <label>Email:</label>
         <input type="email" id="email" disabled />
+        <div id="emailError" class="error"></div>
         <label>Phone:</label>
         <input type="tel" id="phone" disabled />
+        <div id="phoneError" class="error"></div>
         <label>District:</label>
         <input type="text" id="district" disabled />
-
-        <button
-          type="button"
-          class="btn edit-pass-btn"
-          onclick="togglePasswordField()"
-          style="display: none"
-        >
-          Edit Password
-        </button>
-        <div
-          class="password-container"
-          id="passwordField"
-          style="display: none"
-        >
-          <label>New Password:</label>
-          <input type="password" id="password" />
-        </div>
+        <div id="districtError" class="error"></div>
 
         <div class="services-container">
           <h2>Services Offered</h2>
@@ -179,15 +177,69 @@
         }
       }
 
+      function validateForm() {
+        let isValid = true;
+
+        const name = document.getElementById("name");
+        const email = document.getElementById("email");
+        const phone = document.getElementById("phone");
+        const district = document.getElementById("district");
+
+        // Name validation
+        if (!name.value.trim()) {
+          document.getElementById("nameError").textContent = "Full Name is required";
+          name.classList.add("error-border");
+          document.getElementById("nameError").style.display = "block";
+          isValid = false;
+        } else {
+          name.classList.remove("error-border");
+          document.getElementById("nameError").style.display = "none";
+        }
+
+        // Email validation (disabled, so no validation needed)
+        email.classList.remove("error-border");
+        document.getElementById("emailError").style.display = "none";
+
+        // Phone validation
+        if (!phone.value.trim()) {
+          document.getElementById("phoneError").textContent = "Phone Number is required";
+          phone.classList.add("error-border");
+          document.getElementById("phoneError").style.display = "block";
+          isValid = false;
+        } else if (!/^\d{10}$/.test(phone.value.trim())) {
+          document.getElementById("phoneError").textContent = "Phone number should contain 10 digits";
+          phone.classList.add("error-border");
+          document.getElementById("phoneError").style.display = "block";
+          isValid = false;
+        } else {
+          phone.classList.remove("error-border");
+          document.getElementById("phoneError").style.display = "none";
+        }
+
+        // District validation
+        if (!district.value.trim()) {
+          document.getElementById("districtError").textContent = "District is required";
+          district.classList.add("error-border");
+          document.getElementById("districtError").style.display = "block";
+          isValid = false;
+        } else {
+          district.classList.remove("error-border");
+          document.getElementById("districtError").style.display = "none";
+        }
+
+        return isValid;
+      }
+
       async function saveChanges() {
+        if (!validateForm()) return;
+
         const name = document.getElementById("name").value.trim();
         const phone = document.getElementById("phone").value.trim();
         const district = document.getElementById("district").value.trim();
         const serviceItems = document.querySelectorAll(".service-item");
         const servicesOffered = Array.from(serviceItems).map((item) => ({
           name: item.querySelector(".service-name").value.trim(),
-          cost:
-            parseFloat(item.querySelector(".service-cost").value.trim()) || 0,
+          cost: parseFloat(item.querySelector(".service-cost").value.trim()) || 0,
         }));
         try {
           const res = await fetch("/profile/update", {
@@ -209,13 +261,12 @@
       }
 
       function enableEdit() {
-        ["name", "email", "phone", "district"].forEach(
+        ["name", "phone", "district"].forEach(
           (id) => (document.getElementById(id).disabled = false)
         );
         document.querySelector(".edit-btn").style.display = "none";
         document.getElementById("saveBtn").style.display = "inline-block";
         document.getElementById("cancelBtn").style.display = "inline-block";
-        document.querySelector(".edit-pass-btn").style.display = "inline-block";
         document.querySelector(".service-input-container").style.display =
           "block";
         document.querySelector(".add-service-btn").style.display =
@@ -231,10 +282,6 @@
       }
       function cancelEdit() {
         location.reload();
-      }
-      function togglePasswordField() {
-        const pf = document.getElementById("passwordField");
-        pf.style.display = pf.style.display === "none" ? "block" : "none";
       }
       function addService() {
         const n = document.getElementById("newService").value.trim();
@@ -283,6 +330,16 @@
               }
             }
           });
+      });
+
+      // Real-time validation on input change
+      ["name", "phone", "district"].forEach((id) => {
+        const input = document.getElementById(id);
+        if (input) {
+          input.addEventListener("input", () => {
+            validateForm();
+          });
+        }
       });
     </script>
   </body>
