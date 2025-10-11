@@ -4,6 +4,7 @@
   --secondary-color: #333333;
   --success-color: #2ecc71;
   --danger-color: #e74c3c;
+  --warning-color: #f59e0b;
   --background-color: #ffffff; /* Body background - White */
   --card-background: #ffffff;
   --text-primary: #000000; /* Text color - Black */
@@ -68,8 +69,7 @@ body {
 /* Active link should not have persistent box background per updated design */
 .navbar nav ul li a.active {
   background: transparent;
-  /* Optional: uncomment next line to show underline instead of box */
-  /* text-decoration: underline; */
+  text-decoration: underline;
 }
 
 /* Admin Profile */
@@ -103,6 +103,13 @@ body {
   box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.05);
 }
 
+/* Responsive wrapper for wide tables */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 .user-table th,
 .order-table th,
 .generic-table th {
@@ -130,6 +137,7 @@ body {
 .btn,
 .btn-approve,
 .btn-suspend,
+.btn-restore,
 .btn-view,
 .btn-resolve {
   padding: 8px 12px;
@@ -147,6 +155,9 @@ body {
 }
 .btn-suspend {
   background: var(--danger-color);
+}
+.btn-restore {
+  background: var(--success-color);
 }
 .btn-view {
   background: var(--primary-color);
@@ -182,6 +193,60 @@ body {
 
 .tab-btn.active {
   background-color: #1abc9c;
+}
+
+/* Generic tabs container */
+.tabs {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Badges */
+.badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.badge-success {
+  background: #d1fae5;
+  color: #047857;
+}
+.badge-danger {
+  background: #fee2e2;
+  color: #991b1b;
+}
+.badge-secondary {
+  background: #e5e7eb;
+  color: #374151;
+}
+.badge-warning {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+/* Empty state */
+.empty-state {
+  color: var(--text-secondary);
+  font-style: italic;
+  padding: 12px 0;
+}
+
+/* Simple loader */
+.loader {
+  width: 24px;
+  height: 24px;
+  border: 3px solid #e5e7eb;
+  border-top-color: var(--primary-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Utilities */
@@ -406,4 +471,45 @@ body {
 
 .trend.up {
   color: #10b981; /* green */
+}
+
+/* Product tabs table extracted from inline styles */
+.product-tabs table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 15px;
+  font-size: 0.95rem;
+  background: #fff;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.05);
+}
+.product-tabs thead {
+  background: #007bff;
+  color: #fff;
+}
+.product-tabs th,
+.product-tabs td {
+  padding: 12px 15px;
+  border-bottom: 1px solid #ddd;
+  text-align: left;
+}
+.product-tabs tr:nth-child(even) {
+  background: #f9f9f9;
+}
+.product-tabs tr:hover {
+  background: #e6f4ff;
+}
+.product-tabs button {
+  background: #007bff;
+  color: #fff;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  margin-right: 5px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+.product-tabs button:hover {
+  background: #0056b3;
 }

@@ -401,21 +401,33 @@ router.post(
 );
 
 // --- Show only products added by seller (unchanged) ---
+// Serve static HTML page for product management
 router.get(
   "/productmanagement",
   isAuthenticated,
   isSeller,
   async (req, res) => {
-    try {
-      const sellerId = req.session.user.id;
-      const products1 = await Product.find({ seller: sellerId });
-      res.render("Seller/productmanagement", { products1 });
-    } catch (err) {
-      console.error("Error fetching products for seller:", err);
-      res.status(500).send("Internal Server Error");
-    }
+    const filePath = path.join(
+      __dirname,
+      "../public/seller/productManagement.html"
+    );
+    return res.sendFile(filePath);
   }
 );
+
+// JSON API to get seller products (for static HTML hydration)
+router.get("/api/products", isAuthenticated, isSeller, async (req, res) => {
+  try {
+    const sellerId = req.session.user.id;
+    const products = await Product.find({ seller: sellerId }).lean();
+    res.json({ success: true, products });
+  } catch (err) {
+    console.error("Error fetching products for seller:", err);
+    res
+      .status(500)
+      .json({ success: false, message: "Failed to load products" });
+  }
+});
 
 // --- Delete product: remove cloudinary image as well if public id present ---
 router.post(

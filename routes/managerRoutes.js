@@ -3,6 +3,7 @@ const router = express.Router();
 const path = require("path");
 const fs = require("fs");
 const User = require("../models/User"); // Import User model
+const bcrypt = require("bcryptjs");
 const SellerProfile = require("../models/sellerProfile");
 const ServiceBooking = require("../models/serviceBooking");
 const CustomerProfile = require("../models/CustomerProfile");
@@ -412,27 +413,103 @@ router.post(
   }
 );
 
-router.post("/users/restore/:id", async (req, res) => {
-  try {
-    const userId = req.params.id;
-    console.log("Restoring user with ID:", userId);
+router.post(
+  "/users/restore/:id",
+  isAuthenticated,
+  isManager,
+  async (req, res) => {
+    try {
+      const userId = req.params.id;
+      console.log("Restoring user with ID:", userId);
 
-    const user = await User.findById(userId);
-    if (!user) {
-      return res
-        .status(404)
-        .json({ success: false, message: "User not found" });
+      const user = await User.findById(userId);
+      if (!user) {
+        return res
+          .status(404)
+          .json({ success: false, message: "User not found" });
+      }
+
+      user.suspended = false; // Re-activate the user
+      await user.save();
+
+      res.json({ success: true, message: "User restored successfully" });
+    } catch (error) {
+      console.error("Error restoring user:", error);
+      res.status(500).json({ success: false, message: "Server error" });
     }
-
-    user.suspended = false; // Re-activate the user
-    await user.save();
-
-    res.json({ success: true, message: "User restored successfully" });
-  } catch (error) {
-    console.error("Error restoring user:", error);
-    res.status(500).json({ success: false, message: "Server error" });
   }
-});
+);
+
+// Create a new Manager user (manager-only)
+router.post(
+  "/users/create-manager",
+  isAuthenticated,
+  isManager,
+  async (req, res) => {
+    try {
+      const { name, email, phone, password } = req.body || {};
+
+      // Basic validations
+      if (!name || !email || !password) {
+        return res
+          .status(400)
+          .json({ success: false, message: "name, email, password required" });
+      }
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res
+          .status(400)
+          .json({ success: false, message: "Invalid email" });
+      }
+      if (password.length < 6) {
+        return res
+          .status(400)
+          .json({
+            success: false,
+            message: "Password must be at least 6 characters",
+          });
+      }
+      if (phone && !/^\d{10}$/.test(String(phone).trim())) {
+        return res
+          .status(400)
+          .json({ success: false, message: "Phone must be 10 digits" });
+      }
+
+      // Uniqueness check
+      const existing = await User.findOne({ email });
+      if (existing) {
+        return res
+          .status(409)
+          .json({ success: false, message: "Email already exists" });
+      }
+
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const newUser = new User({
+        name,
+        email,
+        phone,
+        password: hashedPassword,
+        role: "manager",
+      });
+      await newUser.save();
+
+      const safeUser = {
+        _id: newUser._id,
+        name: newUser.name,
+        email: newUser.email,
+        role: newUser.role,
+        suspended: newUser.suspended,
+      };
+
+      return res.json({ success: true, user: safeUser });
+    } catch (error) {
+      console.error("Create manager error:", error);
+      return res
+        .status(500)
+        .json({ success: false, message: "Server error creating manager" });
+    }
+  }
+);
 
 router.post(
   "/cancel-booking/:id",

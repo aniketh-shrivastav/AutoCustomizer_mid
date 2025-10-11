@@ -38,12 +38,33 @@
     </header>
 
     <main>
-      <div class="search-bar">
+      <div
+        class="search-bar"
+        style="
+          display: flex;
+          gap: 10px;
+          flex-wrap: wrap;
+          align-items: center;
+          margin: 0 16px;
+        "
+      >
         <input
           type="text"
           id="search-input"
           placeholder="Search for car parts..."
+          class="form-control"
+          style="max-width: 360px"
         />
+        <div class="d-flex align-items-center" style="gap: 8px">
+          <label for="category-filter" class="form-label mb-0">Category</label>
+          <select
+            id="category-filter"
+            class="form-select form-select-sm"
+            style="max-width: 220px"
+          >
+            <option value="">All categories</option>
+          </select>
+        </div>
       </div>
 
       <section class="alert alert-info mx-3 mt-3" role="alert">
@@ -118,7 +139,8 @@
             );
           }
           renderProducts(allProducts);
-          setupSearch();
+          populateCategories();
+          setupFilters();
         } catch (err) {
           console.error("Error loading products:", err);
           document.getElementById("parts-list").innerHTML =
@@ -212,19 +234,50 @@
         });
       }
 
-      function setupSearch() {
+      function populateCategories() {
+        const select = document.getElementById("category-filter");
+        if (!select) return;
+        // Compute unique non-empty categories
+        const cats = Array.from(
+          new Set(
+            (allProducts || [])
+              .map((p) => (p.category || "").trim())
+              .filter((c) => c.length > 0)
+          )
+        ).sort((a, b) => a.localeCompare(b));
+        // Reset options
+        select.innerHTML =
+          '<option value="">All categories</option>' +
+          cats
+            .map(
+              (c) =>
+                `<option value="${c.replace(/"/g, "&quot;")}">${c}</option>`
+            )
+            .join("");
+      }
+
+      function applyFilters() {
         const searchInput = document.getElementById("search-input");
-        searchInput.addEventListener("input", (e) => {
-          const searchTerm = e.target.value.toLowerCase().trim();
-
-          const filteredProducts = allProducts.filter(
-            (product) =>
-              (product.name || "").toLowerCase().includes(searchTerm) ||
-              (product.category || "").toLowerCase().includes(searchTerm)
-          );
-
-          renderProducts(filteredProducts);
+        const select = document.getElementById("category-filter");
+        const term = (searchInput?.value || "").toLowerCase().trim();
+        const cat = (select?.value || "").toLowerCase();
+        const filtered = (allProducts || []).filter((product) => {
+          const matchesText =
+            (product.name || "").toLowerCase().includes(term) ||
+            (product.category || "").toLowerCase().includes(term);
+          const matchesCat =
+            !cat || (product.category || "").toLowerCase() === cat;
+          return matchesText && matchesCat;
         });
+        renderProducts(filtered);
+      }
+
+      function setupFilters() {
+        const searchInput = document.getElementById("search-input");
+        const categorySelect = document.getElementById("category-filter");
+        if (searchInput) searchInput.addEventListener("input", applyFilters);
+        if (categorySelect)
+          categorySelect.addEventListener("change", applyFilters);
       }
 
       // (Removed standalone addToCart; using form interception for parity with EJS markup)

@@ -1,66 +1,84 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AutoCustomizer Dashboard</title>
-    <link rel="stylesheet" href="/styles/styles.css">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body>
+    <link rel="stylesheet" href="/styles/styles.css" />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <header>
+      <div class="logo">
+        <img
+          style="height: 80px"
+          src="/images3/logo2.jpg"
+          alt="AutoCustomizer Logo"
+        />
+        <!-- Fixed path -->
+      </div>
 
-  <header>
-    <div class="logo">
-        <img style="height: 80px;" src="/images3/logo2.jpg" alt="AutoCustomizer Logo"> <!-- Fixed path -->
+      <%- include("../partials/customerHeaders") %>
+    </header>
+
+    <div class="container mt-5">
+      <div class="row">
+        <!-- Product Image -->
+        <div class="col-md-6">
+          <img
+            src="<%= product.image %>"
+            alt="<%= product.name %>"
+            class="img-fluid rounded shadow"
+          />
+        </div>
+
+        <!-- Product Details -->
+        <div class="col-md-6">
+          <h2><%= product.name %></h2>
+          <p><strong>Category:</strong> <%= product.category %></p>
+          <p><strong>Price:</strong> ₹<%= product.price %></p>
+          <p><strong>Description:</strong> <%= product.description %></p>
+          <% if (product.seller) { %>
+          <p><strong>Seller:</strong> <%= product.seller.name %></p>
+          <% } %>
+          <p><strong>Brand:</strong> <%= product.brand %></p>
+          <p><strong>SKU:</strong> <%= product.sku %></p>
+          <p><strong>compatibility:</strong> <%= product.compatibility %></p>
+
+          <a href="/customer/index.html" class="btn btn-secondary mt-3"
+            >Back to Products</a
+          >
+        </div>
+      </div>
     </div>
 
-    <%- include("../partials/customerHeaders") %>
-</header>
-
-<div class="container mt-5">
-  <div class="row">
-    <!-- Product Image -->
-    <div class="col-md-6">
-      <img src="<%= product.image %>" alt="<%= product.name %>" class="img-fluid rounded shadow" />
-    </div>
-
-    <!-- Product Details -->
-    <div class="col-md-6">
-      <h2><%= product.name %></h2>
-      <p><strong>Category:</strong> <%= product.category %></p>
-      <p><strong>Price:</strong> ₹<%= product.price %></p>
-      <p><strong>Description:</strong> <%= product.description %></p>
-      <% if (product.seller) { %>
-        <p><strong>Seller:</strong> <%= product.seller.name %></p>
-      <% } %>
-      <p><strong>Brand:</strong> <%= product.brand %></p>
-      <p><strong>SKU:</strong> <%= product.sku %></p>
-      <p><strong>compatibility:</strong> <%= product.compatibility %></p>
-    
-
-      <a href="/customer/index" class="btn btn-secondary mt-3">Back to Products</a>
-    </div>
-  </div>
-</div>
-
-<footer>
-    <div class="footer-container">
+    <footer>
+      <div class="footer-container">
         <div class="footer-section">
-            <h3>Contact Us</h3>
-            <p>Email: support@autocustomizer.com</p>
-            <p>Phone: +123-456-7890</p>
-            <p>Address: 123 Auto Street, Custom City</p>
+          <h3>Contact Us</h3>
+          <p>Email: support@autocustomizer.com</p>
+          <p>Phone: +123-456-7890</p>
+          <p>Address: 123 Auto Street, Custom City</p>
         </div>
         <div class="footer-section">
-            <h3>Follow Us</h3>
-            <div class="social-icons">
-                <a href="#"><img src="/images/facebook-icon.png" alt="Facebook"></a>
-                <a href="#"><img src="/images/twitter-icon.png" alt="Twitter"></a>
-                <a href="#"><img src="/images/instagram-icon.png" alt="Instagram"></a>
-            </div>
+          <h3>Follow Us</h3>
+          <div class="social-icons">
+            <a href="#"
+              ><img src="/images/facebook-icon.png" alt="Facebook"
+            /></a>
+            <a href="#"><img src="/images/twitter-icon.png" alt="Twitter" /></a>
+            <a href="#"
+              ><img src="/images/instagram-icon.png" alt="Instagram"
+            /></a>
+          </div>
         </div>
-    </div>
-    <div class="footer-bottom">
+      </div>
+      <div class="footer-bottom">
         <p>&copy; 2025 AutoCustomizer. All Rights Reserved.</p>
-    </div>
-</footer>
+      </div>
+    </footer>
+  </body>
+</html>
