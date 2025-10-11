@@ -523,7 +523,8 @@ function parseCsvFile(filePath) {
 
 // GET page
 router.get("/bulk-upload", isAuthenticated, isSeller, (req, res) => {
-  res.render("Seller/bulkUpload");
+  const filePath = path.join(__dirname, "../public/seller/bulkUpload.html");
+  return res.sendFile(filePath);
 });
 
 // Download sample CSV
@@ -803,8 +804,9 @@ router.post(
         /* ignore */
       }
 
-      // render result summary
-      res.render("Seller/bulkUploadResult", { results: resultSummary });
+      // store result in session and redirect to static result page
+      req.session.bulkUploadResult = resultSummary;
+      return res.redirect("/seller/bulk-upload/result");
     } catch (err) {
       console.error("Bulk upload error:", err);
       try {
@@ -814,5 +816,20 @@ router.post(
     }
   }
 );
+
+// Static result page and JSON API to retrieve last summary
+router.get("/bulk-upload/result", isAuthenticated, isSeller, (req, res) => {
+  const filePath = path.join(
+    __dirname,
+    "../public/seller/bulkUploadResult.html"
+  );
+  return res.sendFile(filePath);
+});
+
+router.get("/api/bulk-upload-result", isAuthenticated, isSeller, (req, res) => {
+  const results = req.session.bulkUploadResult;
+  if (!results) return res.json({ success: false, message: "No results" });
+  return res.json({ success: true, results });
+});
 
 module.exports = router;

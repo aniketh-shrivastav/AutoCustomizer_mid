@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bulk Upload Result | Seller</title>
+    <link href="/Css/CStyle.css" rel="stylesheet" />
+    <link href="/newstyle.css" rel="stylesheet" />
+    <link href="/Css/sellerBase.css" rel="stylesheet" />
+    <style>
+      .container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      h1 {
+        color: #6a11cb;
+      }
+      .summary {
+        background: #fff;
+        padding: 16px;
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      }
+      .errors {
+        margin-top: 16px;
+      }
+      .errors li {
+        color: #c0392b;
+      }
+    </style>
+  </head>
+  <body class="seller-page">
+    <nav class="navbar">
+      <div class="brand">AutoCustomizer</div>
+      <ul>
+        <li><a href="/seller/dashboard.html">Dashboard</a></li>
+        <li><a href="/seller/profileSettings">Profile Settings</a></li>
+        <li><a href="/seller/productmanagement">Products</a></li>
+        <li><a href="/seller/orders">Orders</a></li>
+        <li><a href="/seller/earnings-payouts">Earnings</a></li>
+        <li><a href="/seller/reviews">Reviews</a></li>
+        <li><a href="/logout">Logout</a></li>
+      </ul>
+    </nav>
+
+    <header>
+      <h1>Bulk Upload Result</h1>
+    </header>
+
+    <main class="seller-main">
+      <div class="container">
+        <h1>Bulk Upload Summary</h1>
+        <div id="resultWrap" class="summary">Loading summary...</div>
+        <p style="margin-top: 12px">
+          <a href="/Seller/productmanagement">Back to Product Management</a>
+        </p>
+      </div>
+    </main>
+
+    <footer class="seller-footer">
+      <p>&copy; 2025 AutoCustomizer | All Rights Reserved</p>
+    </footer>
+
+    <script>
+      async function loadSummary() {
+        const wrap = document.getElementById("resultWrap");
+        try {
+          const res = await fetch("/seller/api/bulk-upload-result", {
+            headers: { Accept: "application/json" },
+          });
+          if (res.status === 401) {
+            window.location.href = "/login";
+            return;
+          }
+          const data = await res.json();
+          if (!data.success || !data.results) {
+            wrap.textContent = "No summary available.";
+            return;
+          }
+          const r = data.results;
+          let html = `<ul>
+            <li>Total rows: ${r.total}</li>
+            <li>Inserted: ${r.inserted}</li>
+            <li>Skipped: ${r.skipped}</li>
+            <li>Failed: ${r.failed}</li>
+          </ul>`;
+          if (Array.isArray(r.errors) && r.errors.length) {
+            const items = r.errors
+              .map((e) => `<li>Row ${e.row}: ${e.reason}</li>`)
+              .join("");
+            html += `<div class="errors"><h3>Details</h3><ul>${items}</ul></div>`;
+          }
+          wrap.innerHTML = html;
+        } catch (err) {
+          wrap.textContent = "Failed to load summary.";
+        }
+      }
+      document.addEventListener("DOMContentLoaded", loadSummary);
+    </script>
+  </body>
+</html>

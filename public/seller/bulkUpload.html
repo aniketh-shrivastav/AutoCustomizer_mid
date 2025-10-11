@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bulk Upload Products | Seller</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link href="/Css/CStyle.css" rel="stylesheet" />
+    <link href="/newstyle.css" rel="stylesheet" />
+    <link href="/Css/sellerBase.css" rel="stylesheet" />
+    <style>
+      body {
+        font-family: "Poppins", sans-serif;
+        background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
+        color: #333;
+        margin: 0;
+      }
+      header {
+        background: linear-gradient(135deg, #6a11cb, #2575fc);
+        color: #fff;
+        padding: 24px 16px;
+        text-align: center;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+      header h1 {
+        margin: 0;
+        font-size: 2rem;
+        font-weight: 600;
+      }
+      .container {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .container > h1:first-of-type {
+        background: linear-gradient(135deg, #6a11cb, #2575fc);
+        color: #fff;
+        padding: 16px;
+        margin: -20px -20px 24px -20px;
+        width: calc(100% + 40px);
+        text-align: center;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        font-size: 1.8rem;
+        font-weight: 700;
+        border-radius: 0 0 12px 12px;
+      }
+      h2,
+      h3 {
+        color: #6a11cb;
+      }
+      code {
+        background: #eee;
+        padding: 2px 6px;
+        border-radius: 6px;
+      }
+      pre {
+        background: #f9f9f9;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 15px;
+        overflow-x: auto;
+      }
+      .product-form {
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        padding: 20px;
+        margin-bottom: 24px;
+      }
+      .form-group {
+        margin-bottom: 16px;
+      }
+      .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: #6a11cb;
+      }
+      .form-group input[type="file"] {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        background: #fafafa;
+      }
+      .btn-add {
+        background: linear-gradient(135deg, #6a11cb, #2575fc);
+        color: #fff;
+        border: 0;
+        padding: 12px 18px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+      }
+      footer {
+        background: linear-gradient(135deg, #6a11cb, #2575fc);
+        color: #fff;
+        text-align: center;
+        padding: 12px;
+        margin-top: 24px;
+      }
+    </style>
+  </head>
+  <body class="seller-page">
+    <nav class="navbar">
+      <div class="brand">AutoCustomizer</div>
+      <ul>
+        <li><a href="/seller/dashboard.html">Dashboard</a></li>
+        <li><a href="/seller/profileSettings">Profile Settings</a></li>
+        <li><a href="/seller/productmanagement">Products</a></li>
+        <li><a href="/seller/orders">Orders</a></li>
+        <li><a href="/seller/earnings-payouts">Earnings</a></li>
+        <li><a href="/seller/reviews">Reviews</a></li>
+        <li><a href="/logout">Logout</a></li>
+      </ul>
+    </nav>
+
+    <header>
+      <h1>Bulk Upload Products</h1>
+    </header>
+
+    <main class="seller-main">
+      <div class="container">
+        <p>Choose one of these upload options:</p>
+        <ol>
+          <li>
+            <strong>ZIP</strong>: upload a ZIP containing
+            <code>products.csv</code> (or .xlsx) and an
+            <code>images/</code> folder. Rows should reference images by
+            filename (e.g. <code>rim1.jpg</code>).
+          </li>
+          <li>
+            <strong>CSV/XLSX</strong>: upload a CSV or Excel where the
+            <code>image</code> column contains public image URLs (https://...)
+          </li>
+        </ol>
+
+        <form
+          action="/Seller/bulk-upload"
+          method="POST"
+          enctype="multipart/form-data"
+          class="product-form"
+        >
+          <div class="form-group">
+            <label for="file">Select ZIP / CSV / XLSX</label>
+            <input
+              type="file"
+              id="file"
+              name="file"
+              accept=".zip,.csv,.xlsx"
+              required
+            />
+          </div>
+          <button type="submit" class="btn-add">Upload</button>
+        </form>
+
+        <p>
+          Download sample CSV:
+          <a href="/Seller/bulk-upload/sample-csv">product_upload_sample.csv</a>
+        </p>
+
+        <h3>Sample products.csv (for ZIP)</h3>
+        <pre>
+name,price,description,category,brand,quantity,sku,compatibility,image
+Alloy Rims,12000,16-inch alloy rims,WHEELS,OZ,20,RIM123,Civic,rim1.jpg
+Car Spoiler,8000,Rear spoiler,BODYKIT,Mugen,15,SPOILR,Accord,spoiler.jpg</pre
+        >
+      </div>
+    </main>
+
+    <footer class="seller-footer">
+      <p>&copy; 2025 AutoCustomizer | All Rights Reserved</p>
+    </footer>
+  </body>
+</html>
