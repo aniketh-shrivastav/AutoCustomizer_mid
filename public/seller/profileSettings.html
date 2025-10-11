@@ -132,11 +132,11 @@
         <form id="profileForm" class="profile-form" novalidate>
           <div class="form-group">
             <label for="storeName">Store Name:</label>
-            <input type="text" id="storeName" name="storeName" required />
+            <input type="text" id="storeName" name="storeName" required maxlength = "15" />
           </div>
           <div class="form-group">
             <label for="ownerName">Owner Name:</label>
-            <input type="text" id="ownerName" name="ownerName" required />
+            <input type="text" id="ownerName" name="ownerName" required maxlength = "15" />
           </div>
           <div class="form-group">
             <label for="contactEmail">Contact Email:</label>
@@ -167,87 +167,174 @@
       <p>&copy; 2025 AutoCustomizer | All Rights Reserved</p>
     </footer>
     <script>
-      async function loadProfile() {
-        try {
-          const res = await fetch("/seller/api/profileSettings", {
-            headers: { Accept: "application/json" },
+      (function () {
+        const MAX_LEN = 15;
+        const form = document.getElementById("profileForm");
+        const els = {
+          storeName: document.getElementById("storeName"),
+          ownerName: document.getElementById("ownerName"),
+          contactEmail: document.getElementById("contactEmail"),
+          phone: document.getElementById("phone"),
+          address: document.getElementById("address"),
+        };
+        const statusEl = document.getElementById("statusMsg");
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const headerTitle = document.querySelector("header h1");
+
+        // ensure maxlength for name fields (defensive)
+        els.storeName.setAttribute("maxlength", String(MAX_LEN));
+        els.ownerName.setAttribute("maxlength", String(MAX_LEN));
+
+        function setStatus(text = "", color = "black", timeoutMs) {
+          statusEl.textContent = text;
+          statusEl.style.color = color;
+          if (timeoutMs && text) {
+            setTimeout(() => { if (statusEl.textContent === text) statusEl.textContent = ""; }, timeoutMs);
+          }
+        }
+
+        function setFieldError(el, message) {
+          clearFieldError(el);
+          const small = document.createElement("small");
+          small.className = "input-error";
+          small.style.color = "crimson";
+          small.style.display = "block";
+          small.style.marginTop = "6px";
+          small.textContent = message;
+          el.parentElement.appendChild(small);
+          el.classList.add("invalid");
+        }
+
+        function clearFieldError(el) {
+          const err = el.parentElement.querySelector(".input-error");
+          if (err) err.remove();
+          el.classList.remove("invalid");
+        }
+
+        const validators = {
+          storeName: v => {
+            if (!v) return "Store Name required";
+            if (v.length > MAX_LEN) return `Store Name must be ${MAX_LEN} or fewer characters`;
+            return "";
+          },
+          ownerName: v => {
+            if (!v) return "Owner Name required";
+            if (v.length > MAX_LEN) return `Owner Name must be ${MAX_LEN} or fewer characters`;
+            return "";
+          },
+          contactEmail: v => {
+            if (!v) return "Email required";
+            if (!v.includes("@")) return "Email must contain @";
+            const re = /^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,4}$/;
+            if (!re.test(v)) return "Email invalid or not lowercase";
+            return "";
+          },
+          phone: v => {
+            if (!/^\d{10}$/.test(v)) return "Phone must be 10 digits";
+            return "";
+          },
+          address: v => {
+            if (!v) return "Address required";
+            return "";
+          }
+        };
+
+        function validateForm() {
+          setStatus("", "");
+          let ok = true;
+          for (const key of Object.keys(els)) {
+            clearFieldError(els[key]);
+            const err = validators[key](els[key].value.trim());
+            if (err) {
+              setFieldError(els[key], err);
+              ok = false;
+            }
+          }
+          return ok;
+        }
+
+        // live input handling (centralized)
+        Object.entries(els).forEach(([key, el]) => {
+          el.addEventListener("input", () => {
+            clearFieldError(el);
+            // run only quick/live checks to avoid noisy messages:
+            const msg = validators[key](el.value.trim());
+            // show live error for length & email '@' cases
+            if (msg && (key === "storeName" || key === "ownerName" || key === "contactEmail")) {
+              setFieldError(el, msg);
+              if (key === "contactEmail" && msg.includes("@")) setStatus(msg, "crimson", 1800);
+            }
+            if (key === "storeName") updateHeaderPreview();
           });
-          if (res.status === 401) {
-            window.location = "/login";
+        });
+
+        function updateHeaderPreview() {
+          const v = els.storeName.value.trim();
+          headerTitle.textContent = v ? `Profile Settings — ${v}` : "Profile Settings";
+        }
+
+        async function loadProfile() {
+          try {
+            setStatus("Loading profile...", "#666");
+            const res = await fetch("/seller/api/profileSettings", { headers: { Accept: "application/json" } });
+            if (res.status === 401) { window.location = "/login"; return; }
+            const data = await res.json();
+            if (!data.success) throw new Error(data.message || "Failed");
+            const p = data.profile || {};
+            els.storeName.value = p.storeName || "";
+            els.ownerName.value = p.ownerName || "";
+            els.contactEmail.value = p.contactEmail || "";
+            els.phone.value = p.phone || "";
+            els.address.value = p.address || "";
+            updateHeaderPreview();
+            // if loaded values violate rules, show inline errors
+            for (const key of Object.keys(els)) {
+              const err = validators[key](els[key].value.trim());
+              if (err) setFieldError(els[key], err);
+            }
+            setStatus("", "");
+          } catch (e) {
+            console.error(e);
+            setStatus("Failed to load profile", "red");
+          }
+        }
+
+        form.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          setStatus("", "");
+          if (!validateForm()) {
+            setStatus("Fix highlighted errors", "crimson", 3000);
             return;
           }
-          const data = await res.json();
-          if (!data.success) throw new Error(data.message || "Failed");
-          const p = data.profile;
-          storeName.value = p.storeName || "";
-          ownerName.value = p.ownerName || "";
-          contactEmail.value = p.contactEmail || "";
-          phone.value = p.phone || "";
-          address.value = p.address || "";
-        } catch (e) {
-          console.error(e);
-          document.getElementById("statusMsg").textContent =
-            "Failed to load profile";
-          document.getElementById("statusMsg").style.color = "red";
-        }
-      }
-
-      function validateForm() {
-        if (!storeName.value.trim()) {
-          alert("Store Name required");
-          return false;
-        }
-        if (!ownerName.value.trim()) {
-          alert("Owner Name required");
-          return false;
-        }
-        const phoneRegex = /^\d{10}$/;
-        if (!phoneRegex.test(phone.value)) {
-          alert("Phone must be 10 digits");
-          return false;
-        }
-        const emailRegex = /^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,4}$/;
-        if (!emailRegex.test(contactEmail.value)) {
-          alert("Email invalid or not lowercase");
-          return false;
-        }
-        return true;
-      }
-
-      document
-        .getElementById("profileForm")
-        .addEventListener("submit", async (e) => {
-          e.preventDefault();
-          if (!validateForm()) return;
-          const body = {
-            storeName: storeName.value,
-            ownerName: ownerName.value,
-            contactEmail: contactEmail.value,
-            phone: phone.value,
-            address: address.value,
-          };
+          submitBtn.disabled = true;
+          const originalText = submitBtn.textContent;
+          submitBtn.textContent = "Saving...";
           try {
+            const body = Object.fromEntries(Object.entries(els).map(([k,el]) => [k, el.value.trim()]));
             const res = await fetch("/seller/api/profileSettings", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify(body),
             });
             const out = await res.json();
-            const msg = document.getElementById("statusMsg");
             if (!out.success) {
-              msg.textContent = out.message || "Update failed";
-              msg.style.color = "red";
+              // server-side errors mapped to fields when possible
+              if (out.field && els[out.field]) setFieldError(els[out.field], out.message || "Invalid");
+              else setStatus(out.message || "Update failed", "red", 5000);
               return;
             }
-            msg.textContent = "Profile updated successfully";
-            msg.style.color = "green";
+            setStatus("Profile updated successfully", "green", 3000);
           } catch (err) {
             console.error(err);
-            alert("Update failed");
+            setStatus("Update failed", "red");
+          } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
           }
         });
 
-      document.addEventListener("DOMContentLoaded", loadProfile);
+        document.addEventListener("DOMContentLoaded", loadProfile);
+      })();
     </script>
   </body>
 </html>
