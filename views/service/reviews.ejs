@@ -49,3 +49,56 @@
     </div>
 </body>
 </html>
+
+<!-- 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reviews & Ratings</title>
+    <link rel="stylesheet" href="/styles/reviews.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+   
+    <%- include("../partials/serviceHeaders") %>
+    
+    <div class="container">
+        <h1>Reviews & Ratings</h1>
+        <div class="reviews-container">
+           
+            <% reviews.forEach(review => { %>
+                <div class="review-card">
+                  <div class="review-header">
+                    <div class="user-info">
+                      <span class="user-name"><%= review.customerId.name %></span>
+              
+                      <div class="rating">
+                        <% const fullStars = Math.floor(review.rating); %>
+                        <% const halfStar = review.rating % 1 >= 0.5; %>
+              
+                        <% for (let i = 0; i < fullStars; i++) { %>
+                          <i class="fas fa-star"></i>
+                        <% } %>
+                        <% if (halfStar) { %>
+                          <i class="fas fa-star-half-alt"></i>
+                        <% } %>
+                        <% for (let i = fullStars + halfStar; i < 5; i++) { %>
+                          <i class="far fa-star"></i>
+                        <% } %>
+                        <span class="rating-value"><%= review.rating.toFixed(1) %></span>
+                      </div>
+                    </div>
+                  </div>
+              
+                  <p class="review-text">"<%= review.review %>"</p>
+                  <span class="review-date"><%= new Date(review.createdAt).toLocaleDateString() %></span>
+                </div>
+              <% }) %>
+
+          
+        </div>
+    </div>
+</body>
+</html> -->
