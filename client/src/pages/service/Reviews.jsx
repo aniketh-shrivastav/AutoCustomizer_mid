@@ -151,21 +151,3 @@ export default function Reviews() {
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
