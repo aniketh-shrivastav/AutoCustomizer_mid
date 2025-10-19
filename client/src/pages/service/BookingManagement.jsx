@@ -1,3 +1,5 @@
+//This is the Booking Management page for the service provider in the AutoCustomizer application.
+
 import React, { useEffect, useMemo, useState } from "react";
 
 function useLink(href) {
