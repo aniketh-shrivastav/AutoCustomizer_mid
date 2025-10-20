@@ -1,4 +1,5 @@
 //This is the Service Dashboard page component for the AutoCustomizer application.
+//This page is a Dynamic Page.
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Chart from "chart.js/auto";
 
