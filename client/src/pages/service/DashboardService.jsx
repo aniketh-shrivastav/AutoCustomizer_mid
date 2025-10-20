@@ -1,3 +1,4 @@
+//This is the Service Dashboard page component for the AutoCustomizer application.
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Chart from "chart.js/auto";
 
