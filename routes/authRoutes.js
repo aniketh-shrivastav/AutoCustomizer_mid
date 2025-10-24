@@ -138,7 +138,8 @@ router.post("/login", async (req, res) => {
     // Role-based redirection
     switch (user.role) {
       case "manager":
-        return res.redirect("/manager/dashboard.html");
+        // Point managers to the React route instead of the legacy static HTML
+        return res.redirect("/manager/dashboard");
       case "customer":
         return res.redirect("/customer/index.html");
       case "seller":
