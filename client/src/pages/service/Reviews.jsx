@@ -1,3 +1,4 @@
+//This is the Reviews & Ratings Page of Service Provider.
 import React, { useEffect, useState } from "react";
 
 function useLink(href) {
