@@ -9,6 +9,8 @@ import Orders from "./pages/manager/Orders";
 import Payments from "./pages/manager/Payments";
 import Support from "./pages/manager/Support";
 import AllIndex from "./pages/all/Index";
+import FAQ from "./pages/all/FAQ";
+import ContactUs from "./pages/all/ContactUs";
 
 export default function App() {
   return (
@@ -18,6 +20,8 @@ export default function App() {
       <Route path="/signup" element={<Signup />} />
       {/* Public site (All) */}
       <Route path="/all" element={<AllIndex />} />
+      <Route path="/faq" element={<FAQ />} />
+      <Route path="/contactus" element={<ContactUs />} />
       {/* Manager (React) */}
       <Route path="/manager/dashboard" element={<ManagerDashboard />} />
       <Route path="/manager/users" element={<ManagerUsers />} />
