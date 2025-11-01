@@ -13,6 +13,16 @@ function useLink(href) {
 export default function CustomerBooking() {
   // Match legacy CSS
   useLink("/styles/styles.css");
+  function backendBase() {
+    const { protocol, hostname, port } = window.location;
+    if (port === "5173") return `${protocol}//${hostname}:3000`;
+    return "";
+  }
+  function handleLogout(e) {
+    e.preventDefault();
+    const next = encodeURIComponent(`${window.location.origin}/`);
+    window.location.href = `${backendBase()}/logout?next=${next}`;
+  }
 
   const [uniqueDistricts, setUniqueDistricts] = useState([]);
   const [providers, setProviders] = useState([]);
@@ -295,7 +305,7 @@ export default function CustomerBooking() {
               <a href="/customer/profile">Profile</a>
             </li>
             <li>
-              <a href="/logout">Logout</a>
+              <a href="/logout" onClick={handleLogout}>Logout</a>
             </li>
           </ul>
         </nav>

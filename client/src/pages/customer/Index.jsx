@@ -11,6 +11,16 @@ function useLink(href) {
 }
 
 export default function CustomerIndex() {
+  function backendBase() {
+    const { protocol, hostname, port } = window.location;
+    if (port === "5173") return `${protocol}//${hostname}:3000`;
+    return ""; // same origin in production
+  }
+  function handleLogout(e) {
+    e.preventDefault();
+    const next = encodeURIComponent(`${window.location.origin}/`);
+    window.location.href = `${backendBase()}/logout?next=${next}`;
+  }
   // Load same CSS as static page (styles.css) and Bootstrap CDN
   useLink("/styles/styles.css");
   useLink(
@@ -143,7 +153,7 @@ export default function CustomerIndex() {
               <a href="/customer/profile">Profile</a>
             </li>
             <li>
-              <a href="/logout">Logout</a>
+              <a href="/logout" onClick={handleLogout}>Logout</a>
             </li>
           </ul>
         </nav>

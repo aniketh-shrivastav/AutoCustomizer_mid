@@ -12,6 +12,11 @@ function useLink(href) {
 
 export default function CustomerHistory() {
   useLink("/styles/styles.css");
+  function handleLogout(e) {
+    e.preventDefault();
+    const next = encodeURIComponent(`${window.location.origin}/`);
+    window.location.href = `${backendBase}/logout?next=${next}`;
+  }
 
   // Compute backend base URL for downloads. In dev (5173) point to 3000; in prod use same-origin.
   const backendBase = useMemo(() => {
@@ -246,7 +251,7 @@ export default function CustomerHistory() {
               <a href="/customer/profile">Profile</a>
             </li>
             <li>
-              <a href="/logout">Logout</a>
+              <a href="/logout" onClick={handleLogout}>Logout</a>
             </li>
           </ul>
         </nav>

@@ -215,7 +215,11 @@ router.get("/faq", (req, res) => {
 // Logout
 // ─────────────────────────────────────────────
 router.get("/logout", (req, res) => {
+  const next = req.query.next;
   req.session.destroy(() => {
+    if (next && /^https?:\/\//.test(next)) {
+      return res.redirect(next);
+    }
     res.redirect("/");
   });
 });

@@ -21,6 +21,17 @@ export default function CustomerCart() {
   const [showCheckout, setShowCheckout] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("");
 
+  function backendBase() {
+    const { protocol, hostname, port } = window.location;
+    if (port === "5173") return `${protocol}//${hostname}:3000`;
+    return "";
+  }
+  function handleLogout(e) {
+    e.preventDefault();
+    const next = encodeURIComponent(`${window.location.origin}/`);
+    window.location.href = `${backendBase()}/logout?next=${next}`;
+  }
+
   const totalCount = useMemo(
     () => items.reduce((sum, i) => sum + i.quantity, 0),
     [items]
@@ -142,7 +153,7 @@ export default function CustomerCart() {
               <a href="/customer/profile">Profile</a>
             </li>
             <li>
-              <a href="/logout">Logout</a>
+              <a href="/logout" onClick={handleLogout}>Logout</a>
             </li>
           </ul>
         </nav>

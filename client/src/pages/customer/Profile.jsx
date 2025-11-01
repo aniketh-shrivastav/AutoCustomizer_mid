@@ -26,6 +26,17 @@ export default function CustomerProfile() {
   const [userId, setUserId] = useState("");
   const [errors, setErrors] = useState({});
 
+  function backendBase() {
+    const { protocol, hostname, port } = window.location;
+    if (port === "5173") return `${protocol}//${hostname}:3000`;
+    return "";
+  }
+  function handleLogout(e) {
+    e.preventDefault();
+    const next = encodeURIComponent(`${window.location.origin}/`);
+    window.location.href = `${backendBase()}/logout?next=${next}`;
+  }
+
   useEffect(() => {
     (async () => {
       try {
@@ -256,7 +267,7 @@ export default function CustomerProfile() {
               </a>
             </li>
             <li>
-              <a href="/logout">Logout</a>
+              <a href="/logout" onClick={handleLogout}>Logout</a>
             </li>
           </ul>
         </nav>
@@ -427,7 +438,14 @@ export default function CustomerProfile() {
                   fontSize: 15,
                   cursor: "pointer",
                 }}
-                onClick={() => (window.location.href = "/logout")}
+                onClick={(e) => {
+                  e.preventDefault();
+                  const next = encodeURIComponent(`${window.location.origin}/`);
+                  const base = (window.location.port === "5173")
+                    ? `${window.location.protocol}//${window.location.hostname}:3000`
+                    : "";
+                  window.location.href = `${base}/logout?next=${next}`;
+                }}
               >
                 Logout
               </button>
