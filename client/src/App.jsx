@@ -26,7 +26,7 @@ export default function App() {
       <Route path="/contactus" element={<ContactUs />} />
       {/* Customer */}
       <Route path="/customer/index" element={<CustomerIndex />} />
-  <Route path="/customer/booking" element={<CustomerBooking />} />
+      <Route path="/customer/booking" element={<CustomerBooking />} />
       {/* Manager (React) */}
       <Route path="/manager/dashboard" element={<ManagerDashboard />} />
       <Route path="/manager/users" element={<ManagerUsers />} />
