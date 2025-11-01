@@ -23,8 +23,8 @@ export default function App() {
       <Route path="/all" element={<AllIndex />} />
       <Route path="/faq" element={<FAQ />} />
       <Route path="/contactus" element={<ContactUs />} />
-  {/* Customer */}
-  <Route path="/customer/index" element={<CustomerIndex />} />
+      {/* Customer */}
+      <Route path="/customer/index" element={<CustomerIndex />} />
       {/* Manager (React) */}
       <Route path="/manager/dashboard" element={<ManagerDashboard />} />
       <Route path="/manager/users" element={<ManagerUsers />} />
