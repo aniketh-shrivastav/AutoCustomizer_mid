@@ -1,6 +1,41 @@
-import React from "react";
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 export default function Login() {
+  const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+
+  async function onSubmit(e) {
+    e.preventDefault();
+    setError("");
+    try {
+      const res = await fetch("/login", {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        setError(j.message || "Invalid credentials");
+        return;
+      }
+      const j = await res.json();
+      if (j && j.success) {
+        const next = j.redirect || "/";
+        // Client-side navigation to SPA route when possible
+        navigate(next, { replace: true });
+      } else {
+        setError(j.message || "Login failed");
+      }
+    } catch (err) {
+      setError("Network error. Please try again.");
+    }
+  }
   return (
     <div className="container">
       <div className="auth-container">
@@ -17,26 +52,32 @@ export default function Login() {
         </div>
         <div className="auth-section">
           <h2>Welcome Back</h2>
-          {/* Use a regular HTML form so the server can do role-based redirects */}
-          <form action="/login" method="POST" className="auth-form">
+          {error && (
+            <div className="alert alert-danger" role="alert" style={{ marginBottom: 12 }}>
+              {error}
+            </div>
+          )}
+          <form onSubmit={onSubmit} className="auth-form">
             <div className="form-group">
               <label htmlFor="loginEmail">Email Address</label>
               <input
                 type="email"
-                name="email"
                 id="loginEmail"
                 required
                 placeholder="Enter your email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
               />
             </div>
             <div className="form-group">
               <label htmlFor="loginPassword">Password</label>
               <input
                 type="password"
-                name="password"
                 id="loginPassword"
                 required
                 placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
               />
             </div>
             <div className="form-options"></div>
