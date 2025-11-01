@@ -12,6 +12,7 @@ import AllIndex from "./pages/all/Index";
 import FAQ from "./pages/all/FAQ";
 import ContactUs from "./pages/all/ContactUs";
 import CustomerIndex from "./pages/customer/Index";
+import CustomerBooking from "./pages/customer/Booking";
 
 export default function App() {
   return (
@@ -25,6 +26,7 @@ export default function App() {
       <Route path="/contactus" element={<ContactUs />} />
       {/* Customer */}
       <Route path="/customer/index" element={<CustomerIndex />} />
+  <Route path="/customer/booking" element={<CustomerBooking />} />
       {/* Manager (React) */}
       <Route path="/manager/dashboard" element={<ManagerDashboard />} />
       <Route path="/manager/users" element={<ManagerUsers />} />

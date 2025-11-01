@@ -128,7 +128,7 @@ export default function CustomerIndex() {
               <a href="/customer/index">Products</a>
             </li>
             <li>
-              <a href="/customer/booking.html">Services</a>
+                <a href="/customer/booking">Services</a>
             </li>
             <li>
               <a href="/customer/history.html">Order History</a>
