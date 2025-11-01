@@ -80,6 +80,7 @@ router.post("/signup", async (req, res) => {
       return res.json({
         success: true,
         message: "Signup successful. Redirecting to login...",
+        redirect: "/login",
       });
     } else {
       return res.redirect("/login");
@@ -105,6 +106,9 @@ router.get("/login", (req, res) => {
 // ─────────────────────────────────────────────
 router.post("/login", async (req, res) => {
   const { email, password } = req.body;
+  const wantsJson =
+    (req.headers.accept || "").includes("application/json") ||
+    (req.headers["content-type"] || "").includes("application/json");
 
   try {
     // Find user in MongoDB
@@ -139,12 +143,25 @@ router.post("/login", async (req, res) => {
     switch (user.role) {
       case "manager":
         // Point managers to the React route instead of the legacy static HTML
+        if (wantsJson) {
+          return res.json({ success: true, role: "manager", redirect: "/manager/dashboard" });
+        }
         return res.redirect("/manager/dashboard");
       case "customer":
-        return res.redirect("/customer/index.html");
+        // Send customers to the React customer index route
+        if (wantsJson) {
+          return res.json({ success: true, role: "customer", redirect: "/customer/index" });
+        }
+        return res.redirect("/customer/index");
       case "seller":
+        if (wantsJson) {
+          return res.json({ success: true, role: "seller", redirect: "/Seller/dashboard" });
+        }
         return res.redirect("/Seller/dashboard");
       case "service-provider":
+        if (wantsJson) {
+          return res.json({ success: true, role: "service-provider", redirect: "/service/dashboardService" });
+        }
         return res.redirect("/service/dashboardService");
       default:
         return res.status(403).send("Unknown role");
