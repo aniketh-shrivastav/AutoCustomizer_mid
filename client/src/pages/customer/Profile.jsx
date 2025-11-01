@@ -267,7 +267,9 @@ export default function CustomerProfile() {
               </a>
             </li>
             <li>
-              <a href="/logout" onClick={handleLogout}>Logout</a>
+              <a href="/logout" onClick={handleLogout}>
+                Logout
+              </a>
             </li>
           </ul>
         </nav>
@@ -441,9 +443,10 @@ export default function CustomerProfile() {
                 onClick={(e) => {
                   e.preventDefault();
                   const next = encodeURIComponent(`${window.location.origin}/`);
-                  const base = (window.location.port === "5173")
-                    ? `${window.location.protocol}//${window.location.hostname}:3000`
-                    : "";
+                  const base =
+                    window.location.port === "5173"
+                      ? `${window.location.protocol}//${window.location.hostname}:3000`
+                      : "";
                   window.location.href = `${base}/logout?next=${next}`;
                 }}
               >

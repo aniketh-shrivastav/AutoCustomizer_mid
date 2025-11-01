@@ -251,7 +251,9 @@ export default function CustomerHistory() {
               <a href="/customer/profile">Profile</a>
             </li>
             <li>
-              <a href="/logout" onClick={handleLogout}>Logout</a>
+              <a href="/logout" onClick={handleLogout}>
+                Logout
+              </a>
             </li>
           </ul>
         </nav>

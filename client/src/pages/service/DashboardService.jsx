@@ -96,7 +96,11 @@ export default function ServiceDashboard() {
             },
           ],
         },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom" } } },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: "bottom" } },
+        },
       });
 
       const barCtx = barRef.current.getContext("2d");
@@ -105,17 +109,29 @@ export default function ServiceDashboard() {
         data: {
           labels: ["Week 1", "Week 2", "Week 3", "Week 4"],
           datasets: [
-            { label: "Earnings", data: [1500, 2200, 1800, 2500], backgroundColor: "#1abc9c" },
+            {
+              label: "Earnings",
+              data: [1500, 2200, 1800, 2500],
+              backgroundColor: "#1abc9c",
+            },
           ],
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
           scales: {
-            y: { beginAtZero: true, title: { display: true, text: "Earnings (₹)" } },
+            y: {
+              beginAtZero: true,
+              title: { display: true, text: "Earnings (₹)" },
+            },
             x: { title: { display: true, text: "Weeks" } },
           },
-          plugins: { title: { display: true, text: "Monthly Earnings Overview (Weekly Basis)" } },
+          plugins: {
+            title: {
+              display: true,
+              text: "Monthly Earnings Overview (Weekly Basis)",
+            },
+          },
         },
       });
     } catch (e) {
@@ -130,9 +146,21 @@ export default function ServiceDashboard() {
 
   const activity = useMemo(
     () => [
-      { icon: "fa-check-circle", text: "Completed: Brake Repair for Karthick", time: "2 hours ago" },
-      { icon: "fa-tools", text: "Started: Oil Change for Suresh", time: "4 hours ago" },
-      { icon: "fa-star", text: "New Review: 5 stars from Harish", time: "1 day ago" },
+      {
+        icon: "fa-check-circle",
+        text: "Completed: Brake Repair for Karthick",
+        time: "2 hours ago",
+      },
+      {
+        icon: "fa-tools",
+        text: "Started: Oil Change for Suresh",
+        time: "4 hours ago",
+      },
+      {
+        icon: "fa-star",
+        text: "New Review: 5 stars from Harish",
+        time: "1 day ago",
+      },
     ],
     []
   );
@@ -144,9 +172,20 @@ export default function ServiceDashboard() {
           <img src="/images3/logo2.jpg" alt="Logo" className="logo" />
           <span className="brand">AutoCustomizer</span>
         </div>
-        <a href="#" className="menu-btn" onClick={(e)=>{e.preventDefault(); setSidebarOpen(s=>!s);}}>☰</a>
+        <a
+          href="#"
+          className="menu-btn"
+          onClick={(e) => {
+            e.preventDefault();
+            setSidebarOpen((s) => !s);
+          }}
+        >
+          ☰
+        </a>
         <div className={`nav-links ${navOpen ? "active" : ""}`} id="navLinks">
-          <a href="/service/dashboard" className="active">Dashboard</a>
+          <a href="/service/dashboard" className="active">
+            Dashboard
+          </a>
           <a href="/service/profileSettings.html">Profile Settings</a>
           <a href="/service/bookingManagement">Booking Management</a>
           <a href="/service/reviews.html">Reviews & Ratings</a>
@@ -155,14 +194,30 @@ export default function ServiceDashboard() {
       </nav>
 
       <div className={`sidebar ${sidebarOpen ? "active" : ""}`} id="sidebar">
-        <a className="close-btn" onClick={()=> setSidebarOpen(false)}>Close ×</a>
-        <a href="/service/dashboard"><i className="fas fa-tachometer-alt" /> Dashboard</a>
-        <a href="/service/profileSettings.html"><i className="fas fa-user-cog" /> Profile Settings</a>
-        <a href="/service/bookingManagement"><i className="fas fa-calendar-alt" /> Bookings</a>
-        <a href="/service/customerCommunication"><i className="fas fa-comments" /> Communication</a>
-        <a href="/service/earnings"><i className="fas fa-money-bill-wave" /> Earnings</a>
-        <a href="/service/reviews.html"><i className="fas fa-star" /> Reviews</a>
-        <a href="/logout"><i className="fas fa-sign-out-alt" /> Logout</a>
+        <a className="close-btn" onClick={() => setSidebarOpen(false)}>
+          Close ×
+        </a>
+        <a href="/service/dashboard">
+          <i className="fas fa-tachometer-alt" /> Dashboard
+        </a>
+        <a href="/service/profileSettings.html">
+          <i className="fas fa-user-cog" /> Profile Settings
+        </a>
+        <a href="/service/bookingManagement">
+          <i className="fas fa-calendar-alt" /> Bookings
+        </a>
+        <a href="/service/customerCommunication">
+          <i className="fas fa-comments" /> Communication
+        </a>
+        <a href="/service/earnings">
+          <i className="fas fa-money-bill-wave" /> Earnings
+        </a>
+        <a href="/service/reviews.html">
+          <i className="fas fa-star" /> Reviews
+        </a>
+        <a href="/logout">
+          <i className="fas fa-sign-out-alt" /> Logout
+        </a>
       </div>
 
       <div className="dashboard-container">
@@ -172,35 +227,53 @@ export default function ServiceDashboard() {
 
         <div className="cards" id="metricCards">
           <div className="card">
-            <div className="card-icon"><i className="fas fa-rupee-sign"></i></div>
+            <div className="card-icon">
+              <i className="fas fa-rupee-sign"></i>
+            </div>
             <div className="card-content">
               <h2>Total Earnings</h2>
-              <p className="amount" id="earningsValue">₹{totals.earnings || 0}</p>
+              <p className="amount" id="earningsValue">
+                ₹{totals.earnings || 0}
+              </p>
               <p className="subtext">After 20% commission</p>
             </div>
           </div>
           <div className="card">
-            <div className="card-icon"><i className="fas fa-tools"></i></div>
+            <div className="card-icon">
+              <i className="fas fa-tools"></i>
+            </div>
             <div className="card-content">
               <h2>Confirmed Services</h2>
-              <p className="amount" id="ongoingValue">{totals.ongoing || 0}</p>
+              <p className="amount" id="ongoingValue">
+                {totals.ongoing || 0}
+              </p>
               <p className="subtext">Currently active</p>
             </div>
           </div>
           <div className="card">
-            <div className="card-icon"><i className="fas fa-check-circle"></i></div>
+            <div className="card-icon">
+              <i className="fas fa-check-circle"></i>
+            </div>
             <div className="card-content">
               <h2>Ready for Delivery</h2>
-              <p className="amount" id="completedValue">{totals.completed || 0}</p>
+              <p className="amount" id="completedValue">
+                {totals.completed || 0}
+              </p>
               <p className="subtext">Total completed</p>
             </div>
           </div>
           <div className="card">
-            <div className="card-icon"><i className="fas fa-smile"></i></div>
+            <div className="card-icon">
+              <i className="fas fa-smile"></i>
+            </div>
             <div className="card-content">
               <h2>Customer Satisfaction</h2>
-              <p className="amount" id="ratingValue">{(totals.avgRating ?? "N/A")}/5</p>
-              <p className="subtext" id="reviewsValue">Based on {totals.totalReviews || 0} reviews</p>
+              <p className="amount" id="ratingValue">
+                {totals.avgRating ?? "N/A"}/5
+              </p>
+              <p className="subtext" id="reviewsValue">
+                Based on {totals.totalReviews || 0} reviews
+              </p>
             </div>
           </div>
         </div>
@@ -235,7 +308,17 @@ export default function ServiceDashboard() {
       </div>
 
       {error ? (
-        <div style={{ position: "fixed", bottom: 12, right: 12, background: "#e74c3c", color: "#fff", padding: "8px 12px", borderRadius: 6 }}>
+        <div
+          style={{
+            position: "fixed",
+            bottom: 12,
+            right: 12,
+            background: "#e74c3c",
+            color: "#fff",
+            padding: "8px 12px",
+            borderRadius: 6,
+          }}
+        >
           {error}
         </div>
       ) : null}

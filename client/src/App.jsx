@@ -34,10 +34,10 @@ export default function App() {
       <Route path="/customer/history" element={<CustomerHistory />} />
       <Route path="/customer/cart" element={<CustomerCart />} />
       <Route path="/customer/profile" element={<CustomerProfile />} />
-  {/* Service Provider */}
-  <Route path="/service/dashboard" element={<ServiceDashboard />} />
-  {/* Back-compat for legacy path used by server redirects/static HTML */}
-  <Route path="/service/dashboardService" element={<ServiceDashboard />} />
+      {/* Service Provider */}
+      <Route path="/service/dashboard" element={<ServiceDashboard />} />
+      {/* Back-compat for legacy path used by server redirects/static HTML */}
+      <Route path="/service/dashboardService" element={<ServiceDashboard />} />
       {/* Manager (React) */}
       <Route path="/manager/dashboard" element={<ManagerDashboard />} />
       <Route path="/manager/users" element={<ManagerUsers />} />
