@@ -14,6 +14,8 @@ import ContactUs from "./pages/all/ContactUs";
 import CustomerIndex from "./pages/customer/Index";
 import CustomerBooking from "./pages/customer/Booking";
 import CustomerHistory from "./pages/customer/History";
+import CustomerCart from "./pages/customer/Cart";
+import CustomerProfile from "./pages/customer/Profile";
 
 export default function App() {
   return (
@@ -29,6 +31,8 @@ export default function App() {
       <Route path="/customer/index" element={<CustomerIndex />} />
       <Route path="/customer/booking" element={<CustomerBooking />} />
       <Route path="/customer/history" element={<CustomerHistory />} />
+      <Route path="/customer/cart" element={<CustomerCart />} />
+      <Route path="/customer/profile" element={<CustomerProfile />} />
       {/* Manager (React) */}
       <Route path="/manager/dashboard" element={<ManagerDashboard />} />
       <Route path="/manager/users" element={<ManagerUsers />} />
