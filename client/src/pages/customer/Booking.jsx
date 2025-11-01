@@ -283,7 +283,7 @@ export default function CustomerBooking() {
               </a>
             </li>
             <li>
-              <a href="/customer/history.html">Order History</a>
+              <a href="/customer/history">Order History</a>
             </li>
             <li>
               <a href="/customer/cart.html" className="cart-link">
