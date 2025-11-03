@@ -1,4 +1,5 @@
 /* Product Management page styling (scoped and overriding legacy CSS) */
+/*This is the CSS file for styling the Product Management pages of the AutoCustomizer application.*/
 @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap");
 
 body.seller-page,
