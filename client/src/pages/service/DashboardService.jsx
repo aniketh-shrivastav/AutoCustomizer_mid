@@ -38,12 +38,31 @@ export default function ServiceDashboard() {
   const pieChart = useRef(null);
   const barChart = useRef(null);
 
+  // Compute backend base for dev (Vite at 5173) vs prod (same-origin)
+  const backendBase = useMemo(() => {
+    try {
+      const hinted = window.__API_BASE__ || process.env.REACT_APP_API_BASE;
+      if (hinted) return hinted;
+      const { protocol, hostname, port } = window.location;
+      if (port === "5173") return `${protocol}//${hostname}:3000`;
+      return ""; // same-origin in prod
+    } catch {
+      return "";
+    }
+  }, []);
+
+  function handleLogout(e) {
+    e.preventDefault();
+    const next = encodeURIComponent(`${window.location.origin}/`);
+    window.location.href = `${backendBase}/logout?next=${next}`;
+  }
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
         setLoading(true);
-        const res = await fetch("/service/api/dashboard", {
+        const res = await fetch(`/service/api/dashboard`, {
           headers: { Accept: "application/json" },
         });
         if (res.status === 401) {
@@ -51,6 +70,16 @@ export default function ServiceDashboard() {
           return;
         }
         if (!res.ok) throw new Error("Failed to fetch dashboard");
+        const ct = (res.headers.get("content-type") || "").toLowerCase();
+        if (!ct.includes("application/json")) {
+          // Likely got HTML (dev server index or login page). Treat as unauthenticated.
+          const text = await res.text().catch(() => "");
+          if (text.startsWith("<!DOCTYPE") || text.includes("<html")) {
+            window.location.href = "/login";
+            return;
+          }
+          throw new Error("Unexpected response format from server");
+        }
         const data = await res.json();
         if (cancelled) return;
         setServiceLabels(data.serviceLabels || []);
@@ -186,10 +215,12 @@ export default function ServiceDashboard() {
           <a href="/service/dashboard" className="active">
             Dashboard
           </a>
-          <a href="/service/profileSettings.html">Profile Settings</a>
+          <a href="/service/profileSettings">Profile Settings</a>
           <a href="/service/bookingManagement">Booking Management</a>
-          <a href="/service/reviews.html">Reviews & Ratings</a>
-          <a href="/logout">Logout</a>
+          <a href="/service/reviews">Reviews & Ratings</a>
+          <a href="/logout" onClick={handleLogout}>
+            Logout
+          </a>
         </div>
       </nav>
 
@@ -200,7 +231,7 @@ export default function ServiceDashboard() {
         <a href="/service/dashboard">
           <i className="fas fa-tachometer-alt" /> Dashboard
         </a>
-        <a href="/service/profileSettings.html">
+        <a href="/service/profileSettings">
           <i className="fas fa-user-cog" /> Profile Settings
         </a>
         <a href="/service/bookingManagement">
@@ -212,10 +243,10 @@ export default function ServiceDashboard() {
         <a href="/service/earnings">
           <i className="fas fa-money-bill-wave" /> Earnings
         </a>
-        <a href="/service/reviews.html">
+        <a href="/service/reviews">
           <i className="fas fa-star" /> Reviews
         </a>
-        <a href="/logout">
+        <a href="/logout" onClick={handleLogout}>
           <i className="fas fa-sign-out-alt" /> Logout
         </a>
       </div>
