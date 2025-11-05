@@ -83,21 +83,21 @@ export default function SellerOrders() {
       const res = await fetch(`/seller/orders/${orderId}/status`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ newStatus }),
       });
-      const out = await res.json().catch(() => ({}));
-      if (!out.success) {
-        alert(out.message || "Failed to update status");
-        return;
+      if (!res.ok) {
+        const msg = await res.text();
+        throw new Error(msg || "Failed to update status");
       }
-      setOrders((list) =>
-        list.map((o) =>
-          o.orderId === orderId ? { ...o, status: newStatus } : o
-        )
-      );
-      alert("Order status updated successfully!");
+      const out = await res.json().catch(() => ({ success: true }));
+      if (out && out.success === false) {
+        throw new Error(out.message || "Failed to update status");
+      }
+      // Re-fetch to ensure UI reflects persisted status from server
+      await loadOrders();
     } catch (e) {
-      alert("Error updating order");
+      alert(e.message || "Error updating order");
     }
   }
 
@@ -312,6 +312,31 @@ export default function SellerOrders() {
         .seller-page .navbar { position: static !important; }
         .seller-page header { background: linear-gradient(135deg, #6a11cb, #2575fc); color:#fff; padding:30px 20px; text-align:center; box-shadow:0 4px 6px rgba(0,0,0,0.1); }
         .seller-page header h1 { margin:0; font-weight:600; }
+
+        /* Make the Update button look enabled unless actually disabled */
+        .seller-page .form-inline .btn {
+          background: linear-gradient(135deg, #6a11cb, #2575fc) !important;
+          color: #fff !important;
+          border: none !important;
+          padding: 8px 14px !important;
+          border-radius: 8px !important;
+          cursor: pointer !important;
+          opacity: 1 !important;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+          transition: transform .15s ease, box-shadow .15s ease, background .2s ease;
+        }
+        .seller-page .form-inline .btn:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 10px rgba(0,0,0,0.18);
+        }
+        .seller-page .form-inline .btn:disabled {
+          background: #d5d7de !important;
+          color: #888 !important;
+          cursor: not-allowed !important;
+          opacity: .75 !important;
+          box-shadow: none !important;
+          transform: none !important;
+        }
       `}</style>
     </div>
   );
