@@ -217,6 +217,10 @@ router.get("/faq", (req, res) => {
 router.get("/logout", (req, res) => {
   const next = req.query.next;
   req.session.destroy(() => {
+    // Clear session cookie explicitly
+    try {
+      res.clearCookie("connect.sid");
+    } catch {}
     if (next && /^https?:\/\//.test(next)) {
       return res.redirect(next);
     }
