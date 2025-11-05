@@ -12,6 +12,16 @@ import AllIndex from "./pages/all/Index";
 import FAQ from "./pages/all/FAQ";
 import ContactUs from "./pages/all/ContactUs";
 import CustomerIndex from "./pages/customer/Index";
+import CustomerBooking from "./pages/customer/Booking";
+import CustomerHistory from "./pages/customer/History";
+import CustomerCart from "./pages/customer/Cart";
+import CustomerProfile from "./pages/customer/Profile";
+import ServiceDashboard from "./pages/service/DashboardService";
+import ServiceProfileSettings from "./pages/service/ProfileSettings";
+import ServiceBookingManagement from "./pages/service/BookingManagement";
+import ServiceReviews from "./pages/service/Reviews";
+import SellerDashboard from "./pages/seller/Dashboard";
+import SellerProfileSettings from "./pages/seller/ProfileSettings";
 
 export default function App() {
   return (
@@ -23,8 +33,35 @@ export default function App() {
       <Route path="/all" element={<AllIndex />} />
       <Route path="/faq" element={<FAQ />} />
       <Route path="/contactus" element={<ContactUs />} />
-  {/* Customer */}
-  <Route path="/customer/index" element={<CustomerIndex />} />
+      {/* Customer */}
+      <Route path="/customer/index" element={<CustomerIndex />} />
+      <Route path="/customer/booking" element={<CustomerBooking />} />
+      <Route path="/customer/history" element={<CustomerHistory />} />
+      <Route path="/customer/cart" element={<CustomerCart />} />
+      <Route path="/customer/profile" element={<CustomerProfile />} />
+      {/* Service Provider */}
+      <Route path="/service/dashboard" element={<ServiceDashboard />} />
+      {/* Back-compat for legacy path used by server redirects/static HTML */}
+      <Route path="/service/dashboardService" element={<ServiceDashboard />} />
+      <Route
+        path="/service/profileSettings"
+        element={<ServiceProfileSettings />}
+      />
+      {/* Alias for legacy static html path */}
+      <Route
+        path="/service/profileSettings.html"
+        element={<ServiceProfileSettings />}
+      />
+      <Route
+        path="/service/bookingManagement"
+        element={<ServiceBookingManagement />}
+      />
+      <Route
+        path="/service/bookingManagement.html"
+        element={<ServiceBookingManagement />}
+      />
+      <Route path="/service/reviews" element={<ServiceReviews />} />
+      <Route path="/service/reviews.html" element={<ServiceReviews />} />
       {/* Manager (React) */}
       <Route path="/manager/dashboard" element={<ManagerDashboard />} />
       <Route path="/manager/users" element={<ManagerUsers />} />
@@ -32,6 +69,17 @@ export default function App() {
       <Route path="/manager/orders" element={<Orders />} />
       <Route path="/manager/payments" element={<Payments />} />
       <Route path="/manager/support" element={<Support />} />
+      {/* Seller (React) */}
+      <Route path="/seller/dashboard" element={<SellerDashboard />} />
+      <Route path="/seller/dashboard.html" element={<SellerDashboard />} />
+      <Route
+        path="/seller/profileSettings"
+        element={<SellerProfileSettings />}
+      />
+      <Route
+        path="/seller/profileSettings.html"
+        element={<SellerProfileSettings />}
+      />
       <Route
         path="*"
         element={

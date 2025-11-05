@@ -53,7 +53,11 @@ export default function Login() {
         <div className="auth-section">
           <h2>Welcome Back</h2>
           {error && (
-            <div className="alert alert-danger" role="alert" style={{ marginBottom: 12 }}>
+            <div
+              className="alert alert-danger"
+              role="alert"
+              style={{ marginBottom: 12 }}
+            >
               {error}
             </div>
           )}

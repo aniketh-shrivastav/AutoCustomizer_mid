@@ -144,23 +144,39 @@ router.post("/login", async (req, res) => {
       case "manager":
         // Point managers to the React route instead of the legacy static HTML
         if (wantsJson) {
-          return res.json({ success: true, role: "manager", redirect: "/manager/dashboard" });
+          return res.json({
+            success: true,
+            role: "manager",
+            redirect: "/manager/dashboard",
+          });
         }
         return res.redirect("/manager/dashboard");
       case "customer":
         // Send customers to the React customer index route
         if (wantsJson) {
-          return res.json({ success: true, role: "customer", redirect: "/customer/index" });
+          return res.json({
+            success: true,
+            role: "customer",
+            redirect: "/customer/index",
+          });
         }
         return res.redirect("/customer/index");
       case "seller":
         if (wantsJson) {
-          return res.json({ success: true, role: "seller", redirect: "/Seller/dashboard" });
+          return res.json({
+            success: true,
+            role: "seller",
+            redirect: "/Seller/dashboard",
+          });
         }
         return res.redirect("/Seller/dashboard");
       case "service-provider":
         if (wantsJson) {
-          return res.json({ success: true, role: "service-provider", redirect: "/service/dashboardService" });
+          return res.json({
+            success: true,
+            role: "service-provider",
+            redirect: "/service/dashboardService",
+          });
         }
         return res.redirect("/service/dashboardService");
       default:
@@ -199,7 +215,11 @@ router.get("/faq", (req, res) => {
 // Logout
 // ─────────────────────────────────────────────
 router.get("/logout", (req, res) => {
+  const next = req.query.next;
   req.session.destroy(() => {
+    if (next && /^https?:\/\//.test(next)) {
+      return res.redirect(next);
+    }
     res.redirect("/");
   });
 });
