@@ -22,6 +22,9 @@ import ServiceBookingManagement from "./pages/service/BookingManagement";
 import ServiceReviews from "./pages/service/Reviews";
 import SellerDashboard from "./pages/seller/Dashboard";
 import SellerProfileSettings from "./pages/seller/ProfileSettings";
+import SellerProductManagement from "./pages/seller/ProductManagement";
+import SellerOrders from "./pages/seller/Orders";
+import Logout from "./pages/Logout";
 
 export default function App() {
   return (
@@ -29,8 +32,9 @@ export default function App() {
       <Route path="/" element={<AllIndex />} />
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
+      {/* Logout (SPA route that calls server then redirects) */}
+      <Route path="/logout" element={<Logout />} />
       {/* Public site (All) */}
-      <Route path="/all" element={<AllIndex />} />
       <Route path="/faq" element={<FAQ />} />
       <Route path="/contactus" element={<ContactUs />} />
       {/* Customer */}
@@ -80,6 +84,16 @@ export default function App() {
         path="/seller/profileSettings.html"
         element={<SellerProfileSettings />}
       />
+      <Route
+        path="/seller/productmanagement"
+        element={<SellerProductManagement />}
+      />
+      <Route
+        path="/seller/productManagement.html"
+        element={<SellerProductManagement />}
+      />
+      <Route path="/seller/orders" element={<SellerOrders />} />
+      <Route path="/seller/orders.html" element={<SellerOrders />} />
       <Route
         path="*"
         element={
