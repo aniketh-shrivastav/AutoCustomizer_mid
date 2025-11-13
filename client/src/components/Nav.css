@@ -1,0 +1,137 @@
+/* Override legacy header if it exists alongside new nav */
+header {
+  display: none !important;
+}
+
+/* Ensure html and body allow scrolling */
+html,
+body,
+#root {
+  height: auto !important;
+  min-height: 100vh;
+  overflow-x: hidden;
+  overflow-y: auto !important;
+}
+
+.ac-navbar {
+  background: #1f2937; /* slate-800 */
+  color: #fff;
+  position: fixed; /* match legacy header fixed behavior */
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  margin: 0;
+}
+/* Ensure body or root doesn't push content; let legacy main margin-top handle offset */
+body:has(.ac-navbar) {
+  padding-top: 0;
+}
+.ac-navbar .container {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  height: 70px; /* match legacy header height so main's margin-top: 100px aligns */
+}
+.ac-navbar .brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+}
+.ac-navbar .brand img {
+  height: 40px;
+  width: auto;
+  border-radius: 6px;
+}
+.ac-navbar .nav-toggle {
+  display: none;
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 22px;
+  cursor: pointer;
+}
+.ac-navbar .nav-links {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.ac-navbar .nav-links a {
+  color: #e5e7eb; /* gray-200 */
+  text-decoration: none;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-weight: 500;
+}
+.ac-navbar .nav-links a.active {
+  background: #374151; /* slate-700 */
+  color: #fff;
+}
+.ac-navbar .nav-links a:hover {
+  background: #2b3442; /* slightly darker */
+  color: #fff;
+}
+.ac-navbar .cart-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent; /* neutralize legacy CSS */
+  padding: 0; /* let a padding from a tag apply */
+}
+.ac-navbar .cart-link img {
+  height: 18px;
+  width: 18px;
+}
+.ac-navbar .badge {
+  display: inline-block;
+  min-width: 18px;
+  padding: 1px 6px;
+  font-size: 12px;
+  line-height: 18px;
+  text-align: center;
+  background: #ef4444; /* red-500 */
+  color: #fff;
+  border-radius: 999px;
+}
+
+@media (max-width: 768px) {
+  .ac-navbar .nav-toggle {
+    display: inline-block;
+  }
+  .ac-navbar .nav-links {
+    display: none;
+    position: absolute;
+    top: 56px;
+    left: 0;
+    right: 0;
+    background: #1f2937;
+    padding: 10px 16px 16px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    border-bottom: 1px solid #374151;
+  }
+  .ac-navbar .nav-links.open {
+    display: flex;
+  }
+}
+
+/* Repair broken navbar because legacy .container is overriding it */
+.ac-navbar .container {
+  all: unset; /* reset EVERYTHING */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 12px 16px;
+  height: 70px;
+  width: 100%;
+}
