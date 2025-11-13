@@ -20,6 +20,7 @@ export default function CustomerChat() {
   const [user, setUser] = useState(null);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
+  const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -74,7 +75,7 @@ export default function CustomerChat() {
   async function sendMessage(e) {
     e.preventDefault();
     const text = input.trim();
-    if (!text) return;
+    if (!text || !user) return;
 
     setInput("");
 
@@ -95,6 +96,30 @@ export default function CustomerChat() {
       scrollToBottom();
     } catch (e) {
       alert(e.message);
+    }
+  }
+
+  async function onPickFile(e) {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    const form = new FormData();
+    form.append("file", file);
+    setUploading(true);
+    try {
+      const res = await fetch(`/chat/customer/${user.id}/attachments`, {
+        method: "POST",
+        body: form,
+      });
+      const j = await res.json();
+      if (!j.success) throw new Error(j.message || "Upload failed");
+      setMessages((list) => [...list, j.message]);
+      scrollToBottom();
+    } catch (e) {
+      alert(e.message || "Upload failed");
+    } finally {
+      setUploading(false);
+      // reset file input
+      if (e.target) e.target.value = "";
     }
   }
 
@@ -183,7 +208,49 @@ export default function CustomerChat() {
                       lineHeight: 1.4,
                     }}
                   >
-                    {m.text}
+                    {m.attachment?.url ? (
+                      m.attachment.type?.startsWith("image/") ? (
+                        <a
+                          href={m.attachment.url}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          <img
+                            src={m.attachment.url}
+                            alt={m.attachment.name || "attachment"}
+                            style={{
+                              maxWidth: "100%",
+                              borderRadius: 8,
+                              display: "block",
+                            }}
+                          />
+                        </a>
+                      ) : (
+                        <a
+                          href={m.attachment.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{
+                            color: mine ? "#fff" : "#222",
+                            textDecoration: "underline",
+                          }}
+                        >
+                          {m.attachment.name || "Download file"}
+                        </a>
+                      )
+                    ) : null}
+
+                    {m.text ? (
+                      <div
+                        style={{
+                          whiteSpace: "pre-wrap",
+                          marginTop: m.attachment ? 8 : 0,
+                        }}
+                      >
+                        {m.text}
+                      </div>
+                    ) : null}
+
                     <div
                       style={{
                         fontSize: 11,
@@ -217,6 +284,7 @@ export default function CustomerChat() {
             padding: "14px 20px",
             borderTop: "1px solid #e5e7eb",
             background: "#ffffff",
+            alignItems: "center",
           }}
         >
           <input
@@ -234,6 +302,19 @@ export default function CustomerChat() {
               background: "#f9fafb",
             }}
           />
+
+          <input
+            type="file"
+            accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            onChange={onPickFile}
+            disabled={uploading}
+            style={{ marginLeft: 12 }}
+          />
+          {uploading && (
+            <span style={{ marginLeft: 8, fontSize: 12, color: "#6b7280" }}>
+              Uploading...
+            </span>
+          )}
 
           <button
             type="submit"

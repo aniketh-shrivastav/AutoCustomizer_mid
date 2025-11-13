@@ -14,7 +14,18 @@ const messageSchema = new mongoose.Schema(
       required: true,
     },
     senderRole: { type: String, enum: ["customer", "manager"], required: true },
-    text: { type: String, required: true, trim: true, maxlength: 2000 },
+    text: { type: String, trim: true, maxlength: 2000 },
+    attachment: {
+      url: String, // public URL to file
+      type: String, // mime type
+      name: String, // original filename
+      size: Number, // bytes
+      provider: {
+        type: String,
+        enum: ["local", "cloudinary"],
+        default: "local",
+      },
+    },
   },
   { timestamps: { createdAt: true, updatedAt: false } }
 );
