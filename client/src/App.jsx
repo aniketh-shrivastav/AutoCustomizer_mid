@@ -8,6 +8,7 @@ import Profiles from "./pages/manager/Profiles";
 import Orders from "./pages/manager/Orders";
 import Payments from "./pages/manager/Payments";
 import Support from "./pages/manager/Support";
+import ManagerChat from "./pages/manager/Chat";
 import AllIndex from "./pages/all/Index";
 import FAQ from "./pages/all/FAQ";
 import ContactUs from "./pages/all/ContactUs";
@@ -16,6 +17,7 @@ import CustomerBooking from "./pages/customer/Booking";
 import CustomerHistory from "./pages/customer/History";
 import CustomerCart from "./pages/customer/Cart";
 import CustomerProfile from "./pages/customer/Profile";
+import CustomerChat from "./pages/customer/Chat";
 import ServiceDashboard from "./pages/service/DashboardService";
 import ServiceProfileSettings from "./pages/service/ProfileSettings";
 import ServiceBookingManagement from "./pages/service/BookingManagement";
@@ -43,6 +45,7 @@ export default function App() {
       <Route path="/customer/history" element={<CustomerHistory />} />
       <Route path="/customer/cart" element={<CustomerCart />} />
       <Route path="/customer/profile" element={<CustomerProfile />} />
+      <Route path="/customer/chat" element={<CustomerChat />} />
       {/* Service Provider */}
       <Route path="/service/dashboard" element={<ServiceDashboard />} />
       {/* Back-compat for legacy path used by server redirects/static HTML */}
@@ -73,6 +76,7 @@ export default function App() {
       <Route path="/manager/orders" element={<Orders />} />
       <Route path="/manager/payments" element={<Payments />} />
       <Route path="/manager/support" element={<Support />} />
+      <Route path="/manager/chat" element={<ManagerChat />} />
       {/* Seller (React) */}
       <Route path="/seller/dashboard" element={<SellerDashboard />} />
       <Route path="/seller/dashboard.html" element={<SellerDashboard />} />
