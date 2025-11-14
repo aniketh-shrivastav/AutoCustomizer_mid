@@ -105,11 +105,27 @@ export default function CustomerCart() {
         },
         body: JSON.stringify({ paymentMethod }),
       });
-      if (!res.ok) throw new Error("Order failed");
-      alert("Order placed successfully!");
+      
+      const data = await res.json().catch(() => ({}));
+      
+      if (!res.ok) {
+        const errorMessage = data.message || "Order failed. Please try again.";
+        alert(errorMessage);
+        
+        // If it's a profile issue, redirect to profile page
+        if (errorMessage.includes("profile") || errorMessage.includes("address") || errorMessage.includes("district")) {
+          if (window.confirm("Would you like to update your profile now?")) {
+            window.location.href = "/customer/profile";
+          }
+        }
+        return;
+      }
+      
+      alert(data.message || "Order placed successfully!");
       window.location.href = "/customer/history";
     } catch (e) {
-      alert(e.message || "Failed to place order");
+      alert(e.message || "An error occurred while placing your order. Please try again.");
+      console.error("Order placement error:", e);
     }
   }
 

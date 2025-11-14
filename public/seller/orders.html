@@ -124,10 +124,14 @@
             return;
           }
           tbody.innerHTML = "";
-          data.orders.forEach((o) => {
+          data.orders.forEach((o, index) => {
             const disabled =
               o.status === "delivered" || o.status === "cancelled";
             const row = document.createElement("tr");
+            // Use unique ID for each row to ensure independence
+            const uniqueId = o.uniqueId || `${o.orderId}-${o.productId}-${index}`;
+            const rowId = `order-row-${uniqueId}`;
+            row.id = rowId;
             row.innerHTML = `
             <td style="padding:8px;border-bottom:1px solid #ddd;">${
               o.orderId
@@ -144,14 +148,20 @@
             <td style="padding:8px;border-bottom:1px solid #ddd;">${
               o.deliveryAddress
             }</td>
-            <td style="padding:8px;border-bottom:1px solid #ddd;">${statusBadge(
+            <td style="padding:8px;border-bottom:1px solid #ddd;" data-status-cell>${statusBadge(
               o.status
             )}</td>
             <td style="padding:8px;border-bottom:1px solid #ddd;">
               <div class="form-inline" style="background:transparent;padding:0;margin:0;">
-                <select data-order-id="${o.orderId}" ${
-              disabled ? "disabled" : ""
-            } style="padding:6px;border-radius:6px;">
+                <select 
+                  class="status-select" 
+                  data-unique-id="${uniqueId}"
+                  data-order-id="${o.orderId}" 
+                  data-product-id="${o.productId || ''}"
+                  data-item-index="${o.itemIndex !== undefined ? o.itemIndex : ''}"
+                  data-original-status="${o.status}"
+                  ${disabled ? "disabled" : ""} 
+                  style="padding:6px;border-radius:6px;">
                   ${[
                     "pending",
                     "confirmed",
@@ -167,9 +177,16 @@
                     )
                     .join("")}
                 </select>
-                <button class="btn" data-update="${o.orderId}" ${
-              disabled ? "disabled" : ""
-            } style="margin-left:8px;">Update</button>
+                <button 
+                  class="btn update-status-btn" 
+                  data-unique-id="${uniqueId}"
+                  data-order-id="${o.orderId}" 
+                  data-product-id="${o.productId || ''}"
+                  data-item-index="${o.itemIndex !== undefined ? o.itemIndex : ''}"
+                  data-original-status="${o.status}"
+                  ${disabled ? "disabled" : ""}
+                  disabled
+                  style="margin-left:8px;opacity:0.5;cursor:not-allowed;">Update</button>
               </div>
             </td>`;
             tbody.appendChild(row);
@@ -187,38 +204,145 @@
       }
 
       function attachHandlers() {
-        document.querySelectorAll("button[data-update]").forEach((btn) => {
-          btn.addEventListener("click", async () => {
-            const orderId = btn.getAttribute("data-update");
-            const select = document.querySelector(
-              `select[data-order-id="${orderId}"]`
-            );
+        // Attach handlers to each Update button - scoped to its specific row using unique ID
+        document.querySelectorAll("button.update-status-btn").forEach((btn) => {
+          btn.addEventListener("click", async (e) => {
+            e.preventDefault();
+            const uniqueId = btn.getAttribute("data-unique-id");
+            const orderId = btn.getAttribute("data-order-id");
+            
+            // Find the select within the same row using unique ID to ensure independence
+            const row = btn.closest("tr");
+            const select = row.querySelector(`select.status-select[data-unique-id="${uniqueId}"]`);
+            
+            if (!select || !orderId || !uniqueId) {
+              console.error("Could not find select, orderId, or uniqueId");
+              return;
+            }
+            
             const newStatus = select.value;
+            const originalStatus = select.getAttribute("data-original-status");
+            
+            // Don't update if status hasn't changed
+            if (newStatus === originalStatus) {
+              alert("Status unchanged. No update needed.");
+              return;
+            }
+            
+            // Disable button during update
+            btn.disabled = true;
+            btn.textContent = "Updating...";
+            
             try {
+              // Get productId and itemIndex for per-item status update
+              const productId = select.getAttribute("data-product-id");
+              const itemIndex = select.getAttribute("data-item-index");
+              
               const res = await fetch(`/seller/orders/${orderId}/status`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ newStatus }),
+                body: JSON.stringify({ 
+                  newStatus,
+                  productId: productId || undefined,
+                  itemIndex: itemIndex !== '' ? parseInt(itemIndex) : undefined
+                }),
               });
+              
               const out = await res.json();
+              
               if (!out.success) {
-                alert("Failed to update status");
+                alert(out.message || "Failed to update status");
+                // Revert select to original value
+                select.value = originalStatus;
+                updateButtonState(btn, select, originalStatus);
                 return;
               }
-              // Update badge in row
-              const badgeCell = select.closest("tr").children[5];
-              badgeCell.innerHTML = statusBadge(newStatus);
-              if (["delivered", "cancelled"].includes(newStatus)) {
-                select.disabled = true;
-                btn.disabled = true;
+              
+              // Update badge in the same row only
+              const statusCell = row.querySelector("td[data-status-cell]");
+              if (statusCell) {
+                statusCell.innerHTML = statusBadge(newStatus);
               }
+              
+              // Update the original status attribute
+              select.setAttribute("data-original-status", newStatus);
+              btn.setAttribute("data-original-status", newStatus);
+              
+              // Update button state
+              updateButtonState(btn, select, newStatus);
+              
               alert("Order status updated successfully!");
+              
+              // If status changed to delivered, notify user to refresh dashboard for earnings update
+              if (newStatus === "delivered") {
+                console.log("Order marked as delivered - dashboard earnings will update on next view");
+              }
+              
+              // Reload orders to reflect changes
+              setTimeout(() => {
+                loadOrders();
+              }, 500);
             } catch (e) {
-              console.error(e);
-              alert("Error updating order");
+              console.error("Error updating order:", e);
+              alert("Error updating order. Please try again.");
+              // Revert select to original value on error
+              select.value = originalStatus;
+              updateButtonState(btn, select, originalStatus);
             }
           });
         });
+        
+        // Handle dropdown changes - enable/disable update button and show visual feedback
+        document.querySelectorAll("select.status-select").forEach((select) => {
+          select.addEventListener("change", function() {
+            const uniqueId = this.getAttribute("data-unique-id");
+            const row = this.closest("tr");
+            const btn = row.querySelector(`button.update-status-btn[data-unique-id="${uniqueId}"]`);
+            const originalStatus = this.getAttribute("data-original-status");
+            const currentStatus = this.value;
+            const isDisabled = this.disabled;
+            
+            // Enable/disable button based on whether status changed
+            // Button should be enabled for ANY status change (except if dropdown is disabled)
+            if (btn) {
+              if (currentStatus !== originalStatus && !isDisabled) {
+                // Status changed and dropdown is not disabled - enable button
+                btn.disabled = false;
+                btn.style.opacity = "1";
+                btn.style.cursor = "pointer";
+                this.style.borderColor = "#ffc107";
+              } else {
+                // Status unchanged or dropdown disabled - disable button
+                btn.disabled = true;
+                btn.style.opacity = "0.5";
+                btn.style.cursor = "not-allowed";
+                this.style.borderColor = "";
+              }
+            }
+          });
+        });
+      }
+      
+      function updateButtonState(btn, select, status) {
+        const originalStatus = select.getAttribute("data-original-status");
+        const currentStatus = select.value;
+        
+        // Disable if final status or if status matches original
+        if (["delivered", "cancelled"].includes(status)) {
+          select.disabled = true;
+          btn.disabled = true;
+          btn.style.opacity = "0.5";
+          btn.style.cursor = "not-allowed";
+        } else if (currentStatus === originalStatus) {
+          btn.disabled = true;
+          btn.style.opacity = "0.5";
+          btn.style.cursor = "not-allowed";
+        } else {
+          btn.disabled = false;
+          btn.style.opacity = "1";
+          btn.style.cursor = "pointer";
+        }
+        btn.textContent = "Update";
       }
 
       document.addEventListener("DOMContentLoaded", loadOrders);

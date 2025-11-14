@@ -276,27 +276,37 @@ function removeItem(productId) {
   .catch(err => alert("Failed to remove item"));
 }
 
-document.getElementById("place-order").addEventListener("click", () => {
-  fetch("/customer/create-order", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" }
-  })
-  .then(async res => {
-    if (!res.ok) throw new Error(`Failed to place order: ${res.status}`);
-    try {
-      const data = await res.json();
-      alert("Order placed successfully!");
-      location.href = "/customer/history"; 
-    } catch (e) {
-      // In case no JSON response (e.g., 204 No Content)
-      alert("Order placed successfully!");
-      location.href = "/customer/history"; 
+document.getElementById("place-order").addEventListener("click", async () => {
+  try {
+    const res = await fetch("/customer/create-order", {
+      method: "POST",
+      headers: { 
+        "Content-Type": "application/json",
+        Accept: "application/json"
+      }
+    });
+    
+    const data = await res.json().catch(() => ({}));
+    
+    if (!res.ok) {
+      const errorMessage = data.message || "Order failed. Please try again.";
+      alert(errorMessage);
+      
+      // If it's a profile issue, redirect to profile page
+      if (errorMessage.includes("profile") || errorMessage.includes("address") || errorMessage.includes("district")) {
+        if (confirm("Would you like to update your profile now?")) {
+          location.href = "/customer/profile";
+        }
+      }
+      return;
     }
-  })
-  .catch(err => {
-    alert("Error placing order");
-    console.error(err);
-  });
+    
+    alert(data.message || "Order placed successfully!");
+    location.href = "/customer/history"; 
+  } catch (err) {
+    alert(err.message || "An error occurred while placing your order. Please try again.");
+    console.error("Order placement error:", err);
+  }
 });
 
 document.getElementById("checkout-btn").addEventListener("click", () => {

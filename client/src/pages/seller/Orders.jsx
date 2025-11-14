@@ -50,6 +50,10 @@ export default function SellerOrders() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  // Store original statuses to track changes
+  const [originalStatuses, setOriginalStatuses] = useState({});
+  // Store pending status changes (not yet saved)
+  const [pendingStatuses, setPendingStatuses] = useState({});
 
   async function loadOrders() {
     setLoading(true);
@@ -65,7 +69,16 @@ export default function SellerOrders() {
       const data = await res.json();
       if (!data.success)
         throw new Error(data.message || "Failed to load orders");
-      setOrders(data.orders || []);
+      const loadedOrders = data.orders || [];
+      setOrders(loadedOrders);
+      // Initialize original statuses and clear pending changes using uniqueId
+      const statusMap = {};
+      loadedOrders.forEach((o) => {
+        const uniqueId = o.uniqueId || `${o.orderId}-${o.productId || ''}`;
+        statusMap[uniqueId] = o.status;
+      });
+      setOriginalStatuses(statusMap);
+      setPendingStatuses({});
     } catch (e) {
       setError("Failed to load orders");
       setOrders([]);
@@ -78,27 +91,103 @@ export default function SellerOrders() {
     loadOrders();
   }, []);
 
-  async function updateStatus(orderId, newStatus) {
+  async function updateStatus(uniqueId, orderId, productId, itemIndex) {
+    // Get the pending status or current status
+    const order = orders.find(o => {
+      const oUniqueId = o.uniqueId || `${o.orderId}-${o.productId || ''}`;
+      return oUniqueId === uniqueId;
+    });
+    const newStatus = pendingStatuses[uniqueId] || order?.status;
+    const originalStatus = originalStatuses[uniqueId] || order?.status;
+    
+    // Don't update if status hasn't changed
+    if (newStatus === originalStatus) {
+      alert("Status unchanged. No update needed.");
+      return;
+    }
+    
     try {
       const res = await fetch(`/seller/orders/${orderId}/status`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ newStatus }),
+        body: JSON.stringify({ 
+          newStatus,
+          productId: productId || undefined,
+          itemIndex: itemIndex !== undefined ? itemIndex : undefined
+        }),
       });
-      if (!res.ok) {
-        const msg = await res.text();
-        throw new Error(msg || "Failed to update status");
+      
+      const out = await res.json().catch(() => ({}));
+      
+      if (!res.ok || out.success === false) {
+        const errorMsg = out.message || "Failed to update status";
+        alert(errorMsg);
+        // Revert to original status on error
+        setPendingStatuses(prev => {
+          const updated = { ...prev };
+          delete updated[uniqueId];
+          return updated;
+        });
+        setOrders(prev => prev.map(o => {
+          const oUniqueId = o.uniqueId || `${o.orderId}-${o.productId || ''}`;
+          return oUniqueId === uniqueId ? { ...o, status: originalStatus } : o;
+        }));
+        return;
       }
-      const out = await res.json().catch(() => ({ success: true }));
-      if (out && out.success === false) {
-        throw new Error(out.message || "Failed to update status");
-      }
-      // Re-fetch to ensure UI reflects persisted status from server
-      await loadOrders();
+      
+      // Update original status after successful save
+      setOriginalStatuses(prev => ({
+        ...prev,
+        [uniqueId]: newStatus
+      }));
+      
+      // Clear pending status
+      setPendingStatuses(prev => {
+        const updated = { ...prev };
+        delete updated[uniqueId];
+        return updated;
+      });
+      
+      // Update order in state
+      setOrders(prev => prev.map(o => {
+        const oUniqueId = o.uniqueId || `${o.orderId}-${o.productId || ''}`;
+        return oUniqueId === uniqueId ? { ...o, status: newStatus } : o;
+      }));
+      
+      alert("Order status updated successfully!");
+      
+      // Reload orders to ensure dashboard reflects changes
+      setTimeout(() => {
+        loadOrders();
+      }, 500);
     } catch (e) {
       alert(e.message || "Error updating order");
+      // Revert on error
+      setPendingStatuses(prev => {
+        const updated = { ...prev };
+        delete updated[uniqueId];
+        return updated;
+      });
+      setOrders(prev => prev.map(o => {
+        const oUniqueId = o.uniqueId || `${o.orderId}-${o.productId || ''}`;
+        return oUniqueId === uniqueId ? { ...o, status: originalStatus } : o;
+      }));
     }
+  }
+  
+  function handleStatusChange(uniqueId, newStatus) {
+    // Only update the pending status (visual change), don't persist yet
+    setPendingStatuses(prev => ({
+      ...prev,
+      [uniqueId]: newStatus
+    }));
+    
+    // Update visual display immediately
+    setOrders(prev => prev.map(o => {
+      const oUniqueId = o.uniqueId || `${o.orderId}-${o.productId || ''}`;
+      return oUniqueId === uniqueId ? { ...o, status: newStatus } : o;
+    }));
   }
 
   const allStatuses = [
@@ -210,11 +299,18 @@ export default function SellerOrders() {
                   </tr>
                 ) : (
                   orders.map((o) => {
+                    const uniqueId = o.uniqueId || `${o.orderId}-${o.productId || ''}`;
+                    const currentStatus = pendingStatuses[uniqueId] || o.status;
+                    const originalStatus = originalStatuses[uniqueId] || o.status;
+                    const hasChanged = currentStatus !== originalStatus;
+                    // Disable if original status is final (prevent changing FROM final state)
+                    // Allow changing TO delivered/cancelled from other states
                     const disabled = ["delivered", "cancelled"].includes(
-                      String(o.status).toLowerCase()
+                      String(originalStatus).toLowerCase()
                     );
+                    
                     return (
-                      <tr key={o.orderId}>
+                      <tr key={uniqueId}>
                         <td
                           style={{ padding: 8, borderBottom: "1px solid #ddd" }}
                         >
@@ -243,7 +339,7 @@ export default function SellerOrders() {
                         <td
                           style={{ padding: 8, borderBottom: "1px solid #ddd" }}
                         >
-                          <StatusBadge status={o.status} />
+                          <StatusBadge status={currentStatus} />
                         </td>
                         <td
                           style={{ padding: 8, borderBottom: "1px solid #ddd" }}
@@ -257,18 +353,14 @@ export default function SellerOrders() {
                             }}
                           >
                             <select
-                              value={String(o.status).toLowerCase()}
+                              value={String(currentStatus).toLowerCase()}
                               disabled={disabled}
-                              onChange={(e) =>
-                                setOrders((list) =>
-                                  list.map((x) =>
-                                    x.orderId === o.orderId
-                                      ? { ...x, status: e.target.value }
-                                      : x
-                                  )
-                                )
-                              }
-                              style={{ padding: 6, borderRadius: 6 }}
+                              onChange={(e) => handleStatusChange(uniqueId, e.target.value)}
+                              style={{ 
+                                padding: 6, 
+                                borderRadius: 6,
+                                borderColor: hasChanged ? "#ffc107" : ""
+                              }}
                             >
                               {allStatuses.map((s) => (
                                 <option key={s} value={s}>
@@ -278,14 +370,15 @@ export default function SellerOrders() {
                             </select>
                             <button
                               className="btn"
-                              disabled={disabled}
-                              style={{ marginLeft: 8 }}
+                              disabled={disabled || !hasChanged}
+                              style={{ 
+                                marginLeft: 8,
+                                opacity: (disabled || !hasChanged) ? 0.5 : 1,
+                                cursor: (disabled || !hasChanged) ? "not-allowed" : "pointer"
+                              }}
                               onClick={(e) => {
                                 e.preventDefault();
-                                const current = orders.find(
-                                  (x) => x.orderId === o.orderId
-                                )?.status;
-                                updateStatus(o.orderId, current);
+                                updateStatus(uniqueId, o.orderId, o.productId, o.itemIndex);
                               }}
                             >
                               Update
