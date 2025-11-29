@@ -2,6 +2,8 @@ import React from "react";
 import { Routes, Route, Navigate, Link } from "react-router-dom";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import ManagerDashboard from "./pages/manager/Dashboard";
 import ManagerUsers from "./pages/manager/Users";
 import Profiles from "./pages/manager/Profiles";
@@ -34,6 +36,8 @@ export default function App() {
       <Route path="/" element={<AllIndex />} />
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password/:token" element={<ResetPassword />} />
       {/* Logout (SPA route that calls server then redirects) */}
       <Route path="/logout" element={<Logout />} />
       {/* Public site (All) */}
