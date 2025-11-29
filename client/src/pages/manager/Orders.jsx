@@ -5,16 +5,21 @@ function StatusBadge({ type, status }) {
   // type: 'order' | 'booking'
   const isDanger =
     type === "order" ? status === "cancelled" : status === "Rejected";
+  const isWarn = type === "order" && status === "partial";
   const label =
     type === "order"
       ? isDanger
         ? "Cancelled"
+        : isWarn
+        ? "Partial"
         : "Active"
       : isDanger
       ? "Rejected"
       : "Active";
   return (
-    <span className={`badge ${isDanger ? "badge-danger" : "badge-success"}`}>
+    <span
+      className={`badge ${isDanger ? "badge-danger" : isWarn ? "badge-warning" : "badge-success"}`}
+    >
       {label}
     </span>
   );
@@ -111,15 +116,12 @@ export default function Orders() {
               </ul>
             </td>
             <td>
-              <StatusBadge type="order" status={o.orderStatus} />
+              <StatusBadge type="order" status={o.computedStatus || o.orderStatus} />
             </td>
             <td>
-              {o.orderStatus === "cancelled" ? (
-                <button
-                  className="btn btn-restore"
-                  onClick={() => performAction("order", "restore", o._id)}
-                >
-                  Restore
+              {(o.computedStatus || o.orderStatus) === "cancelled" ? (
+                <button className="btn btn-suspend" disabled>
+                  Cancelled
                 </button>
               ) : (
                 <button

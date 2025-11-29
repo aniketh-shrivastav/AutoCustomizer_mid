@@ -586,11 +586,28 @@ router.get("/product/:id", customerOnly, async (req, res) => {
       "name"
     );
     if (!product || product.status !== "approved") {
+      if (req.headers.accept && req.headers.accept.includes("application/json")) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Product not found" });
+      }
       return res.status(404).send("Product not found");
     }
+
+    // If the client explicitly wants JSON (SPA/fetch), return JSON
+    if (req.headers.accept && req.headers.accept.includes("application/json")) {
+      return res.json({ success: true, product, user: req.session.user });
+    }
+
+    // Otherwise render the original EJS view
     res.render("customer/productDetails", { product, user: req.session.user });
   } catch (error) {
     console.error("Product detail fetch error:", error);
+    if (req.headers.accept && req.headers.accept.includes("application/json")) {
+      return res
+        .status(500)
+        .json({ success: false, message: "Error fetching product details" });
+    }
     res.status(500).send("Error fetching product details");
   }
 });
