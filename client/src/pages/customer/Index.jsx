@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import CustomerNav from "../../components/CustomerNav";
 
 function useLink(href) {
   useEffect(() => {
@@ -121,45 +122,7 @@ export default function CustomerIndex() {
 
   return (
     <>
-      <header>
-        <div className="logo">
-          <img
-            style={{ height: 80 }}
-            src="/images3/logo2.jpg"
-            alt="AutoCustomizer Logo"
-          />
-        </div>
-        <nav>
-          <ul className="nav-links">
-            <li>
-              <a href="/">Home</a>
-            </li>
-            <li>
-              <a href="/customer/index">Products</a>
-            </li>
-            <li>
-              <a href="/customer/booking">Services</a>
-            </li>
-            <li>
-              <a href="/customer/history">Order History</a>
-            </li>
-            <li>
-              <a href="/customer/cart" className="cart-link">
-                <img src="/images/cart-icon.png" alt="Cart" />
-                <span>Cart</span>
-              </a>
-            </li>
-            <li>
-              <a href="/customer/profile">Profile</a>
-            </li>
-            <li>
-              <a href="/logout" onClick={handleLogout}>
-                Logout
-              </a>
-            </li>
-          </ul>
-        </nav>
-      </header>
+      <CustomerNav />
 
       <main>
         <div

@@ -1,32 +1,79 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useMemo, useState } from "react";
+import { NavLink } from "react-router-dom";
+import "./Nav.css";
 
+/**
+ * ManagerNav - navigation bar for manager role with responsive toggle.
+ * Uses NavLink for SPA navigation and active state styling.
+ */
 export default function ManagerNav() {
+  const [open, setOpen] = useState(false);
   const links = useMemo(
     () => [
-      { href: "/manager/dashboard", label: "Dashboard" },
-      { href: "/manager/users", label: "User Management" },
-      { href: "/manager/profiles", label: "User Profiles" },
-      { href: "/manager/orders", label: "Orders & Bookings" },
-      { href: "/manager/payments", label: "Payments" },
-      { href: "/manager/support", label: "Support" },
-      { href: "/logout", label: "Logout" },
+      { to: "/manager/dashboard", label: "Dashboard" },
+      { to: "/manager/users", label: "User Management" },
+      { to: "/manager/profiles", label: "User Profiles" },
+      { to: "/manager/orders", label: "Orders & Bookings" },
+      { to: "/manager/payments", label: "Payments" },
+      { to: "/manager/support", label: "Support" },
+      { to: "/manager/chat", label: "Chat" },
     ],
     []
   );
 
-  const path = typeof window !== "undefined" ? window.location.pathname : "";
+  function backendBase() {
+    const { protocol, hostname, port } = window.location;
+    if (port === "5173") return `${protocol}//${hostname}:3000`;
+    return "";
+  }
+  function handleLogout(e) {
+    e.preventDefault();
+    const next = encodeURIComponent(`${window.location.origin}/login`);
+    window.location.href = `${backendBase()}/logout?next=${next}`;
+  }
 
   return (
-    <nav>
-      <ul>
-        {links.map((l) => (
-          <li key={l.href}>
-            <a href={l.href} className={l.href === path ? "active" : undefined}>
-              {l.label}
-            </a>
-          </li>
-        ))}
-      </ul>
-    </nav>
+    <>
+      <nav
+        className="ac-navbar"
+        role="navigation"
+        aria-label="Manager navigation"
+      >
+        <div className="container">
+          <div className="brand">
+            <img src="/images3/logo2.jpg" alt="AutoCustomizer Logo" />
+            <span>Manager Panel</span>
+          </div>
+          <button
+            className="nav-toggle"
+            aria-label="Toggle navigation"
+            aria-expanded={open}
+            onClick={() => setOpen((o) => !o)}
+          >
+            ☰
+          </button>
+          <ul className={`nav-links ${open ? "open" : ""}`}>
+            {links.map((l) => (
+              <li key={l.to} onClick={() => setOpen(false)}>
+                <NavLink
+                  to={l.to}
+                  className={({ isActive }) =>
+                    isActive ? "active" : undefined
+                  }
+                  end={false}
+                >
+                  {l.label}
+                </NavLink>
+              </li>
+            ))}
+            <li>
+              <a href="/logout" onClick={handleLogout}>
+                Logout
+              </a>
+            </li>
+          </ul>
+        </div>
+      </nav>
+    </>
   );
 }

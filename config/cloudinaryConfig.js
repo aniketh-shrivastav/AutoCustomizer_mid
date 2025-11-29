@@ -1,20 +1,12 @@
-require("dotenv").config(); // Ensure environment variables are loaded
 const cloudinary = require("cloudinary").v2;
 
-// Validate Cloudinary configuration
-const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
-const apiKey = process.env.CLOUDINARY_API_KEY;
-const apiSecret = process.env.CLOUDINARY_API_SECRET;
-
-if (!cloudName || !apiKey || !apiSecret) {
-  console.warn("⚠️  Cloudinary credentials not found in environment variables.");
-  console.warn("   Product image uploads will fail. Please add CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET to your .env file.");
-}
-
+// Configure Cloudinary with sensible defaults and a higher timeout for slower networks
 cloudinary.config({
-  cloud_name: cloudName,
-  api_key: apiKey,
-  api_secret: apiSecret,
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+  secure: true,
+  timeout: 120000, // 120s to reduce 499 timeouts on slower connections
 });
 
 module.exports = cloudinary;
