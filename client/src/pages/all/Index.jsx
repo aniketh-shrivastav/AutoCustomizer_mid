@@ -6,15 +6,15 @@ function useExternalCss(href) {
     link.rel = "stylesheet";
     link.href = href;
     document.head.appendChild(link);
-    return () => {
-      document.head.removeChild(link);
-    };
+    return () => document.head.removeChild(link);
   }, [href]);
 }
 
 export default function AllIndex() {
   const [session, setSession] = useState({ authenticated: false });
-  useExternalCss("/styles/all.css");
+
+  // Load CSS exactly like index.html
+  useExternalCss("/styles/index.css");
 
   useEffect(() => {
     let cancelled = false;
@@ -39,13 +39,15 @@ export default function AllIndex() {
   const authed = !!session.authenticated;
 
   return (
-    <div>
+    <>
+      {/* ---------------- NAV ---------------- */}
       <nav>
         <div className="logo">AutoCustomizer</div>
         <ul className="nav-links" id="globalNav">
           <li>
             <a href="/">Home</a>
           </li>
+
           {!authed && (
             <>
               <li id="loginLink">
@@ -56,6 +58,7 @@ export default function AllIndex() {
               </li>
             </>
           )}
+
           <li>
             <a href="/contactus">Contact Us</a>
           </li>
@@ -65,6 +68,7 @@ export default function AllIndex() {
         </ul>
       </nav>
 
+      {/* ---------------- HEADER (MISSING IN YOUR BUILD BEFORE) ---------------- */}
       <header>
         <h1>Welcome to AutoCustomizer</h1>
         <p>
@@ -73,17 +77,20 @@ export default function AllIndex() {
         </p>
       </header>
 
+      {/* ---------------- HERO ---------------- */}
       <section className="hero">
         <img
           src="/public/images2/car-customization.png"
           alt="Car Customization"
         />
+
         <div className="hero-content">
           <h2>Your Car, Your Style!</h2>
           <p>
             Whether you're looking to customize your car, sell premium parts, or
-            offer your expert services - AutoCustomizer is your platform.
+            offer your expert services – AutoCustomizer is your platform.
           </p>
+
           <div className="cta-buttons">
             {authed ? (
               <>
@@ -104,6 +111,7 @@ export default function AllIndex() {
                 </a>
               </>
             )}
+
             <a href="/signup" className="btn seller-btn">
               Sell Products
             </a>
@@ -114,8 +122,10 @@ export default function AllIndex() {
         </div>
       </section>
 
+      {/* ---------------- USER TYPES ---------------- */}
       <section className="user-types">
         <h2>AutoCustomizer For Everyone</h2>
+
         <div className="user-type-container">
           <div className="user-type">
             <h3>Car Owners</h3>
@@ -127,6 +137,7 @@ export default function AllIndex() {
               Get Started
             </a>
           </div>
+
           <div className="user-type">
             <h3>Parts Sellers</h3>
             <p>
@@ -137,6 +148,7 @@ export default function AllIndex() {
               Start Selling
             </a>
           </div>
+
           <div className="user-type">
             <h3>Service Providers</h3>
             <p>
@@ -150,6 +162,7 @@ export default function AllIndex() {
         </div>
       </section>
 
+      {/* ---------------- FEATURES ---------------- */}
       <section className="features">
         <div className="feature">
           <img src="/public/images2/products.png" alt="Car Parts" />
@@ -159,6 +172,7 @@ export default function AllIndex() {
             customization needs.
           </p>
         </div>
+
         <div className="feature">
           <img src="/public/images2/service.png" alt="Car Service" />
           <h3>Top Service Providers</h3>
@@ -167,6 +181,7 @@ export default function AllIndex() {
             wrapping, tuning, and more.
           </p>
         </div>
+
         <div className="feature">
           <img src="/public/images2/easy-booking.png" alt="Easy Booking" />
           <h3>Easy Platform for All</h3>
@@ -177,8 +192,10 @@ export default function AllIndex() {
         </div>
       </section>
 
+      {/* ---------------- BENEFITS ---------------- */}
       <section className="benefits">
         <h2>Why Join AutoCustomizer as a Business Partner?</h2>
+
         <div className="benefits-container">
           <div className="benefit">
             <h3>Targeted Audience</h3>
@@ -187,6 +204,7 @@ export default function AllIndex() {
               products and services.
             </p>
           </div>
+
           <div className="benefit">
             <h3>Business Tools</h3>
             <p>
@@ -194,6 +212,7 @@ export default function AllIndex() {
               processing tools.
             </p>
           </div>
+
           <div className="benefit">
             <h3>Growth Opportunity</h3>
             <p>
@@ -201,6 +220,7 @@ export default function AllIndex() {
               platform.
             </p>
           </div>
+
           <div className="benefit">
             <h3>Seamless Experience</h3>
             <p>
@@ -209,14 +229,16 @@ export default function AllIndex() {
             </p>
           </div>
         </div>
+
         <a href="/faq" className="btn large">
           Learn More About Our Business Solutions
         </a>
       </section>
 
+      {/* ---------------- FOOTER ---------------- */}
       <footer>
         <p>© 2025 AutoCustomizer. All rights reserved.</p>
       </footer>
-    </div>
+    </>
   );
 }

@@ -118,12 +118,31 @@ router.get("/api/orders", isAuthenticated, isManager, async (req, res) => {
       .populate("userId")
       .populate("items.seller")
       .sort({ placedAt: -1 });
-    const orders = ordersRaw.filter(
-      (o) =>
-        o.userId &&
-        !o.userId.suspended &&
-        o.items.every((it) => it.seller && !it.seller.suspended)
-    );
+    const orders = ordersRaw
+      .filter(
+        (o) =>
+          o.userId &&
+          !o.userId.suspended &&
+          o.items.every((it) => it.seller && !it.seller.suspended)
+      )
+      .map((o) => {
+        // Derive a manager-visible status from per-item statuses
+        const itemStatuses = (o.items || []).map((it) => it.itemStatus || o.orderStatus || "pending");
+        const allCancelled = itemStatuses.length > 0 && itemStatuses.every((s) => s === "cancelled");
+        const allDelivered = itemStatuses.length > 0 && itemStatuses.every((s) => s === "delivered");
+        const anyCancelled = itemStatuses.some((s) => s === "cancelled");
+        const anyDelivered = itemStatuses.some((s) => s === "delivered");
+
+        let computedStatus = o.orderStatus || "pending";
+        if (allCancelled) computedStatus = "cancelled";
+        else if (allDelivered) computedStatus = "delivered";
+        else if (anyCancelled || anyDelivered) computedStatus = "partial"; // mixed state
+
+        return {
+          ...o.toObject(),
+          computedStatus,
+        };
+      });
 
     res.json({ orders, bookings });
   } catch (err) {

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import CustomerNav from "../../components/CustomerNav";
 
 function useLink(href) {
@@ -206,12 +207,12 @@ export default function CustomerIndex() {
                         {product.name || "Unnamed Product"}
                       </h5>
                       <p className="card-text">₹{product.price || "0"}</p>
-                      <a
-                        href={`/customer/product/${productId(product)}`}
+                      <Link
+                        to={`/customer/product/${productId(product)}`}
                         className="btn btn-sm btn-outline-primary"
                       >
                         View Details
-                      </a>
+                      </Link>
                       <div className="mt-3">
                         <button
                           className="btn btn-primary w-100"
