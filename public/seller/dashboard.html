@@ -74,11 +74,29 @@
         try {
           const res = await fetch("/seller/api/dashboard", {
             headers: { Accept: "application/json" },
+            credentials: "include", // Include cookies for session
           });
-          if (res.status === 401) {
+          
+          // Check if response is actually JSON
+          const contentType = res.headers.get("content-type");
+          if (!contentType || !contentType.includes("application/json")) {
+            // If we got HTML instead of JSON, likely a redirect or error page
+            if (res.status === 401 || res.status === 403) {
+              window.location.href = "/login";
+              return;
+            }
+            throw new Error("Server returned non-JSON response");
+          }
+          
+          if (res.status === 401 || res.status === 403) {
             window.location.href = "/login";
             return;
           }
+          
+          if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
+          }
+          
           const data = await res.json();
           if (!data.success)
             throw new Error(data.message || "Failed to load dashboard");
