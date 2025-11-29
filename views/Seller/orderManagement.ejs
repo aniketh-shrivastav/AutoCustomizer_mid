@@ -324,7 +324,8 @@ footer p {
         <tbody>
           <% if (orders && orders.length > 0) { %>
             <% orders.forEach(order => { %>
-              <% order.items.forEach(item => { %> <!-- For multiple products in one order -->
+              <% order.items.forEach((item, itemIndex) => { %> <!-- For multiple products in one order -->
+                <% const currentItemStatus = (item.itemStatus || order.orderStatus || 'pending').toString(); %>
                 <tr>
                   <td><%= order._id %></td>
                   <td><%= order.userId?.name %></td>
@@ -332,21 +333,20 @@ footer p {
                   <td><%= item.quantity %></td>
                   <td><%= order.deliveryAddress %></td> <!-- ✅ Show deliveryAddress -->
                   <td>
-                    <span class="status <%= (order.orderStatus || '').toLowerCase() %>">
-                      <%= order.orderStatus %>
+                    <span class="status <%= currentItemStatus.toLowerCase() %>">
+                      <%= currentItemStatus.charAt(0).toUpperCase() + currentItemStatus.slice(1) %>
                     </span>
                   </td>
                   <td>
                     <div class="form-inline">
-                        <select class="status-select" <%= (order.orderStatus === 'delivered' || order.orderStatus === 'cancelled') ? 'disabled' : '' %>>
-                        <option value="pending" <%= order.orderStatus === 'pending' ? 'selected' : '' %>>Pending</option>
-                        <option value="confirmed" <%= order.orderStatus === 'confirmed' ? 'selected' : '' %>>Confirmed</option>
-                        <option value="shipped" <%= order.orderStatus === 'shipped' ? 'selected' : '' %>>Shipped</option>
-                        <option value="delivered" <%= order.orderStatus === 'delivered' ? 'selected' : '' %>>Delivered</option>
-                        <option value="cancelled" <%= order.orderStatus === 'cancelled' ? 'selected' : '' %>>Cancelled</option>
+                        <select class="status-select" <%= (currentItemStatus === 'delivered' || currentItemStatus === 'cancelled') ? 'disabled' : '' %>>
+                        <option value="pending" <%= currentItemStatus === 'pending' ? 'selected' : '' %>>Pending</option>
+                        <option value="confirmed" <%= currentItemStatus === 'confirmed' ? 'selected' : '' %>>Confirmed</option>
+                        <option value="shipped" <%= currentItemStatus === 'shipped' ? 'selected' : '' %>>Shipped</option>
+                        <option value="delivered" <%= currentItemStatus === 'delivered' ? 'selected' : '' %>>Delivered</option>
+                        <option value="cancelled" <%= currentItemStatus === 'cancelled' ? 'selected' : '' %>>Cancelled</option>
                       </select>
-                      <button type="button" class="btn update-status-btn"
-  <%= (order.orderStatus === 'delivered' || order.orderStatus === 'cancelled') ? 'disabled' : '' %>>Update</button>
+                      <button type="button" class="btn update-status-btn" data-order-id="<%= order._id %>" data-product-id="<%= item.productId %>" data-item-index="<%= itemIndex %>" data-current-status="<%= currentItemStatus %>" <%= (currentItemStatus === 'delivered' || currentItemStatus === 'cancelled') ? 'disabled' : '' %>>Update</button>
                     </div>
                   </td>
                 </tr>
@@ -373,37 +373,59 @@ footer p {
             const statusSelect = row.querySelector('.status-select');
             const newStatus = statusSelect.value;
             const statusDisplay = row.querySelector('.status');
-  
-            // Remove existing classes
-          // Remove existing classes
-statusDisplay.classList.remove('pending', 'confirmed', 'shipped', 'delivered');
 
-// Add new status class
-statusDisplay.classList.add(newStatus.toLowerCase());
-statusDisplay.textContent = newStatus.charAt(0).toUpperCase() + newStatus.slice(1);
+            // Remove common status classes
+            statusDisplay.classList.remove('pending', 'confirmed', 'shipped', 'delivered', 'cancelled');
 
-// ✅ Send update to server
-const orderId = row.querySelector('td').textContent.trim(); // Get Order ID from first column
+            // Add new status class and update visible text
+            statusDisplay.classList.add(newStatus.toLowerCase());
+            statusDisplay.textContent = newStatus.charAt(0).toUpperCase() + newStatus.slice(1);
 
-fetch(`/seller/orders/${orderId}/status`, {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify({ newStatus })
-})
-.then(response => response.json())
-.then(data => {
-  if (data.success) {
-    alert('Order status updated successfully!');
-  } else {
-    alert('Failed to update order status');
-  }
-})
-.catch(error => {
-  console.error('Error updating status:', error);
-  alert('Error occurred!');
-});
+            // Prepare identifiers for per-item update
+            const orderId = this.dataset.orderId;
+            const productId = this.dataset.productId;
+            const itemIndex = Number(this.dataset.itemIndex);
+
+            fetch(`/seller/orders/${orderId}/status`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ newStatus, productId, itemIndex })
+            })
+            .then(response => response.json())
+            .then(data => {
+              if (data.success) {
+                alert('Order status updated successfully!');
+                // If final state, disable controls for this item
+                if (newStatus === 'delivered' || newStatus === 'cancelled') {
+                  statusSelect.disabled = true;
+                  this.disabled = true;
+                }
+                // update button's current-status attribute to reflect saved state
+                this.dataset.currentStatus = newStatus;
+              } else {
+                alert(data.message || 'Failed to update order status');
+              }
+            })
+            .catch(error => {
+              console.error('Error updating status:', error);
+              alert('Error occurred!');
+            });
+          });
+        });
+
+        // Enable Update button when select value changes (if different from current item status)
+        const statusSelects = document.querySelectorAll('.status-select');
+        statusSelects.forEach(select => {
+          select.addEventListener('change', function() {
+            const row = this.closest('tr');
+            const btn = row.querySelector('.update-status-btn');
+            if (!btn) return;
+            const current = (btn.dataset.currentStatus || '').toString();
+            const chosen = this.value;
+            // Enable button only if chosen status differs from current saved status
+            btn.disabled = (chosen === current);
           });
         });
       });

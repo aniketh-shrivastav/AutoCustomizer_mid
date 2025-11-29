@@ -15,7 +15,10 @@ exports.createOrderFromCart = async (req, res) => {
 
     const cart = await Cart.findOne({ userId });
     if (!cart || cart.items.length === 0) {
-      return res.status(400).json({ message: "Cart is empty." });
+      return res.status(400).json({ 
+        success: false,
+        message: "Cart is empty. Please add items to your cart before placing an order." 
+      });
     }
 
     // Step 1: Fetch products and prepare order items
@@ -23,12 +26,18 @@ exports.createOrderFromCart = async (req, res) => {
     for (const item of cart.items) {
       const product = await Product.findById(item.productId);
       if (!product) {
-        return res.status(404).json({ message: `Product ${item.productId} not found.` });
+        return res.status(404).json({ 
+          success: false,
+          message: `Product ${item.productId} not found.` 
+        });
       }
 
       // Check stock before placing order
       if (item.quantity > product.quantity) {
-        return res.status(400).json({ message: `Not enough stock for product ${product.name}. Available: ${product.quantity}` });
+        return res.status(400).json({ 
+          success: false,
+          message: `Not enough stock for product ${product.name}. Available: ${product.quantity}, Requested: ${item.quantity}` 
+        });
       }
 
       orderItems.push({
@@ -37,7 +46,8 @@ exports.createOrderFromCart = async (req, res) => {
         price: product.price,
         image: product.image,
         quantity: item.quantity,
-        seller: product.seller
+        seller: product.seller,
+        itemStatus: "pending" // Initialize each item with pending status
       });
     }
 
@@ -68,7 +78,10 @@ exports.createOrderFromCart = async (req, res) => {
     }
 
     if (!address || !district) {
-      return res.status(400).json({ message: "Delivery address or district not found. Please update your profile." });
+      return res.status(400).json({ 
+        success: false,
+        message: "Delivery address or district not found. Please update your profile with complete address and district information." 
+      });
     }
 
     // Step 4: Create separate orders per seller
@@ -101,11 +114,18 @@ exports.createOrderFromCart = async (req, res) => {
     // Step 6: Clear cart
     await Cart.deleteOne({ userId });
 
-    res.status(201).json({ message: "Orders placed successfully", orders: createdOrders });
+    res.status(201).json({ 
+      success: true,
+      message: "Orders placed successfully", 
+      orders: createdOrders 
+    });
 
   } catch (err) {
     console.error("Order creation error:", err);
-    res.status(500).json({ message: "Failed to create orders. Update customer profile with complete info." });
+    res.status(500).json({ 
+      success: false,
+      message: err.message || "Failed to create orders. Please ensure your profile has complete address and district information." 
+    });
   }
 };
 

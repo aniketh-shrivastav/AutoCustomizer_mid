@@ -6,7 +6,12 @@ const OrderItemSchema = new mongoose.Schema({
   price: { type: Number, required: true },
   image: { type: String },
   quantity: { type: Number, required: true },
-  seller: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true } // populated at order time
+  seller: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }, // populated at order time
+  itemStatus: { 
+    type: String, 
+    enum: ["pending", "confirmed", "shipped", "delivered", "cancelled"],
+    default: "pending" 
+  } // Individual status for each product/item
 }, { _id: false });
 
 const OrderSchema = new mongoose.Schema({
