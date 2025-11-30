@@ -116,8 +116,20 @@ io.on("connection", (socket) => {
   socket.on("chat:join", ({ customerId }) => {
     if (customerId) socket.join(`customer_${customerId}`);
   });
+  
+  // Service provider joins earnings room
+  socket.on("earnings:join", ({ providerId }) => {
+    if (providerId) {
+      socket.join(`provider_earnings_${providerId}`);
+      console.log(`Provider ${providerId} joined earnings room`);
+    }
+  });
+  
   socket.on("disconnect", () => {});
 });
+
+// Make io accessible globally for routes
+global.io = io;
 
 // Start Server
 httpServer.listen(3000, () => {

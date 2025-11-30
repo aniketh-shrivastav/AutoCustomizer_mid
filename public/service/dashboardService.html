@@ -111,12 +111,121 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
     <script>
+      let earningsBarChart; // Store chart instance for updates
+      
       function toggleSidebar() {
         document.getElementById("sidebar").classList.toggle("active");
       }
       function toggleNavLinks() {
         document.getElementById("navLinks").classList.toggle("active");
+      }
+
+      // Fetch real earnings data from API
+      async function fetchEarningsData() {
+        try {
+          const res = await fetch("/service/api/earnings-data?timeRange=1");
+          if (!res.ok) throw new Error("Failed to fetch earnings data");
+          const data = await res.json();
+          return {
+            labels: data.labels,
+            data: data.data,
+            totalEarnings: data.totalEarnings
+          };
+        } catch (error) {
+          console.error("Error fetching earnings data:", error);
+          return { labels: [], data: [], totalEarnings: 0 };
+        }
+      }
+
+      // Fetch recent activity from API
+      async function fetchRecentActivity() {
+        try {
+          const res = await fetch("/service/api/recent-activity?limit=5");
+          if (!res.ok) throw new Error("Failed to fetch recent activity");
+          const data = await res.json();
+          return data.activities || [];
+        } catch (error) {
+          console.error("Error fetching recent activity:", error);
+          return [];
+        }
+      }
+
+      // Update earnings bar chart with real data
+      async function updateEarningsChart() {
+        const earningsData = await fetchEarningsData();
+        
+        if (earningsBarChart && earningsData.labels.length > 0) {
+          earningsBarChart.data.labels = earningsData.labels;
+          earningsBarChart.data.datasets[0].data = earningsData.data;
+          earningsBarChart.update();
+        }
+      }
+
+      // Update recent activity section
+      async function updateRecentActivity() {
+        const activities = await fetchRecentActivity();
+        const activityList = document.getElementById("activityList");
+        
+        if (activities.length > 0) {
+          activityList.innerHTML = "";
+          activities.forEach((activity) => {
+            const li = document.createElement("li");
+            li.innerHTML = `<i class="fas ${activity.icon}"></i><span>${activity.text}</span><span class="time">${activity.timeAgo}</span>`;
+            activityList.appendChild(li);
+          });
+        }
+      }
+
+      // Set up Socket.IO for real-time updates
+      let socket = null;
+      function initializeSocketIO() {
+        if (typeof io !== 'undefined') {
+          socket = io();
+          
+          socket.on('connect', () => {
+            console.log('Connected to real-time server');
+            // Join earnings room
+            socket.emit('earnings:join', { providerId: getProviderId() });
+          });
+          
+          // Listen for earnings updates
+          socket.on('earnings:updated', (data) => {
+            console.log('Earnings updated in real-time:', data);
+            // Refresh chart, activity, and dashboard immediately
+            updateEarningsChart();
+            updateRecentActivity();
+            loadDashboard();
+          });
+          
+          // Listen for activity updates
+          socket.on('activity:updated', (data) => {
+            console.log('Activity updated in real-time:', data);
+            // Refresh activity feed
+            updateRecentActivity();
+          });
+          
+          socket.on('disconnect', () => {
+            console.log('Disconnected from real-time server');
+          });
+        }
+      }
+
+      // Extract provider ID from session or DOM
+      function getProviderId() {
+        // Try to get from data attribute
+        const elem = document.querySelector('[data-provider-id]');
+        if (elem) return elem.getAttribute('data-provider-id');
+        return null;
+      }
+
+      // Set up periodic refresh every 30 seconds
+      function setupAutoRefresh() {
+        setInterval(() => {
+          updateEarningsChart();
+          updateRecentActivity();
+        }, 30000);
       }
 
       async function loadDashboard() {
@@ -154,37 +263,45 @@
                 {
                   data: serviceCounts,
                   backgroundColor: [
-                    "#1abc9c",
-                    "#3498db",
-                    "#9b59b6",
-                    "#f1c40f",
-                    "#e74c3c",
-                    "#2ecc71",
-                    "#e67e22",
+                    "rgba(26,188,156,0.85)",
+                    "rgba(52,152,219,0.85)",
+                    "rgba(155,89,182,0.85)",
+                    "rgba(241,196,15,0.85)",
+                    "rgba(231,76,60,0.85)",
+                    "rgba(46,204,113,0.85)",
+                    "rgba(230,126,34,0.85)",
                   ],
+                  hoverOffset: 8,
+                  borderColor: 'rgba(15,42,68,0.06)'
                 },
               ],
             },
             options: {
               responsive: true,
               maintainAspectRatio: true,
-              plugins: { legend: { position: "bottom" } },
+              plugins: { 
+                legend: { position: "bottom", labels: { color: '#213040' } }
+              },
             },
           });
 
-          // Bar chart (placeholder - could be replaced with real earnings breakdown API)
+          // Bar chart with real earnings data
+          const earningsData = await fetchEarningsData();
           const barCtx = document
             .getElementById("earningsBarChart")
             .getContext("2d");
-          new Chart(barCtx, {
+          
+          earningsBarChart = new Chart(barCtx, {
             type: "bar",
             data: {
-              labels: ["Week 1", "Week 2", "Week 3", "Week 4"],
+              labels: earningsData.labels.length > 0 ? earningsData.labels : ["Week 1", "Week 2", "Week 3", "Week 4"],
               datasets: [
                 {
-                  label: "Earnings",
-                  data: [1500, 2200, 1800, 2500],
-                  backgroundColor: "#1abc9c",
+                  label: "Earnings (₹)",
+                  data: earningsData.data.length > 0 ? earningsData.data : [0, 0, 0, 0],
+                  backgroundColor: "rgba(26,188,156,0.75)",
+                  borderColor: "rgba(13,139,122,0.45)",
+                  borderWidth: 1,
                 },
               ],
             },
@@ -195,48 +312,47 @@
                 y: {
                   beginAtZero: true,
                   title: { display: true, text: "Earnings (₹)" },
+                  ticks: { color: '#213040' },
+                  grid: { color: 'rgba(15,42,68,0.06)' },
                 },
-                x: { title: { display: true, text: "Weeks" } },
+                x: { title: { display: true, text: "Weeks" }, ticks: { color: '#213040' }, grid: { color: 'rgba(15,42,68,0.04)' } },
               },
               plugins: {
                 title: {
                   display: true,
                   text: "Monthly Earnings Overview (Weekly Basis)",
+                  color: '#213040'
                 },
               },
             },
           });
 
-          // Recent activity placeholder; can be enhanced with a future API
-          const activityList = document.getElementById("activityList");
-          activityList.innerHTML = "";
-          const samples = [
-            {
-              icon: "fa-check-circle",
-              text: "Completed: Brake Repair for Karthick",
-              time: "2 hours ago",
-            },
-            {
-              icon: "fa-tools",
-              text: "Started: Oil Change for Suresh",
-              time: "4 hours ago",
-            },
-            {
-              icon: "fa-star",
-              text: "New Review: 5 stars from Harish",
-              time: "1 day ago",
-            },
-          ];
-          samples.forEach((a) => {
-            const li = document.createElement("li");
-            li.innerHTML = `<i class="fas ${a.icon}"></i><span>${a.text}</span><span class="time">${a.time}</span>`;
-            activityList.appendChild(li);
-          });
+          // Load recent activity
+          await updateRecentActivity();
         } catch (err) {
           console.error("Dashboard load error", err);
         }
       }
-      loadDashboard();
+      
+      // Initialize everything on page load
+      window.addEventListener('DOMContentLoaded', () => {
+        loadDashboard();
+        setupAutoRefresh();
+        initializeSocketIO();
+      });
     </script>
   </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
