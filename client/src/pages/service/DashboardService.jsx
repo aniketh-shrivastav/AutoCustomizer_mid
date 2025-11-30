@@ -25,6 +25,9 @@ export default function ServiceDashboard() {
 
   const [serviceLabels, setServiceLabels] = useState([]);
   const [serviceCounts, setServiceCounts] = useState([]);
+  const [earningsLabels, setEarningsLabels] = useState(["Week 1", "Week 2", "Week 3", "Week 4"]);
+  const [earningsData, setEarningsData] = useState([0, 0, 0, 0]);
+  const [activities, setActivities] = useState([]);
   const [totals, setTotals] = useState({
     earnings: 0,
     ongoing: 0,
@@ -37,6 +40,7 @@ export default function ServiceDashboard() {
   const barRef = useRef(null);
   const pieChart = useRef(null);
   const barChart = useRef(null);
+  const socketRef = useRef(null);
 
   // Compute backend base for dev (Vite at 5173) vs prod (same-origin)
   const backendBase = useMemo(() => {
@@ -55,6 +59,35 @@ export default function ServiceDashboard() {
     e.preventDefault();
     const next = encodeURIComponent(`${window.location.origin}/`);
     window.location.href = `${backendBase}/logout?next=${next}`;
+  }
+
+  // Fetch real earnings data from API
+  async function fetchEarningsData() {
+    try {
+      const res = await fetch("/service/api/earnings-data?timeRange=1");
+      if (!res.ok) throw new Error("Failed to fetch earnings data");
+      const data = await res.json();
+      return {
+        labels: data.labels || ["Week 1", "Week 2", "Week 3", "Week 4"],
+        data: data.data || [0, 0, 0, 0],
+      };
+    } catch (error) {
+      console.error("Error fetching earnings data:", error);
+      return { labels: ["Week 1", "Week 2", "Week 3", "Week 4"], data: [0, 0, 0, 0] };
+    }
+  }
+
+  // Fetch recent activity from API
+  async function fetchRecentActivity() {
+    try {
+      const res = await fetch("/service/api/recent-activity?limit=5");
+      if (!res.ok) throw new Error("Failed to fetch recent activity");
+      const data = await res.json();
+      return data.activities || [];
+    } catch (error) {
+      console.error("Error fetching recent activity:", error);
+      return [];
+    }
   }
 
   useEffect(() => {
@@ -85,6 +118,19 @@ export default function ServiceDashboard() {
         setServiceLabels(data.serviceLabels || []);
         setServiceCounts(data.serviceCounts || []);
         setTotals(data.totals || {});
+
+        // Fetch real earnings data
+        const earningsRes = await fetchEarningsData();
+        if (!cancelled) {
+          setEarningsLabels(earningsRes.labels);
+          setEarningsData(earningsRes.data);
+        }
+
+        // Fetch recent activity
+        const activityRes = await fetchRecentActivity();
+        if (!cancelled) {
+          setActivities(activityRes);
+        }
       } catch (e) {
         if (!cancelled) setError(e.message || "Failed to load");
       } finally {
@@ -114,21 +160,28 @@ export default function ServiceDashboard() {
             {
               data: serviceCounts,
               backgroundColor: [
-                "#1abc9c",
-                "#3498db",
-                "#9b59b6",
-                "#f1c40f",
-                "#e74c3c",
-                "#2ecc71",
-                "#e67e22",
+                "rgba(26,188,156,0.85)",
+                "rgba(52,152,219,0.85)",
+                "rgba(155,89,182,0.85)",
+                "rgba(241,196,15,0.85)",
+                "rgba(231,76,60,0.85)",
+                "rgba(46,204,113,0.85)",
+                "rgba(230,126,34,0.85)",
               ],
+              hoverOffset: 8,
+              borderColor: "rgba(15,42,68,0.06)",
             },
           ],
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          plugins: { legend: { position: "bottom" } },
+          plugins: {
+            legend: {
+              position: "bottom",
+              labels: { color: "#213040" },
+            },
+          },
         },
       });
 
@@ -136,12 +189,14 @@ export default function ServiceDashboard() {
       barChart.current = new Chart(barCtx, {
         type: "bar",
         data: {
-          labels: ["Week 1", "Week 2", "Week 3", "Week 4"],
+          labels: earningsLabels,
           datasets: [
             {
               label: "Earnings",
-              data: [1500, 2200, 1800, 2500],
-              backgroundColor: "#1abc9c",
+              data: earningsData,
+              backgroundColor: "rgba(26,188,156,0.75)",
+              borderColor: "rgba(13,139,122,0.45)",
+              borderWidth: 1,
             },
           ],
         },
@@ -152,13 +207,20 @@ export default function ServiceDashboard() {
             y: {
               beginAtZero: true,
               title: { display: true, text: "Earnings (₹)" },
+              ticks: { color: "#213040" },
+              grid: { color: "rgba(15,42,68,0.06)" },
             },
-            x: { title: { display: true, text: "Weeks" } },
+            x: {
+              title: { display: true, text: "Weeks" },
+              ticks: { color: "#213040" },
+              grid: { color: "rgba(15,42,68,0.04)" },
+            },
           },
           plugins: {
             title: {
               display: true,
               text: "Monthly Earnings Overview (Weekly Basis)",
+              color: "#213040",
             },
           },
         },
@@ -171,28 +233,57 @@ export default function ServiceDashboard() {
       if (pieChart.current) pieChart.current.destroy();
       if (barChart.current) barChart.current.destroy();
     };
-  }, [serviceLabels, serviceCounts]);
+  }, [serviceLabels, serviceCounts, earningsLabels, earningsData]);
 
-  const activity = useMemo(
-    () => [
-      {
-        icon: "fa-check-circle",
-        text: "Completed: Brake Repair for Karthick",
-        time: "2 hours ago",
-      },
-      {
-        icon: "fa-tools",
-        text: "Started: Oil Change for Suresh",
-        time: "4 hours ago",
-      },
-      {
-        icon: "fa-star",
-        text: "New Review: 5 stars from Harish",
-        time: "1 day ago",
-      },
-    ],
-    []
-  );
+  // Initialize Socket.io for real-time earnings updates
+  useEffect(() => {
+    if (typeof io === "undefined") return; // Socket.io not available
+
+    const socket = io();
+    socketRef.current = socket;
+
+    socket.on("connect", () => {
+      console.log("Connected to real-time server");
+    });
+
+    socket.on("earnings:updated", async (data) => {
+      console.log("Earnings updated in real-time:", data);
+      // Refresh earnings data
+      const earningsRes = await fetchEarningsData();
+      setEarningsLabels(earningsRes.labels);
+      setEarningsData(earningsRes.data);
+
+      // Refresh recent activity
+      const activityRes = await fetchRecentActivity();
+      setActivities(activityRes);
+
+      // Refresh dashboard totals
+      try {
+        const res = await fetch("/service/api/dashboard");
+        if (res.ok) {
+          const data = await res.json();
+          setTotals(data.totals || {});
+        }
+      } catch (e) {
+        console.error("Error refreshing dashboard:", e);
+      }
+    });
+
+    socket.on("disconnect", () => {
+      console.log("Disconnected from real-time server");
+    });
+
+    // Also listen for activity updates separately
+    socket.on("activity:updated", async (data) => {
+      console.log("Activity updated in real-time:", data);
+      const activityRes = await fetchRecentActivity();
+      setActivities(activityRes);
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
 
   return (
     <>
@@ -300,7 +391,7 @@ export default function ServiceDashboard() {
             <div className="card-content">
               <h2>Customer Satisfaction</h2>
               <p className="amount" id="ratingValue">
-                {totals.avgRating ?? "N/A"}/5
+                {totals.avgRating ?? "N/A"}
               </p>
               <p className="subtext" id="reviewsValue">
                 Based on {totals.totalReviews || 0} reviews
@@ -327,13 +418,20 @@ export default function ServiceDashboard() {
         <div className="recent-activity">
           <h2>Recent Activity</h2>
           <ul className="activity-list" id="activityList">
-            {activity.map((a, idx) => (
-              <li key={idx}>
-                <i className={`fas ${a.icon}`}></i>
-                <span>{a.text}</span>
-                <span className="time">{a.time}</span>
+            {activities.length > 0 ? (
+              activities.map((a, idx) => (
+                <li key={idx}>
+                  <i className={`fas ${a.icon}`}></i>
+                  <span>{a.text}</span>
+                  <span className="time">{a.timeAgo}</span>
+                </li>
+              ))
+            ) : (
+              <li>
+                <i className="fas fa-info-circle"></i>
+                <span>No recent activity</span>
               </li>
-            ))}
+            )}
           </ul>
         </div>
       </div>
