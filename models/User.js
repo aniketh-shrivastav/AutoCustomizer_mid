@@ -29,6 +29,11 @@ const UserSchema = new mongoose.Schema({
   // Password reset flow
   resetPasswordToken: { type: String },
   resetPasswordExpires: { type: Date },
+  // Email verification via OTP for new signups
+  emailVerified: { type: Boolean, default: true }, // existing users remain allowed
+  signupOtp: { type: String },
+  signupOtpExpires: { type: Date },
+  signupOtpAttempts: { type: Number, default: 0 },
 });
 
 const User = mongoose.model("User", UserSchema);
