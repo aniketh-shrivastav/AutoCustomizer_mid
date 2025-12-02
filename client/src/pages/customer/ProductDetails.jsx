@@ -61,52 +61,66 @@ export default function ProductDetails() {
         {loading && <div>Loading product...</div>}
         {error && <div className="text-danger mb-3">{error}</div>}
 
-        {!loading && !error && product && (
-          <div className="row">
-            <div className="col-md-6">
-              <img
-                src={product.image || "/images/placeholder.jpg"}
-                alt={product.name || "Product"}
-                className="img-fluid rounded shadow"
-              />
-            </div>
+                {!loading && !error && product && (
+          <div className="product-details-card card border-0 shadow-lg p-4">
+            <div className="row g-4 align-items-start">
+              <div className="col-md-6">
+                <img
+                  src={product.image || "/images/placeholder.jpg"}
+                  alt={product.name || "Product"}
+                  className="img-fluid product-details-image"
+                />
+              </div>
 
-            <div className="col-md-6">
-              <h2>{product.name}</h2>
-              <p>
-                <strong>Category:</strong> {product.category}
-              </p>
-              <p>
-                <strong>Price:</strong> ₹{product.price}
-              </p>
-              <p>
-                <strong>Description:</strong> {product.description}
-              </p>
-              {product.seller && (
-                <p>
-                  <strong>Seller:</strong> {product.seller.name}
+              <div className="col-md-6">
+                <h2 className="mb-3">{product.name}</h2>
+                <p className="text-primary fs-4 fw-semibold mb-3">
+                  ₹{product.price}
                 </p>
-              )}
-              <p>
-                <strong>Brand:</strong> {product.brand}
-              </p>
-              <p>
-                <strong>SKU:</strong> {product.sku}
-              </p>
-              <p>
-                <strong>Compatibility:</strong> {product.compatibility}
-              </p>
 
-              <button
-                type="button"
-                className="btn btn-secondary mt-3"
-                onClick={() => navigate("/customer/index")}
-              >
-                Back to Products
-              </button>
+                <div className="product-details-meta mb-3">
+                  <p className="mb-1">
+                    <strong>Category:</strong> {product.category}
+                  </p>
+                  <p className="mb-1">
+                    <strong>Brand:</strong> {product.brand}
+                  </p>
+                  <p className="mb-1">
+                    <strong>SKU:</strong> {product.sku}
+                  </p>
+                  <p className="mb-1">
+                    <strong>Compatibility:</strong> {product.compatibility}
+                  </p>
+                  {product.seller && (
+                    <p className="mb-1">
+                      <strong>Seller:</strong> {product.seller.name}
+                    </p>
+                  )}
+                </div>
+
+                <div className="product-details-description">
+                  <p className="mb-0">
+                    <strong>Description:</strong> {product.description}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  className="btn btn-secondary mt-4"
+                  style={{
+                    borderRadius: "999px",
+                    paddingInline: "20px",
+                    boxShadow: "0 6px 16px rgba(108, 117, 125, 0.25)",
+                  }}
+                  onClick={() => navigate("/customer/index")}
+                >
+                  ← Back to Products
+                </button>
+              </div>
             </div>
           </div>
         )}
+
       </div>
 
       <footer>
