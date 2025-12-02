@@ -2,30 +2,40 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 export default function ForgotPassword() {
-  const [email, setEmail] = useState("");
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  //State Variables
+  const [email, setEmail] = useState("");               // Stores user email input
+  const [message, setMessage] = useState("");           // Success message
+  const [error, setError] = useState("");               // Error message
+  const [loading, setLoading] = useState(false);        // Button loading state
+  const [previewUrl, setPreviewUrl] = useState(null);   // Nodemailer preview URL (DEV mode
+
   const navigate = useNavigate();
 
+  // Handle form submission
   async function onSubmit(e) {
-    e.preventDefault();
+    e.preventDefault();// Prevent page refresh
+
+    // Reset status messages
     setMessage("");
     setError("");
     setLoading(true);
+
     try {
+      // Send POST request to backend
       const res = await fetch("/forgot-password", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Accept: "application/json",
         },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email }),// Pass email to backend
       });
       const j = await res.json().catch(() => ({}));
       if (!res.ok) {
+        // Show backend error message
         setError(j.message || "Request failed");
       } else {
+        // Display success message
         setMessage(j.message || "If that email exists, a reset link was sent.");
         if (j.previewUrl) {
           setMessage(
@@ -36,13 +46,12 @@ export default function ForgotPassword() {
         }
       }
     } catch (err) {
+      // Network or server crash
       setError("Network error. Please try again.");
     } finally {
       setLoading(false);
     }
   }
-
-  const [previewUrl, setPreviewUrl] = useState(null);
 
   return (
     <div className="container">
