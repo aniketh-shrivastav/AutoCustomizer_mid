@@ -18,7 +18,9 @@ function StatusBadge({ type, status }) {
       : "Active";
   return (
     <span
-      className={`badge ${isDanger ? "badge-danger" : isWarn ? "badge-warning" : "badge-success"}`}
+      className={`badge ${
+        isDanger ? "badge-danger" : isWarn ? "badge-warning" : "badge-success"
+      }`}
     >
       {label}
     </span>
@@ -116,7 +118,10 @@ export default function Orders() {
               </ul>
             </td>
             <td>
-              <StatusBadge type="order" status={o.computedStatus || o.orderStatus} />
+              <StatusBadge
+                type="order"
+                status={o.computedStatus || o.orderStatus}
+              />
             </td>
             <td>
               {(o.computedStatus || o.orderStatus) === "cancelled" ? (
