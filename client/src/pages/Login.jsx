@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import "../Css/auth.css";
 import { useNavigate } from "react-router-dom";
 
 export default function Login() {
@@ -37,20 +38,28 @@ export default function Login() {
     }
   }
   return (
-    <div className="container">
-      <div className="auth-container">
-        <div className="brand-section">
-          <div className="brand-content">
-            <h1>AutoCustomizer</h1>
-            <p>Your one-stop platform for all car customization needs</p>
+    <div className="container auth-page">
+      <div className="auth-wrapper">
+        <div className="auth-brand">
+          <h1>AutoCustomizer</h1>
+          <p>Your one-stop platform for all car customization needs</p>
+          <div className="brand-image">
             <img
               src="https://images.unsplash.com/photo-1603584173870-7f23fdae1b7a?auto=format&fit=crop&q=80"
               alt="Car customization"
-              className="brand-image"
             />
           </div>
         </div>
-        <div className="auth-section">
+        <div className="auth-panel">
+          <div className="auth-topbar">
+            <button
+              className="back-btn"
+              type="button"
+              onClick={() => navigate("/")}
+            >
+              ⟵ Back to Dashboard
+            </button>
+          </div>
           <h2>Welcome Back</h2>
           {error && (
             <div
@@ -108,11 +117,13 @@ export default function Login() {
                 Forgot password?
               </button>
             </div>
-            <button type="submit" className="submit-btn">
-              Sign In
-            </button>
+            <div className="auth-actions">
+              <button type="submit" className="submit-btn">
+                Sign In
+              </button>
+            </div>
           </form>
-          <p>
+          <p className="auth-extra">
             Don't have an account? <a href="/signup">Sign up here</a>
           </p>
         </div>

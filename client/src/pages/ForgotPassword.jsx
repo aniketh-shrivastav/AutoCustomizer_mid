@@ -1,19 +1,20 @@
 import React, { useState } from "react";
+import "../Css/auth.css";
 import { useNavigate } from "react-router-dom";
 
 export default function ForgotPassword() {
   //State Variables
-  const [email, setEmail] = useState("");               // Stores user email input
-  const [message, setMessage] = useState("");           // Success message
-  const [error, setError] = useState("");               // Error message
-  const [loading, setLoading] = useState(false);        // Button loading state
-  const [previewUrl, setPreviewUrl] = useState(null);   // Nodemailer preview URL (DEV mode
+  const [email, setEmail] = useState(""); // Stores user email input
+  const [message, setMessage] = useState(""); // Success message
+  const [error, setError] = useState(""); // Error message
+  const [loading, setLoading] = useState(false); // Button loading state
+  const [previewUrl, setPreviewUrl] = useState(null); // Nodemailer preview URL (DEV mode
 
   const navigate = useNavigate();
 
   // Handle form submission
   async function onSubmit(e) {
-    e.preventDefault();// Prevent page refresh
+    e.preventDefault(); // Prevent page refresh
 
     // Reset status messages
     setMessage("");
@@ -28,7 +29,7 @@ export default function ForgotPassword() {
           "Content-Type": "application/json",
           Accept: "application/json",
         },
-        body: JSON.stringify({ email }),// Pass email to backend
+        body: JSON.stringify({ email }), // Pass email to backend
       });
       const j = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -54,9 +55,9 @@ export default function ForgotPassword() {
   }
 
   return (
-    <div className="container">
-      <div className="auth-container">
-        <div className="auth-section" style={{ maxWidth: 420 }}>
+    <div className="container auth-page">
+      <div className="auth-wrapper" style={{ gridTemplateColumns: "1fr" }}>
+        <div className="auth-panel" style={{ maxWidth: 520 }}>
           <h2>Forgot Password</h2>
           <p>Enter your account email to receive a reset link.</p>
           {message && <div className="alert alert-success">{message}</div>}
@@ -81,11 +82,13 @@ export default function ForgotPassword() {
                 onChange={(e) => setEmail(e.target.value)}
               />
             </div>
-            <button className="submit-btn" disabled={loading} type="submit">
-              {loading ? "Sending..." : "Send Reset Link"}
-            </button>
+            <div className="auth-actions">
+              <button className="submit-btn" disabled={loading} type="submit">
+                {loading ? "Sending..." : "Send Reset Link"}
+              </button>
+            </div>
           </form>
-          <p style={{ marginTop: 16 }}>
+          <p className="auth-extra">
             <a href="/login">Back to Login</a>
           </p>
         </div>

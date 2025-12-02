@@ -192,12 +192,10 @@ router.post("/login", async (req, res) => {
         /\/$/,
         ""
       )}/verify-otp?email=${encodeURIComponent(email)}`;
-      return res
-        .status(403)
-        .json({
-          message: "Please verify your email to continue.",
-          redirect: verifyUrl,
-        });
+      return res.status(403).json({
+        message: "Please verify your email to continue.",
+        redirect: verifyUrl,
+      });
     }
 
     // Check if the user is suspended
@@ -329,7 +327,6 @@ router.post("/forgot-password", async (req, res) => {
   try {
     const user = await User.findOne({ email });
     if (!user) {
-      // Do not reveal existence
       return res.json({
         success: true,
         message: "If that email exists, a reset link was sent.",

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import "../Css/auth.css";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 export default function VerifyOtp() {
@@ -79,9 +80,9 @@ export default function VerifyOtp() {
   }
 
   return (
-    <div className="container">
-      <div className="auth-container ">
-        <div className="auth-section" style={{ maxWidth: 420 }}>
+    <div className="container auth-page">
+      <div className="auth-wrapper" style={{ gridTemplateColumns: "1fr" }}>
+        <div className="auth-panel" style={{ maxWidth: 520 }}>
           <h2>Verify your email</h2>
           <p style={{ marginTop: 8 }}>
             We sent a 6-digit code to <b>{email || "(no email)"}</b>.
@@ -111,19 +112,25 @@ export default function VerifyOtp() {
                 required
               />
             </div>
-            <button type="submit" className="submit-btn" disabled={loading}>
+            <button
+              type="submit"
+              className="submit-btn"
+              disabled={loading || !email}
+            >
               {loading ? "Verifying…" : "Verify Email"}
             </button>
           </form>
-          <button
-            onClick={resend}
-            className="submit-btn"
-            style={{ marginTop: 12 }}
-            disabled={loading || !email}
-          >
-            Resend Code
-          </button>
-          <p style={{ marginTop: 16 }}>
+          <div className="auth-actions" style={{ marginTop: 10 }}>
+            <button
+              onClick={resend}
+              className="submit-btn"
+              disabled={loading || !email}
+              type="button"
+            >
+              Resend Code
+            </button>
+          </div>
+          <p className="auth-extra">
             Already verified? <a href="/login">Login</a>
           </p>
         </div>

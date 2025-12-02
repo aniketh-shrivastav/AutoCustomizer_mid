@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import "../Css/auth.css";
 import { useParams, useNavigate } from "react-router-dom";
 
 export default function ResetPassword() {
@@ -81,9 +82,9 @@ export default function ResetPassword() {
   }
 
   return (
-    <div className="container">
-      <div className="auth-container">
-        <div className="auth-section" style={{ maxWidth: 420 }}>
+    <div className="container auth-page">
+      <div className="auth-wrapper" style={{ gridTemplateColumns: "1fr" }}>
+        <div className="auth-panel" style={{ maxWidth: 520 }}>
           <h2>Reset Password</h2>
           {message && <div className="alert alert-success">{message}</div>}
           {error && <div className="alert alert-danger">{error}</div>}
@@ -110,9 +111,11 @@ export default function ResetPassword() {
                 onChange={(e) => setConfirm(e.target.value)}
               />
             </div>
-            <button type="submit" className="submit-btn" disabled={loading}>
-              {loading ? "Resetting..." : "Reset Password"}
-            </button>
+            <div className="auth-actions">
+              <button type="submit" className="submit-btn" disabled={loading}>
+                {loading ? "Resetting..." : "Reset Password"}
+              </button>
+            </div>
           </form>
         </div>
       </div>

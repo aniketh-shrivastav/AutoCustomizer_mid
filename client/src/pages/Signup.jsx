@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import "../Css/auth.css";
 import { useNavigate } from "react-router-dom";
 
 const nameRegex = /^[A-Za-z\s.-]+$/;
@@ -221,20 +222,28 @@ export default function Signup() {
   };
 
   return (
-    <div className="container">
-      <div className="auth-container">
-        <div className="brand-section">
-          <div className="brand-content">
-            <h1>AutoCustomizer</h1>
-            <p>Your one-stop platform for all car customization needs</p>
+    <div className="container auth-page">
+      <div className="auth-wrapper">
+        <div className="auth-brand">
+          <h1>AutoCustomizer</h1>
+          <p>Your one-stop platform for all car customization needs</p>
+          <div className="brand-image">
             <img
               src="https://images.unsplash.com/photo-1603584173870-7f23fdae1b7a?auto=format&fit=crop&q=80"
               alt="Car customization"
-              className="brand-image"
             />
           </div>
         </div>
-        <div className="auth-section">
+        <div className="auth-panel">
+          <div className="auth-topbar">
+            <button
+              className="back-btn"
+              type="button"
+              onClick={() => navigate("/")}
+            >
+              ⟵ Back to Dashboard
+            </button>
+          </div>
           <h2>Create an Account</h2>
 
           <label htmlFor="userType">Select User Type</label>
@@ -285,12 +294,14 @@ export default function Signup() {
                 </span>
               </div>
             ))}
-            <button type="submit" className="submit-btn">
-              {titleByRole[role]}
-            </button>
+            <div className="auth-actions">
+              <button type="submit" className="submit-btn">
+                {titleByRole[role]}
+              </button>
+            </div>
           </form>
 
-          <p>
+          <p className="auth-extra">
             Already have an account? <a href="/login">Login here</a>
           </p>
         </div>
