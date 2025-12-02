@@ -21,6 +21,9 @@ export default function ManagerChat() {
   const [activeCustomer, setActiveCustomer] = useState(null);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
+  const [search, setSearch] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [searching, setSearching] = useState(false);
   const [loadingThread, setLoadingThread] = useState(false);
   const [loadingCustomers, setLoadingCustomers] = useState(true);
   const bottomRef = useRef(null);
@@ -148,6 +151,39 @@ export default function ManagerChat() {
     }
   }
 
+  useEffect(() => {
+    const term = search.trim();
+    if (!term) {
+      setSearchResults([]);
+      setSearching(false);
+      return;
+    }
+    const controller = new AbortController();
+    (async () => {
+      try {
+        setSearching(true);
+        const res = await fetch(
+          `/chat/customers/search?q=${encodeURIComponent(term)}`,
+          { signal: controller.signal }
+        );
+        const j = await res.json();
+        if (!controller.signal.aborted) {
+          setSearchResults(j.success ? j.customers || [] : []);
+        }
+      } catch (err) {
+        if (err.name !== "AbortError") {
+          console.error(err);
+          setSearchResults([]);
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setSearching(false);
+        }
+      }
+    })();
+    return () => controller.abort();
+  }, [search]);
+
   async function openThread(customerId) {
     setActiveCustomer(customerId);
     setLoadingThread(true);
@@ -228,18 +264,80 @@ export default function ManagerChat() {
             <h3 style={{ margin: 0, fontSize: 16, color: palette.textPrimary }}>
               Customer Threads
             </h3>
+            <p
+              style={{
+                margin: "6px 0 0",
+                color: palette.textSecondary,
+                fontSize: 12,
+              }}
+            >
+              Search by name or email to start a new conversation.
+            </p>
+          </div>
+          <div
+            style={{
+              padding: "12px 16px",
+              borderBottom: `1px solid ${palette.divider}`,
+              background: palette.cardBg,
+              display: "flex",
+              gap: 8,
+            }}
+          >
+            <input
+              type="text"
+              placeholder="Search by name or email..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={{
+                flex: 1,
+                padding: "10px 12px",
+                borderRadius: 10,
+                border: `1px solid ${palette.inputBorder}`,
+                background: palette.inputBg,
+                color: palette.textPrimary,
+                outline: "none",
+                fontSize: 14,
+              }}
+            />
+            <button
+              type="button"
+              onClick={loadCustomers}
+              title="Refresh list"
+              style={{
+                padding: "10px 12px",
+                borderRadius: 10,
+                background: palette.listHover,
+                border: `1px solid ${palette.divider}`,
+                color: palette.textPrimary,
+                cursor: "pointer",
+              }}
+            >
+              Refresh
+            </button>
           </div>
           <div
             style={{ flex: 1, overflowY: "auto", background: palette.cardBg }}
           >
-            {loadingCustomers ? (
-              <p style={{ padding: 16 }}>Loading...</p>
-            ) : customers.length === 0 ? (
-              <p style={{ padding: 16, color: "#777" }}>
-                No conversations yet.
-              </p>
-            ) : (
-              customers.map((c) => {
+            {(() => {
+              const showingSearch = Boolean(search.trim());
+              const list = showingSearch ? searchResults : customers;
+              const loadingState = showingSearch ? searching : loadingCustomers;
+              const emptyText = showingSearch
+                ? "No matching users."
+                : "No conversations yet.";
+              if (loadingState) {
+                return (
+                  <p style={{ padding: 16 }}>
+                    {showingSearch ? "Searching..." : "Loading..."}
+                  </p>
+                );
+              }
+              if (list.length === 0) {
+                return (
+                  <p style={{ padding: 16, color: "#777" }}>{emptyText}</p>
+                );
+              }
+              return list.map((c) => {
                 const active = String(c.customerId) === String(activeCustomer);
                 return (
                   <button
@@ -259,30 +357,66 @@ export default function ManagerChat() {
                   >
                     <div
                       style={{
-                        fontWeight: 600,
-                        fontSize: 14,
-                        color: palette.textPrimary,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 8,
                       }}
                     >
-                      {c.customer?.name || "Customer"}
+                      <span
+                        style={{
+                          fontWeight: 600,
+                          fontSize: 14,
+                          color: palette.textPrimary,
+                        }}
+                      >
+                        {c.customer?.name || "Customer"}
+                      </span>
+                      {c.role && (
+                        <span
+                          style={{
+                            fontSize: 11,
+                            textTransform: "capitalize",
+                            background: palette.listHover,
+                            borderRadius: 999,
+                            padding: "2px 8px",
+                            border: `1px solid ${palette.divider}`,
+                            color: palette.textSecondary,
+                          }}
+                        >
+                          {c.role.replace(/-/g, " ")}
+                        </span>
+                      )}
                     </div>
+                    {c.customer?.email && (
+                      <div
+                        style={{
+                          fontSize: 12,
+                          color: palette.textSecondary,
+                          marginTop: 4,
+                        }}
+                      >
+                        {c.customer.email}
+                      </div>
+                    )}
                     <div
                       style={{
                         fontSize: 12,
-                        opacity: 0.7,
+                        opacity: 0.8,
                         whiteSpace: "nowrap",
                         overflow: "hidden",
                         textOverflow: "ellipsis",
                         maxWidth: "100%",
                         color: palette.textSecondary,
+                        marginTop: 4,
                       }}
                     >
-                      {c.lastMessage || "(no messages)"}
+                      {c.lastMessage || "(no messages yet)"}
                     </div>
                   </button>
                 );
-              })
-            )}
+              });
+            })()}
           </div>
           <div
             style={{
