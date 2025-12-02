@@ -459,11 +459,13 @@ router.post(
         return res.status(400).send("Product image required.");
       }
 
-      // Upload local file to Cloudinary
+      // Upload local file to Cloudinary (increase timeout to avoid 499 timeouts)
       const uploadRes = await cloudinary.uploader.upload(req.file.path, {
         folder: "autocustomizer/products",
         fetch_format: "auto",
         quality: "auto",
+        resource_type: "image",
+        timeout: 120000,
       });
 
       // remove local file
@@ -490,7 +492,12 @@ router.post(
       await newProduct.save();
       res.redirect("/Seller/productmanagement");
     } catch (error) {
-      console.error("Error adding product:", error.message);
+      // Cloudinary and other libraries sometimes nest details under error.error
+      const msg =
+        error?.message ||
+        error?.error?.message ||
+        "Unknown error adding product";
+      console.error("Error adding product:", msg);
       console.error("Full Error Object:", JSON.stringify(error, null, 2));
 
       if (error.name === "ValidationError") {
@@ -511,11 +518,15 @@ router.post(
           );
       }
 
-      // Provide more helpful error messages
-      if (error.message && error.message.includes("api_key")) {
-        return res.status(500).send("Cloudinary configuration error: Please configure CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in your .env file.");
-      }
-      res.status(500).send("Internal Server Error: " + error.message);
+// Provide clearer Cloudinary-related error messages
+if (error.message && error.message.includes("api_key")) {
+  return res.status(500).send(
+    "Cloudinary configuration error: Please configure CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in your .env file."
+  );
+}
+
+// Bubble up clearer message for troubleshooting (but still return 500)
+res.status(500).send(msg || ("Internal Server Error: " + error.message));
     }
   }
 );
@@ -838,6 +849,8 @@ router.post(
                 folder: "autocustomizer/products",
                 fetch_format: "auto",
                 quality: "auto",
+                resource_type: "image",
+                timeout: 120000,
               });
             } else {
               // search inside extractPath and extractPath/images
@@ -859,6 +872,8 @@ router.post(
                 folder: "autocustomizer/products",
                 fetch_format: "auto",
                 quality: "auto",
+                resource_type: "image",
+                timeout: 120000,
               });
             }
 
@@ -956,6 +971,8 @@ router.post(
               folder: "autocustomizer/products",
               fetch_format: "auto",
               quality: "auto",
+              resource_type: "image",
+              timeout: 120000,
             });
 
             const newProd = new Product({

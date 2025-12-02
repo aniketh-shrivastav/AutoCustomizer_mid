@@ -1,5 +1,7 @@
 require("dotenv").config(); // Load environment variables first
 const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
 const session = require("express-session");
 const path = require("path");
 const cors = require("cors");
@@ -8,6 +10,14 @@ const User = require("./models/User");
 //Import the User model
 
 const app = express();
+const httpServer = http.createServer(app);
+const io = new Server(httpServer, {
+  cors: {
+    origin: ["http://localhost:5173", "http://localhost:3000"],
+    credentials: true,
+  },
+});
+app.set("io", io);
 connectDB();
 
 app.use(
@@ -82,6 +92,7 @@ const sellerRoutes = require("./routes/sellerRoutes");
 const profileSettingsRoutes = require("./routes/profileSettingsRoutes");
 const cartRoutes = require("./routes/cartRoutes");
 const bookingRoutes = require("./routes/bookingRoutes");
+const chatRoutes = require("./routes/chatRoutes");
 
 app.use("/", profileSettingsRoutes);
 app.use("/", authRoutes);
@@ -92,6 +103,7 @@ app.use("/", contactRoutes);
 app.use("/seller", sellerRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/bookings", bookingRoutes);
+app.use("/", chatRoutes);
 app.use(express.json()); // Parse JSON request bodies
 app.use(express.urlencoded({ extended: true }));
 // app.use((err, req, res, next) => {
@@ -99,7 +111,15 @@ app.use(express.urlencoded({ extended: true }));
 //   res.status(500).send("Something went wrong!");
 // });
 
+// Socket.IO basic rooms per customer
+io.on("connection", (socket) => {
+  socket.on("chat:join", ({ customerId }) => {
+    if (customerId) socket.join(`customer_${customerId}`);
+  });
+  socket.on("disconnect", () => {});
+});
+
 // Start Server
-app.listen(3000, () => {
+httpServer.listen(3000, () => {
   console.log("Server running at http://localhost:3000");
 });
