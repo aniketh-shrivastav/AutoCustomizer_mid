@@ -140,7 +140,9 @@ export default function SellerProfileSettings() {
   return (
     <div className="seller-page">
       <nav className="navbar">
-        <div className="brand">AutoCustomizer</div>
+        <div className="brand">
+          <img src="/images3/logo2.jpg" alt="AutoCustomizer" style={{ height: '40px', objectFit: 'contain' }} />
+        </div>
         <ul>
           <li>
             <a href="/seller/dashboard">Dashboard</a>

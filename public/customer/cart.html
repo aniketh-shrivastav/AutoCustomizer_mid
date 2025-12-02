@@ -362,11 +362,27 @@
                 Accept: "application/json",
               },
             });
-            if (!res.ok) throw new Error("Order failed");
-            alert("Order placed successfully!");
+            
+            const data = await res.json().catch(() => ({}));
+            
+            if (!res.ok) {
+              const errorMessage = data.message || "Order failed. Please try again.";
+              alert(errorMessage);
+              
+              // If it's a profile issue, redirect to profile page
+              if (errorMessage.includes("profile") || errorMessage.includes("address") || errorMessage.includes("district")) {
+                if (confirm("Would you like to update your profile now?")) {
+                  location.href = "/customer/profile.html";
+                }
+              }
+              return;
+            }
+            
+            alert(data.message || "Order placed successfully!");
             location.href = "/customer/history.html";
           } catch (err) {
-            alert(err.message);
+            alert(err.message || "An error occurred while placing your order. Please try again.");
+            console.error("Order placement error:", err);
           }
         });
 

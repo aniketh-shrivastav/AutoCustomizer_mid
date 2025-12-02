@@ -209,8 +209,33 @@ export default function BookingManagement() {
           </ul>
         </div>
 
+        <div className="filter-section">
+          <div className="filter-left">
+            <input
+              type="text"
+              id="searchInput"
+              placeholder="Search by Customer ID or Name"
+              className="search-input"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <select
+              className="dropdown"
+              value={sortOrder}
+              onChange={(e) => setSortOrder(e.target.value)}
+            >
+              <option>Newest Order Sent</option>
+              <option>Oldest Order Sent</option>
+            </select>
+            <button className="filter-btn" onClick={(e) => e.preventDefault()}>
+              Filter
+            </button>
+          </div>
+          <div className="filter-info">Showing {filtered.length} orders</div>
+        </div>
+
         <div className="order-header">
-          {["Open", "Confirmed", "Ready", "Rejected"].map((tab) => (
+          {['Open', 'Confirmed', 'Ready', 'Rejected'].map((tab) => (
             <button
               key={tab}
               className={`tab ${activeTab === tab ? "active" : ""}`}
@@ -219,28 +244,6 @@ export default function BookingManagement() {
               {tab}
             </button>
           ))}
-        </div>
-
-        <div className="filter-section">
-          <input
-            type="text"
-            id="searchInput"
-            placeholder="Search by Customer ID or Name"
-            className="search-input"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          <select
-            className="dropdown"
-            value={sortOrder}
-            onChange={(e) => setSortOrder(e.target.value)}
-          >
-            <option>Newest Order Sent</option>
-            <option>Oldest Order Sent</option>
-          </select>
-          <button className="filter-btn" onClick={(e) => e.preventDefault()}>
-            Filter
-          </button>
         </div>
 
         <table className="order-table">

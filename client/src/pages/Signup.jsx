@@ -184,7 +184,12 @@ export default function Signup() {
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) {
-        navigate("/login");
+        if (data.redirect) {
+          // Let the SPA navigate to OTP verification when required
+          navigate(data.redirect.replace(/^https?:\/\/[^/]+/, ""));
+        } else {
+          navigate("/login");
+        }
       } else {
         const msg = data.message || "Signup failed. Please try again.";
         // Attach field-specific error if we can guess

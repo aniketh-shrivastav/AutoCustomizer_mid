@@ -88,6 +88,14 @@ body {
   overflow-y: auto;
 }
 
+/* Headings inside auth areas */
+.auth-section h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+  color: var(--text-color);
+}
+
 .auth-toggle {
   text-align: right;
   margin-bottom: 1rem;
