@@ -23,6 +23,9 @@ export default function CustomerChat() {
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [themeMode, setThemeMode] = useState(() =>
+    document.documentElement.getAttribute("data-theme") || "light"
+  );
 
   const bottomRef = useRef(null);
   const socketRef = useRef(null);
@@ -32,6 +35,12 @@ export default function CustomerChat() {
   };
 
   useEffect(() => {
+    const observer = new MutationObserver(() => {
+      const mode = document.documentElement.getAttribute("data-theme") || "light";
+      setThemeMode(mode);
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    
     (async () => {
       const u = await fetchSession();
       if (!u || u.role !== "customer") {
@@ -69,8 +78,40 @@ export default function CustomerChat() {
       });
     })();
 
-    return () => socketRef.current?.disconnect();
+    return () => { observer.disconnect(); socketRef.current?.disconnect(); };
   }, []);
+
+  const palette = themeMode === "dark"
+    ? {
+        pageBg: "#0f131a",
+        cardBg: "#111827",
+        cardShadow: "0 10px 25px rgba(0,0,0,0.35)",
+        headerGrad: "linear-gradient(135deg,#3b82f6,#2563eb)",
+        msgsBg: "#0f131a",
+        msgOtherBg: "#1f2937",
+        msgOtherText: "#e5e7eb",
+        msgMineGrad: "linear-gradient(135deg,#6366f1,#4f46e5)",
+        divider: "#1f2937",
+        inputBg: "#0b0f16",
+        inputBorder: "#334155",
+        sendGrad: "linear-gradient(135deg,#4f46e5,#4338ca)",
+        textPrimary: "#e5e7eb",
+      }
+    : {
+        pageBg: "#eef1f5",
+        cardBg: "#ffffff",
+        cardShadow: "0 10px 25px rgba(0,0,0,0.12)",
+        headerGrad: "linear-gradient(135deg,#3b82f6,#2563eb)",
+        msgsBg: "#f7f9fc",
+        msgOtherBg: "#e5e7eb",
+        msgOtherText: "#111",
+        msgMineGrad: "linear-gradient(135deg,#6366f1,#4f46e5)",
+        divider: "#e5e7eb",
+        inputBg: "#f9fafb",
+        inputBorder: "#d1d5db",
+        sendGrad: "linear-gradient(135deg,#4f46e5,#4338ca)",
+        textPrimary: "#111",
+      };
 
   async function sendMessage(e) {
     e.preventDefault();
@@ -127,7 +168,7 @@ export default function CustomerChat() {
     <div
       style={{
         minHeight: "100vh",
-        background: "#eef1f5",
+        background: palette.pageBg,
         paddingTop: "90px",
         paddingBottom: "40px",
       }}
@@ -140,10 +181,10 @@ export default function CustomerChat() {
           maxWidth: 850,
           height: "75vh",
           margin: "0 auto",
-          background: "#ffffff",
+          background: palette.cardBg,
           borderRadius: 20,
           overflow: "hidden",
-          boxShadow: "0 10px 25px rgba(0,0,0,0.12)",
+          boxShadow: palette.cardShadow,
           display: "flex",
           flexDirection: "column",
         }}
@@ -152,7 +193,7 @@ export default function CustomerChat() {
         <div
           style={{
             padding: "18px 24px",
-            background: "linear-gradient(135deg,#3b82f6,#2563eb)",
+            background: palette.headerGrad,
             color: "#fff",
             fontWeight: 600,
             fontSize: 18,
@@ -173,7 +214,7 @@ export default function CustomerChat() {
             flex: 1,
             overflowY: "auto",
             padding: "20px 24px",
-            background: "#f7f9fc",
+            background: palette.msgsBg,
           }}
         >
           {loading ? (
@@ -199,11 +240,9 @@ export default function CustomerChat() {
                       padding: "10px 14px",
                       borderRadius: 14,
                       maxWidth: "70%",
-                      background: mine
-                        ? "linear-gradient(135deg,#6366f1,#4f46e5)"
-                        : "#e5e7eb",
-                      color: mine ? "#fff" : "#111",
-                      boxShadow: "0 2px 6px rgba(0,0,0,0.12)",
+                      background: mine ? palette.msgMineGrad : palette.msgOtherBg,
+                      color: mine ? "#fff" : palette.msgOtherText,
+                      boxShadow: themeMode === "dark" ? "0 2px 6px rgba(0,0,0,0.35)" : "0 2px 6px rgba(0,0,0,0.12)",
                       fontSize: 15,
                       lineHeight: 1.4,
                     }}
@@ -282,8 +321,8 @@ export default function CustomerChat() {
           style={{
             display: "flex",
             padding: "14px 20px",
-            borderTop: "1px solid #e5e7eb",
-            background: "#ffffff",
+            borderTop: `1px solid ${palette.divider}`,
+            background: palette.cardBg,
             alignItems: "center",
           }}
         >
@@ -296,10 +335,11 @@ export default function CustomerChat() {
               flex: 1,
               padding: "12px 16px",
               borderRadius: 30,
-              border: "1px solid #d1d5db",
+              border: `1px solid ${palette.inputBorder}`,
               outline: "none",
               fontSize: 15,
-              background: "#f9fafb",
+              background: palette.inputBg,
+              color: palette.textPrimary,
             }}
           />
 
@@ -322,12 +362,12 @@ export default function CustomerChat() {
               padding: "12px 22px",
               marginLeft: 12,
               borderRadius: 30,
-              background: "linear-gradient(135deg,#4f46e5,#4338ca)",
+              background: palette.sendGrad,
               color: "#fff",
               fontWeight: 600,
               border: "none",
               cursor: "pointer",
-              boxShadow: "0 4px 10px rgba(0,0,0,0.15)",
+              boxShadow: themeMode === "dark" ? "0 4px 10px rgba(0,0,0,0.35)" : "0 4px 10px rgba(0,0,0,0.15)",
             }}
           >
             Send
