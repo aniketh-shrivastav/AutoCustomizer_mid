@@ -72,12 +72,20 @@ export default function CustomerChat() {
     return () => socketRef.current?.disconnect();
   }, []);
 
-  async function sendMessage(e) {
+    async function sendMessage(e) {
     e.preventDefault();
     const text = input.trim();
-    if (!text || !user) return;
+
+    // If no message text, show a warning instead of silently doing nothing
+    if (!text || !user) {
+      if (!text) {
+        alert("Please type a message or upload a file before sending.");
+      }
+      return;
+    }
 
     setInput("");
+
 
     try {
       const res = await fetch(`/chat/customer/${user.id}/messages`, {
@@ -303,13 +311,18 @@ export default function CustomerChat() {
             }}
           />
 
-          <input
+                    <input
             type="file"
             accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
             onChange={onPickFile}
             disabled={uploading}
-            style={{ marginLeft: 12 }}
+            style={{
+              marginLeft: 12,
+              fontSize: 13,
+              maxWidth: 210,
+            }}
           />
+
           {uploading && (
             <span style={{ marginLeft: 8, fontSize: 12, color: "#6b7280" }}>
               Uploading...
