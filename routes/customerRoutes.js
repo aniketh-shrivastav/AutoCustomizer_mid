@@ -586,7 +586,10 @@ router.get("/product/:id", customerOnly, async (req, res) => {
       "name"
     );
     if (!product || product.status !== "approved") {
-      if (req.headers.accept && req.headers.accept.includes("application/json")) {
+      if (
+        req.headers.accept &&
+        req.headers.accept.includes("application/json")
+      ) {
         return res
           .status(404)
           .json({ success: false, message: "Product not found" });
