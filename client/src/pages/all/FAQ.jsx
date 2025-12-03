@@ -13,7 +13,7 @@ function useExternalCss(href) {
 }
 
 export default function FAQ() {
-  useExternalCss("/styles/all.css");
+  useExternalCss("/styles/index.css");
   const [authed, setAuthed] = useState(false);
 
   useEffect(() => {

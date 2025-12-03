@@ -14,6 +14,13 @@ const uploadDir = path.join(__dirname, "..", "tmp", "uploads");
 fs.mkdirSync(uploadDir, { recursive: true });
 const upload = multer({ dest: uploadDir });
 
+function cleanupLocalAttachment(attachment) {
+  if (!attachment?.url || attachment.provider !== "local") return;
+  const relative = attachment.url.replace(/^\/+/, "");
+  const fullPath = path.join(__dirname, "..", relative);
+  fs.unlink(fullPath, () => {});
+}
+
 // Auth helpers similar to other routes
 const isAuthenticated = (req, res, next) => {
   if (req.session?.user) return next();
@@ -34,6 +41,8 @@ function canAccessCustomer(req, res, next) {
   return res.status(403).json({ success: false, message: "Forbidden" });
 }
 
+const escapeRegex = (str = "") => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 // List customers with latest message preview (manager only)
 router.get("/chat/customers", isAuthenticated, isManager, async (req, res) => {
   try {
@@ -51,11 +60,20 @@ router.get("/chat/customers", isAuthenticated, isManager, async (req, res) => {
     ]);
 
     const ids = latest.map((x) => x._id);
-    const users = await User.find({ _id: { $in: ids } }, "name email").lean();
+    const users = await User.find(
+      { _id: { $in: ids } },
+      "name email role"
+    ).lean();
     const byId = Object.fromEntries(users.map((u) => [String(u._id), u]));
     const results = latest.map((x) => ({
       customerId: x._id,
-      customer: byId[String(x._id)] || { name: "Unknown" },
+      customer: byId[String(x._id)]
+        ? {
+            name: byId[String(x._id)].name || "Customer",
+            email: byId[String(x._id)].email || "",
+          }
+        : { name: "Unknown" },
+      role: byId[String(x._id)]?.role || "customer",
       lastMessage: x.lastMessage,
       lastAt: x.lastAt,
     }));
@@ -65,6 +83,68 @@ router.get("/chat/customers", isAuthenticated, isManager, async (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
+
+// Search customers (including those without conversations)
+router.get(
+  "/chat/customers/search",
+  isAuthenticated,
+  isManager,
+  async (req, res) => {
+    try {
+      const q = String(req.query.q || "").trim();
+      if (!q) return res.json({ success: true, customers: [] });
+
+      const regex = new RegExp(escapeRegex(q), "i");
+      const limit = Math.min(Number(req.query.limit) || 20, 50);
+      const users = await User.find(
+        {
+          role: "customer",
+          $or: [{ name: regex }, { email: regex }],
+        },
+        "name email role"
+      )
+        .sort({ createdAt: -1 })
+        .limit(limit)
+        .lean();
+
+      if (users.length === 0) {
+        return res.json({ success: true, customers: [] });
+      }
+
+      const ids = users.map((u) => u._id);
+      const latest = await Message.aggregate([
+        { $match: { customerId: { $in: ids } } },
+        { $sort: { createdAt: -1 } },
+        {
+          $group: {
+            _id: "$customerId",
+            lastMessage: { $first: "$text" },
+            lastAt: { $first: "$createdAt" },
+          },
+        },
+      ]);
+      const preview = Object.fromEntries(
+        latest.map((x) => [
+          String(x._id),
+          { lastMessage: x.lastMessage, lastAt: x.lastAt },
+        ])
+      );
+
+      const results = users.map((u) => ({
+        customerId: u._id,
+        customer: { name: u.name || "Customer", email: u.email || "" },
+        role: u.role || "customer",
+        lastMessage: preview[String(u._id)]?.lastMessage || "",
+        lastAt: preview[String(u._id)]?.lastAt || null,
+      }));
+
+      res.json({ success: true, customers: results });
+    } catch (e) {
+      console.error("chat/customers/search", e);
+      res.status(500).json({ success: false, message: "Server error" });
+    }
+  }
+);
 
 // Get messages for a customer thread
 router.get(
@@ -188,6 +268,51 @@ router.post(
       res.json({ success: true, message: msg });
     } catch (e) {
       console.error("chat attachment", e);
+      res.status(500).json({ success: false, message: "Server error" });
+    }
+  }
+);
+
+// Delete a message from customer thread
+router.delete(
+  "/chat/customer/:customerId/messages/:messageId",
+  isAuthenticated,
+  canAccessCustomer,
+  async (req, res) => {
+    try {
+      const { customerId, messageId } = req.params;
+      const msg = await Message.findOne({
+        _id: messageId,
+        customerId,
+      });
+      if (!msg) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Message not found" });
+      }
+
+      const requester = req.session.user;
+      const isOwner = String(msg.senderId) === String(requester.id);
+      if (!isOwner && requester.role !== "manager") {
+        return res
+          .status(403)
+          .json({ success: false, message: "Cannot delete this message" });
+      }
+
+      cleanupLocalAttachment(msg.attachment);
+      await msg.deleteOne();
+
+      try {
+        const io = req.app.get("io");
+        if (io)
+          io.to(`customer_${customerId}`).emit("chat:deleted", {
+            _id: String(msg._id),
+          });
+      } catch {}
+
+      res.json({ success: true, deletedId: String(msg._id) });
+    } catch (e) {
+      console.error("chat delete", e);
       res.status(500).json({ success: false, message: "Server error" });
     }
   }

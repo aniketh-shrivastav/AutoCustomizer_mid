@@ -118,12 +118,37 @@ router.get("/api/orders", isAuthenticated, isManager, async (req, res) => {
       .populate("userId")
       .populate("items.seller")
       .sort({ placedAt: -1 });
-    const orders = ordersRaw.filter(
-      (o) =>
-        o.userId &&
-        !o.userId.suspended &&
-        o.items.every((it) => it.seller && !it.seller.suspended)
-    );
+    const orders = ordersRaw
+      .filter(
+        (o) =>
+          o.userId &&
+          !o.userId.suspended &&
+          o.items.every((it) => it.seller && !it.seller.suspended)
+      )
+      .map((o) => {
+        // Derive a manager-visible status from per-item statuses
+        const itemStatuses = (o.items || []).map(
+          (it) => it.itemStatus || o.orderStatus || "pending"
+        );
+        const allCancelled =
+          itemStatuses.length > 0 &&
+          itemStatuses.every((s) => s === "cancelled");
+        const allDelivered =
+          itemStatuses.length > 0 &&
+          itemStatuses.every((s) => s === "delivered");
+        const anyCancelled = itemStatuses.some((s) => s === "cancelled");
+        const anyDelivered = itemStatuses.some((s) => s === "delivered");
+
+        let computedStatus = o.orderStatus || "pending";
+        if (allCancelled) computedStatus = "cancelled";
+        else if (allDelivered) computedStatus = "delivered";
+        else if (anyCancelled || anyDelivered) computedStatus = "partial"; // mixed state
+
+        return {
+          ...o.toObject(),
+          computedStatus,
+        };
+      });
 
     res.json({ orders, bookings });
   } catch (err) {
@@ -190,7 +215,7 @@ router.get("/api/dashboard", isAuthenticated, isManager, async (req, res) => {
       (a, c) => ((a[c._id] = c.count), a),
       {}
     );
-    const roles = ["customer", "service-provider", "seller", "admin"];
+    const roles = ["customer", "service-provider", "seller", "manager"];
     const userCounts = roles.map((r) => userDistribution[r] || 0);
     const [pendingProducts, approvedProducts, rejectedProducts] =
       await Promise.all([
@@ -240,7 +265,7 @@ router.get("/dashboard", isAuthenticated, isManager, async (req, res) => {
       return acc;
     }, {});
 
-    const roles = ["customer", "service-provider", "seller", "admin"];
+    const roles = ["customer", "service-provider", "seller", "manager"];
     const formattedCounts = roles.map((role) => userDistribution[role] || 0);
 
     // ✅ Fetch products by status
@@ -462,12 +487,10 @@ router.post(
           .json({ success: false, message: "Invalid email" });
       }
       if (password.length < 6) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message: "Password must be at least 6 characters",
-          });
+        return res.status(400).json({
+          success: false,
+          message: "Password must be at least 6 characters",
+        });
       }
       if (phone && !/^\d{10}$/.test(String(phone).trim())) {
         return res

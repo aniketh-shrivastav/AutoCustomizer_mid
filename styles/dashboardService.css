@@ -156,23 +156,20 @@ body {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
     gap: 20px;
-    margin-bottom: 30px;
-    height:600px;
-    
+    margin-bottom: 20px;
 }
 
 /* Chart Cards */
 .chart-card {
-    background: white;
-    padding: 45px;
+    background: #fbfdff; /* very light tint matching dashboard */
+    padding: 20px;
     border-radius: 10px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-    overflow: hidden; 
+    border: 1px solid rgba(15, 42, 68, 0.06);
+    box-shadow: 0 6px 18px rgba(15, 42, 68, 0.04);
+    overflow: hidden;
     height: auto;
-    min-height: 400px;
-    z-index: 1; /* or just leave it out */
-    position: relative; /* required if you're using z-index */
-
+    min-height: auto;
+    position: relative;
 }
 
 .chart-card h2 {
@@ -183,8 +180,9 @@ body {
 
 .chart-wrapper {
     width: 100%;
-    height: 250px;
+    height: 280px;
     position: relative;
+    background: transparent;
 }
 
 
@@ -255,4 +253,25 @@ body {
         left: 0;
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

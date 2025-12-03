@@ -1,16 +1,19 @@
 /* Copied from server styles/admin-consistent.css to keep consistent UI in React client. */
 /* Root Theme Variables */
 :root {
+  /* Defaults are neutral; manager pages will override via html[data-theme] */
   --primary-color: #000000;
   --secondary-color: #333333;
   --success-color: #2ecc71;
   --danger-color: #e74c3c;
   --warning-color: #f59e0b;
-  --background-color: #ffffff;
-  --card-background: #ffffff;
-  --text-primary: #000000;
-  --text-secondary: #6b7280;
-  --chart-box-bg: rgba(0, 0, 0, 0.05);
+  --background-color: #111827;
+  --card-background: #0f172a;
+  --text-primary: #e5e7eb;
+  --text-secondary: #9ca3af;
+  --chart-box-bg: rgba(255, 255, 255, 0.08);
+  --border-color: #374151;
+  --table-hover-bg: rgba(255, 255, 255, 0.05);
 }
 * {
   margin: 0;
@@ -28,6 +31,31 @@ body {
 /* Force light theme on manager pages even if a global gradient is present */
 body.manager-theme {
   background: var(--background-color) !important;
+}
+
+/* Light/dark palettes scoped to manager pages via html[data-theme] */
+html[data-theme="light"] body.manager-theme {
+  --primary-color: #000000;
+  --secondary-color: #333333;
+  --background-color: #ffffff;
+  --card-background: #ffffff;
+  --text-primary: #111827;
+  --text-secondary: #6b7280;
+  --chart-box-bg: rgba(0, 0, 0, 0.05);
+  --border-color: #e5e7eb;
+  --table-hover-bg: #f4f4f4;
+}
+
+html[data-theme="dark"] body.manager-theme {
+  --primary-color: #111827;
+  --secondary-color: #374151;
+  --background-color: #0b0f1a;
+  --card-background: #111827;
+  --text-primary: #e5e7eb;
+  --text-secondary: #9ca3af;
+  --chart-box-bg: rgba(255, 255, 255, 0.08);
+  --border-color: #374151;
+  --table-hover-bg: rgba(255, 255, 255, 0.05);
 }
 .navbar {
   width: 100%;
@@ -88,8 +116,8 @@ body.manager-theme {
   justify-content: space-between;
   gap: 14px;
   flex-wrap: wrap;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
+  background: var(--card-background);
+  border: 1px solid var(--border-color);
   padding: 12px;
   border-radius: 12px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04);
@@ -108,16 +136,17 @@ body.manager-theme {
   width: 100%;
   max-width: 100%;
   padding: 12px 14px;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--border-color);
   border-radius: 10px;
-  background: #f9fafb;
+  background: var(--card-background);
+  color: var(--text-primary);
   outline: none;
   transition: box-shadow 0.2s, border-color 0.2s, background 0.2s;
 }
 .search-box:focus {
-  border-color: #111827;
+  border-color: var(--primary-color);
   box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.1);
-  background: #ffffff;
+  background: var(--card-background);
 }
 
 .filter-btn {
@@ -165,13 +194,13 @@ body.manager-theme {
 .order-table td,
 .generic-table td {
   padding: 12px;
-  color: black;
-  border-bottom: 1px solid #ddd;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-color);
 }
 .user-table tr:hover,
 .order-table tr:hover,
 .generic-table tr:hover {
-  background: #f4f4f4;
+  background: var(--table-hover-bg);
 }
 .btn,
 .btn-approve,
@@ -311,8 +340,8 @@ body.manager-theme {
   margin-bottom: 2rem;
 }
 .stat-card {
-  background-color: #f9fafb;
-  color: #1f2937;
+  background-color: var(--card-background);
+  color: var(--text-primary);
   padding: 1.5rem;
   border-radius: 12px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
@@ -331,15 +360,15 @@ body.manager-theme {
   margin-bottom: 2rem;
 }
 .chart-wrapper {
-  background-color: #1f2937;
-  color: #fff;
+  background-color: var(--card-background);
+  color: var(--text-primary);
   padding: 1.5rem;
   border-radius: 10px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
   margin-bottom: 1.5rem;
 }
 .chart-wrapper h2 {
-  color: #f9fafb;
+  color: var(--text-primary);
   margin-bottom: 1rem;
 }
 .chart-box {
@@ -350,8 +379,8 @@ body.manager-theme {
   margin: auto;
 }
 .recent-activity {
-  background-color: #1f2937;
-  color: #fff;
+  background-color: var(--card-background);
+  color: var(--text-primary);
   padding: 1.5rem;
   border-radius: 10px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
@@ -366,15 +395,15 @@ body.manager-theme {
 .recent-activity td {
   padding: 0.75rem 1rem;
   border-bottom: 1px solid #374151;
-  color: #e5e7eb;
+  color: var(--text-primary);
 }
 .recent-activity th {
-  background-color: #111827;
-  color: #9ca3af;
+  background-color: var(--primary-color);
+  color: var(--text-secondary);
   text-align: left;
 }
 .recent-activity tr:hover {
-  background-color: #374151;
+  background-color: var(--table-hover-bg);
 }
 @media (max-width: 768px) {
   .charts-container {
@@ -417,7 +446,7 @@ body.manager-theme {
 }
 .profile-body {
   padding: 15px;
-  color: #333;
+  color: var(--text-primary);
 }
 .profile-name {
   font-size: 18px;

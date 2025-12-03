@@ -1,52 +1,119 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Routes, Route, Navigate, Link } from "react-router-dom";
+
+// Redux
 import { Provider } from "react-redux";
 import { PersistGate } from "redux-persist/integration/react";
 import { store, persistor } from "./redux/store";
+
+// Auth Pages
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
+import VerifyOtp from "./pages/VerifyOtp";
+
+// Manager
 import ManagerDashboard from "./pages/manager/Dashboard";
 import ManagerUsers from "./pages/manager/Users";
 import Profiles from "./pages/manager/Profiles";
-import Orders from "./pages/manager/Orders";
+import ManagerOrders from "./pages/manager/Orders";
 import Payments from "./pages/manager/Payments";
 import Support from "./pages/manager/Support";
 import ManagerChat from "./pages/manager/Chat";
+
+// All Users (public)
 import AllIndex from "./pages/all/Index";
 import FAQ from "./pages/all/FAQ";
 import ContactUs from "./pages/all/ContactUs";
+
+// Customer
 import CustomerIndex from "./pages/customer/Index";
 import CustomerBooking from "./pages/customer/Booking";
 import CustomerHistory from "./pages/customer/History";
 import CustomerCart from "./pages/customer/Cart";
 import CustomerProfile from "./pages/customer/Profile";
 import CustomerChat from "./pages/customer/Chat";
+import ProductDetails from "./pages/customer/ProductDetails";
+
+// Service Provider
 import ServiceDashboard from "./pages/service/DashboardService";
 import ServiceProfileSettings from "./pages/service/ProfileSettings";
 import ServiceBookingManagement from "./pages/service/BookingManagement";
 import ServiceReviews from "./pages/service/Reviews";
+
+// Seller
 import SellerDashboard from "./pages/seller/Dashboard";
 import SellerProfileSettings from "./pages/seller/ProfileSettings";
 import SellerProductManagement from "./pages/seller/ProductManagement";
 import SellerOrders from "./pages/seller/Orders";
-import Logout from "./pages/Logout";
-import BulkUpload from './pages/seller/BulkUpload';
-import BulkUploadResult from './pages/seller/BulkUploadResult';
+import BulkUpload from "./pages/seller/BulkUpload";
+import BulkUploadResult from "./pages/seller/BulkUploadResult";
 
+// Logout
+import Logout from "./pages/Logout";
+
+// ------------------ SESSION HOOK ---------------------
+
+function useSession() {
+  const [state, setState] = useState({ loading: true, user: null });
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const res = await fetch("/api/session", {
+          headers: { Accept: "application/json" },
+        });
+        const j = await res.json().catch(() => ({}));
+        if (!cancelled) setState({ loading: false, user: j?.user || null });
+      } catch {
+        if (!cancelled) setState({ loading: false, user: null });
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return state;
+}
+
+// ------------------ ROLE PROTECTION ---------------------
+
+function RequireRole({ role, children }) {
+  const { loading, user } = useSession();
+
+  if (loading) return null;
+  if (!user) return <Navigate to="/login" replace />;
+  if (role && user.role !== role) return <Navigate to="/login" replace />;
+
+  return children;
+}
+
+// ------------------ MAIN APP ---------------------
 
 export default function App() {
   return (
     <Provider store={store}>
-      <PersistGate loading={<div style={{ padding: "50px", textAlign: "center" }}>Loading...</div>} persistor={persistor}>
+      <PersistGate
+        loading={<div style={{ padding: "50px", textAlign: "center" }}>Loading...</div>}
+        persistor={persistor}
+      >
         <Routes>
+          {/* Public pages */}
           <Route path="/" element={<AllIndex />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
-          {/* Logout (SPA route that calls server then redirects) */}
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password/:token" element={<ResetPassword />} />
+          <Route path="/verify-otp" element={<VerifyOtp />} />
           <Route path="/logout" element={<Logout />} />
-          {/* Public site (All) */}
           <Route path="/faq" element={<FAQ />} />
           <Route path="/contactus" element={<ContactUs />} />
+
           {/* Customer */}
           <Route path="/customer/index" element={<CustomerIndex />} />
           <Route path="/customer/booking" element={<CustomerBooking />} />
@@ -54,73 +121,144 @@ export default function App() {
           <Route path="/customer/cart" element={<CustomerCart />} />
           <Route path="/customer/profile" element={<CustomerProfile />} />
           <Route path="/customer/chat" element={<CustomerChat />} />
-          {/* Service Provider */}
-          <Route path="/service/dashboard" element={<ServiceDashboard />} />
-          {/* Back-compat for legacy path used by server redirects/static HTML */}
-          <Route path="/service/dashboardService" element={<ServiceDashboard />} />
+          <Route path="/customer/product/:id" element={<ProductDetails />} />
+
+          {/* Service Provider Protected */}
+          <Route
+            path="/service/dashboard"
+            element={
+              <RequireRole role="service-provider">
+                <ServiceDashboard />
+              </RequireRole>
+            }
+          />
           <Route
             path="/service/profileSettings"
-            element={<ServiceProfileSettings />}
-          />
-          {/* Alias for legacy static html path */}
-          <Route
-            path="/service/profileSettings.html"
-            element={<ServiceProfileSettings />}
+            element={
+              <RequireRole role="service-provider">
+                <ServiceProfileSettings />
+              </RequireRole>
+            }
           />
           <Route
             path="/service/bookingManagement"
-            element={<ServiceBookingManagement />}
+            element={
+              <RequireRole role="service-provider">
+                <ServiceBookingManagement />
+              </RequireRole>
+            }
           />
           <Route
-            path="/service/bookingManagement.html"
-            element={<ServiceBookingManagement />}
+            path="/service/reviews"
+            element={
+              <RequireRole role="service-provider">
+                <ServiceReviews />
+              </RequireRole>
+            }
           />
-          <Route path="/service/reviews" element={<ServiceReviews />} />
-          <Route path="/service/reviews.html" element={<ServiceReviews />} />
-          {/* Manager (React) */}
-          <Route path="/manager/dashboard" element={<ManagerDashboard />} />
-          <Route path="/manager/users" element={<ManagerUsers />} />
-          <Route path="/manager/profiles" element={<Profiles />} />
-          <Route path="/manager/orders" element={<Orders />} />
-          <Route path="/manager/payments" element={<Payments />} />
-          <Route path="/manager/support" element={<Support />} />
-          <Route path="/manager/chat" element={<ManagerChat />} />
-          {/* Seller (React) */}
-          <Route path="/seller/dashboard" element={<SellerDashboard />} />
-          <Route path="/seller/dashboard.html" element={<SellerDashboard />} />
+
+          {/* Manager Protected */}
+          <Route
+            path="/manager/dashboard"
+            element={
+              <RequireRole role="manager">
+                <ManagerDashboard />
+              </RequireRole>
+            }
+          />
+          <Route
+            path="/manager/users"
+            element={
+              <RequireRole role="manager">
+                <ManagerUsers />
+              </RequireRole>
+            }
+          />
+          <Route
+            path="/manager/profiles"
+            element={
+              <RequireRole role="manager">
+                <Profiles />
+              </RequireRole>
+            }
+          />
+          <Route
+            path="/manager/orders"
+            element={
+              <RequireRole role="manager">
+                <ManagerOrders />
+              </RequireRole>
+            }
+          />
+          <Route
+            path="/manager/payments"
+            element={
+              <RequireRole role="manager">
+                <Payments />
+              </RequireRole>
+            }
+          />
+          <Route
+            path="/manager/support"
+            element={
+              <RequireRole role="manager">
+                <Support />
+              </RequireRole>
+            }
+          />
+          <Route
+            path="/manager/chat"
+            element={
+              <RequireRole role="manager">
+                <ManagerChat />
+              </RequireRole>
+            }
+          />
+
+          {/* Seller Protected */}
+          <Route
+            path="/seller/dashboard"
+            element={
+              <RequireRole role="seller">
+                <SellerDashboard />
+              </RequireRole>
+            }
+          />
           <Route
             path="/seller/profileSettings"
-            element={<SellerProfileSettings />}
-          />
-          <Route
-            path="/seller/profileSettings.html"
-            element={<SellerProfileSettings />}
+            element={
+              <RequireRole role="seller">
+                <SellerProfileSettings />
+              </RequireRole>
+            }
           />
           <Route
             path="/seller/productmanagement"
-            element={<SellerProductManagement />}
+            element={
+              <RequireRole role="seller">
+                <SellerProductManagement />
+              </RequireRole>
+            }
           />
           <Route
-            path="/seller/bulk-upload"
-            element={<BulkUpload />}
+            path="/seller/orders"
+            element={
+              <RequireRole role="seller">
+                <SellerOrders />
+              </RequireRole>
+            }
           />
-          <Route
-            path="/seller/bulk-upload-result"
-            element={<BulkUploadResult />}
-          />
-          <Route
-            path="/seller/productManagement.html"
-            element={<SellerProductManagement />}
-          />
-          <Route path="/seller/orders" element={<SellerOrders />} />
-          <Route path="/seller/orders.html" element={<SellerOrders />} />
+          <Route path="/seller/bulk-upload" element={<BulkUpload />} />
+          <Route path="/seller/bulk-upload-result" element={<BulkUploadResult />} />
+
+          {/* 404 */}
           <Route
             path="*"
             element={
               <div style={{ padding: 24 }}>
                 <h2>Page not found</h2>
                 <p>
-                  Quick links: <Link to="/all">Home</Link>,{" "}
+                  Quick links: <Link to="/">Home</Link>,{" "}
                   <Link to="/login">Login</Link>, <Link to="/signup">Signup</Link>
                 </p>
               </div>

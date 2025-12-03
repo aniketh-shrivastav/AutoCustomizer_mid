@@ -1,5 +1,20 @@
 const mongoose = require("mongoose");
 
+const attachmentSchema = new mongoose.Schema(
+  {
+    url: { type: String, trim: true },
+    type: { type: String, trim: true },
+    name: { type: String, trim: true },
+    size: { type: Number, min: 0 },
+    provider: {
+      type: String,
+      enum: ["local", "cloudinary"],
+      default: "local",
+    },
+  },
+  { _id: false }
+);
+
 const messageSchema = new mongoose.Schema(
   {
     customerId: {
@@ -15,17 +30,7 @@ const messageSchema = new mongoose.Schema(
     },
     senderRole: { type: String, enum: ["customer", "manager"], required: true },
     text: { type: String, trim: true, maxlength: 2000 },
-    attachment: {
-      url: String, // public URL to file
-      type: String, // mime type
-      name: String, // original filename
-      size: Number, // bytes
-      provider: {
-        type: String,
-        enum: ["local", "cloudinary"],
-        default: "local",
-      },
-    },
+    attachment: attachmentSchema,
   },
   { timestamps: { createdAt: true, updatedAt: false } }
 );
