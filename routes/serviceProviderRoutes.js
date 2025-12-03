@@ -136,6 +136,27 @@ router.post("/updateBookingStatus", serviceOnly, async (req, res) => {
     booking.status = newStatus;
     await booking.save();
 
+    // Emit earnings update event when booking status changes to "Ready" or "Completed"
+    if (newStatus === "Ready" || newStatus === "Completed") {
+      const io = req.app.get("io");
+      if (io && booking.providerId) {
+        io.to(`provider_earnings_${booking.providerId}`).emit("earnings:updated", {
+          providerId: booking.providerId,
+          newEarning: booking.totalCost,
+          timestamp: new Date()
+        });
+      }
+    }
+
+    // Also emit activity update for all booking status changes
+    const io = req.app.get("io");
+    if (io && booking.providerId) {
+      io.to(`provider_earnings_${booking.providerId}`).emit("activity:updated", {
+        providerId: booking.providerId,
+        timestamp: new Date()
+      });
+    }
+
     res.json({ success: true });
   } catch (err) {
     console.error("Error updating booking status:", err);
@@ -200,6 +221,108 @@ router.get("/earnings", serviceOnly, async (req, res) => {
     res.status(500).send("Server Error");
   }
 });
+
+// API endpoint for dynamic earnings data
+router.get("/api/earnings-data", serviceOnly, async (req, res) => {
+  try {
+    const providerId = new mongoose.Types.ObjectId(req.session.user.id);
+    const timeRange = req.query.timeRange || "1"; // 1 = current month, 6 = 6 months, 12 = 1 year
+
+    const currentDate = new Date();
+    const labels = [];
+    const data = [];
+    let totalEarnings = 0;
+
+    if (timeRange === "1") {
+      // Weekly breakdown for current month
+      const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
+      const monthName = getMonthName(currentDate.getMonth());
+
+      for (let weekStart = 1; weekStart <= daysInMonth; weekStart += 7) {
+        const weekEnd = Math.min(weekStart + 6, daysInMonth);
+        labels.push(`${monthName} ${weekStart}-${weekEnd}`);
+
+        // Get earnings for this week
+        const weekStartDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), weekStart);
+        const weekEndDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), weekEnd + 1);
+
+        const weeklyEarnings = await ServiceBooking.aggregate([
+          {
+            $match: {
+              providerId,
+              status: "Ready",
+              totalCost: { $exists: true },
+              createdAt: { $gte: weekStartDate, $lt: weekEndDate }
+            }
+          },
+          {
+            $group: {
+              _id: null,
+              total: { $sum: "$totalCost" }
+            }
+          }
+        ]);
+
+        const weekTotal = weeklyEarnings[0]?.total || 0;
+        totalEarnings += weekTotal;
+        data.push(weekTotal);
+      }
+    } else {
+      // Monthly breakdown for 6 months or 1 year
+      const months = parseInt(timeRange);
+      for (let i = months - 1; i >= 0; i--) {
+        const date = new Date(currentDate);
+        date.setMonth(currentDate.getMonth() - i);
+        const monthName = getMonthName(date.getMonth());
+        labels.push(monthName);
+
+        // Get earnings for this month
+        const monthStartDate = new Date(date.getFullYear(), date.getMonth(), 1);
+        const monthEndDate = new Date(date.getFullYear(), date.getMonth() + 1, 1);
+
+        const monthlyEarnings = await ServiceBooking.aggregate([
+          {
+            $match: {
+              providerId,
+              status: "Ready",
+              totalCost: { $exists: true },
+              createdAt: { $gte: monthStartDate, $lt: monthEndDate }
+            }
+          },
+          {
+            $group: {
+              _id: null,
+              total: { $sum: "$totalCost" }
+            }
+          }
+        ]);
+
+        const monthTotal = monthlyEarnings[0]?.total || 0;
+        totalEarnings += monthTotal;
+        data.push(monthTotal);
+      }
+    }
+
+    // Apply 80% commission (20% deduction)
+    const commissionData = data.map(amount => Math.round(amount * 0.8));
+    const commissionTotalEarnings = Math.round(totalEarnings * 0.8);
+
+    res.json({
+      labels,
+      data: commissionData,
+      totalEarnings: commissionTotalEarnings,
+      timeRange
+    });
+  } catch (err) {
+    console.error("Earnings API error", err);
+    res.status(500).json({ error: "Failed to load earnings data" });
+  }
+});
+
+function getMonthName(monthIndex) {
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return months[monthIndex];
+}
 
 // Customer Communication
 router.get("/customerCommunication", serviceOnly, (req, res) => {
@@ -373,6 +496,83 @@ router.get("/api/profile", serviceOnly, async (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
+
+// API endpoint for recent activity
+router.get("/api/recent-activity", serviceOnly, async (req, res) => {
+  try {
+    const providerId = req.session.user.id;
+    const limit = parseInt(req.query.limit) || 5; // Default to 5 activities
+
+    // Get recent bookings with various statuses
+    const recentBookings = await ServiceBooking.find({ providerId })
+      .populate("customerId", "name")
+      .sort({ createdAt: -1 })
+      .limit(limit * 2) // Get more to filter
+      .lean();
+
+    const activities = [];
+    const statusIcons = {
+      "Open": "fa-calendar",
+      "Confirmed": "fa-tools",
+      "Ready": "fa-check-circle",
+      "Completed": "fa-check-double",
+      "Rejected": "fa-times-circle"
+    };
+
+    for (const booking of recentBookings) {
+      if (activities.length >= limit) break;
+
+      const customerName = booking.customerId?.name || "Unknown Customer";
+      const createdDate = new Date(booking.createdAt);
+      const timeAgo = getTimeAgo(createdDate);
+      const services = (booking.selectedServices || []).join(", ") || "Service";
+      const status = booking.status || "Open";
+      const icon = statusIcons[status] || "fa-info-circle";
+
+      let text = "";
+      switch (status) {
+        case "Open":
+          text = `New Booking: ${services} for ${customerName}`;
+          break;
+        case "Confirmed":
+          text = `Confirmed: ${services} for ${customerName}`;
+          break;
+        case "Ready":
+          text = `Ready for Delivery: ${services} for ${customerName}`;
+          break;
+        case "Completed":
+          text = `Completed: ${services} for ${customerName}`;
+          break;
+        default:
+          text = `${status}: ${services} for ${customerName}`;
+      }
+
+      activities.push({
+        icon,
+        text,
+        timeAgo,
+        status,
+        bookingId: booking._id
+      });
+    }
+
+    res.json({ success: true, activities });
+  } catch (error) {
+    console.error("Recent activity API error:", error);
+    res.status(500).json({ success: false, message: "Failed to load recent activity" });
+  }
+});
+
+function getTimeAgo(date) {
+  const now = new Date();
+  const seconds = Math.floor((now - date) / 1000);
+
+  if (seconds < 60) return "Just now";
+  if (seconds < 3600) return `${Math.floor(seconds / 60)} minutes ago`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)} hours ago`;
+  if (seconds < 604800) return `${Math.floor(seconds / 86400)} days ago`;
+  return date.toLocaleDateString();
+}
 
 // Static JSON API for booking management (service provider)
 router.get("/api/bookings", serviceOnly, async (req, res) => {
