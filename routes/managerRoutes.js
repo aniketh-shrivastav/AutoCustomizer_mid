@@ -610,12 +610,42 @@ router.post(
   isManager,
   async (req, res) => {
     try {
-      await Product.findByIdAndUpdate(req.params.id, { status: "approved" });
+      const wantsJson =
+        (req.headers.accept || "").includes("application/json") ||
+        req.xhr === true;
+
+      const product = await Product.findByIdAndUpdate(
+        req.params.id,
+        { status: "approved" },
+        { new: true }
+      );
+
+      if (!product) {
+        if (wantsJson) {
+          return res
+            .status(404)
+            .json({ success: false, message: "Product not found" });
+        }
+        return res.status(404).send("Product not found");
+      }
+
+      if (wantsJson) {
+        return res.json({ success: true, product });
+      }
+
       if (req.query.from === "static")
         return res.redirect("/manager/dashboard.html");
       res.redirect("/manager/dashboard");
     } catch (err) {
       console.error(err);
+      const wantsJson =
+        (req.headers.accept || "").includes("application/json") ||
+        req.xhr === true;
+      if (wantsJson) {
+        return res
+          .status(500)
+          .json({ success: false, message: "Error approving product" });
+      }
       res.status(500).send("Error approving product");
     }
   }
@@ -627,12 +657,42 @@ router.post(
   isManager,
   async (req, res) => {
     try {
-      await Product.findByIdAndUpdate(req.params.id, { status: "rejected" });
+      const wantsJson =
+        (req.headers.accept || "").includes("application/json") ||
+        req.xhr === true;
+
+      const product = await Product.findByIdAndUpdate(
+        req.params.id,
+        { status: "rejected" },
+        { new: true }
+      );
+
+      if (!product) {
+        if (wantsJson) {
+          return res
+            .status(404)
+            .json({ success: false, message: "Product not found" });
+        }
+        return res.status(404).send("Product not found");
+      }
+
+      if (wantsJson) {
+        return res.json({ success: true, product });
+      }
+
       if (req.query.from === "static")
         return res.redirect("/manager/dashboard.html");
       res.redirect("/manager/dashboard");
     } catch (err) {
       console.error(err);
+      const wantsJson =
+        (req.headers.accept || "").includes("application/json") ||
+        req.xhr === true;
+      if (wantsJson) {
+        return res
+          .status(500)
+          .json({ success: false, message: "Error rejecting product" });
+      }
       res.status(500).send("Error rejecting product");
     }
   }

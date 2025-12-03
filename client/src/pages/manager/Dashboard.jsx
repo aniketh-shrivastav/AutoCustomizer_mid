@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import ManagerNav from "../../components/ManagerNav";
 import Chart from "chart.js/auto";
@@ -14,7 +14,14 @@ function formatCurrency(v) {
   return "₹" + Number(v || 0).toFixed(2);
 }
 
-function ProductTable({ title, products, type }) {
+function ProductTable({
+  title,
+  products,
+  type,
+  onApprove,
+  onReject,
+  actionState,
+}) {
   if (!products || products.length === 0) {
     return (
       <div className="product-tabs">
@@ -65,47 +72,53 @@ function ProductTable({ title, products, type }) {
                 <td>
                   {type === "pending" && (
                     <>
-                      <form
-                        method="POST"
-                        action={`/manager/products/${p._id}/approve`}
-                        style={{ display: "inline" }}
+                      <button
+                        type="button"
+                        className="btn btn-approve"
+                        onClick={() => onApprove?.(p._id)}
+                        disabled={
+                          actionState?.loadingKey === `${p._id}:approve`
+                        }
                       >
-                        <button type="submit" className="btn btn-approve">
-                          Approve
-                        </button>
-                      </form>
-                      <form
-                        method="POST"
-                        action={`/manager/products/${p._id}/reject`}
-                        style={{ display: "inline" }}
+                        {actionState?.loadingKey === `${p._id}:approve`
+                          ? "Approving..."
+                          : "Approve"}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-suspend"
+                        onClick={() => onReject?.(p._id)}
+                        disabled={actionState?.loadingKey === `${p._id}:reject`}
                       >
-                        <button type="submit" className="btn btn-suspend">
-                          Reject
-                        </button>
-                      </form>
+                        {actionState?.loadingKey === `${p._id}:reject`
+                          ? "Rejecting..."
+                          : "Reject"}
+                      </button>
                     </>
                   )}
                   {type === "approved" && (
-                    <form
-                      method="POST"
-                      action={`/manager/products/${p._id}/reject`}
-                      style={{ display: "inline" }}
+                    <button
+                      type="button"
+                      className="btn btn-suspend"
+                      onClick={() => onReject?.(p._id)}
+                      disabled={actionState?.loadingKey === `${p._id}:reject`}
                     >
-                      <button type="submit" className="btn btn-suspend">
-                        Reject
-                      </button>
-                    </form>
+                      {actionState?.loadingKey === `${p._id}:reject`
+                        ? "Rejecting..."
+                        : "Reject"}
+                    </button>
                   )}
                   {type === "rejected" && (
-                    <form
-                      method="POST"
-                      action={`/manager/products/${p._id}/approve`}
-                      style={{ display: "inline" }}
+                    <button
+                      type="button"
+                      className="btn btn-approve"
+                      onClick={() => onApprove?.(p._id)}
+                      disabled={actionState?.loadingKey === `${p._id}:approve`}
                     >
-                      <button type="submit" className="btn btn-approve">
-                        Approve
-                      </button>
-                    </form>
+                      {actionState?.loadingKey === `${p._id}:approve`
+                        ? "Approving..."
+                        : "Approve"}
+                    </button>
                   )}
                 </td>
               </tr>
@@ -132,6 +145,44 @@ export default function ManagerDashboard() {
   const userDistChart = useRef();
   const revenueChart = useRef();
   const growthChart = useRef();
+  const [productActionState, setProductActionState] = useState({
+    loadingKey: null,
+    error: null,
+  });
+
+  const handleProductAction = async (productId, action) => {
+    if (!productId || !["approve", "reject"].includes(action)) return;
+    setProductActionState({
+      loadingKey: `${productId}:${action}`,
+      error: null,
+    });
+    try {
+      const res = await fetch(`/manager/products/${productId}/${action}`, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "X-Requested-With": "XMLHttpRequest",
+        },
+        credentials: "include",
+      });
+
+      const ct = res.headers.get("content-type") || "";
+      const payload = ct.includes("application/json") ? await res.json() : null;
+      if (!res.ok) {
+        throw new Error(
+          payload?.message || `Failed to ${action} product. Try again.`
+        );
+      }
+
+      await dispatch(fetchManagerDashboard()).unwrap();
+      setProductActionState({ loadingKey: null, error: null });
+    } catch (err) {
+      setProductActionState({
+        loadingKey: null,
+        error: err.message || "Something went wrong.",
+      });
+    }
+  };
 
   useEffect(() => {
     // Ensure manager pages render on a light background and not auth gradient
@@ -393,12 +444,21 @@ export default function ManagerDashboard() {
             </button>
           </div>
 
+          {productActionState.error && (
+            <div className="error-banner" style={{ marginBottom: 16 }}>
+              {productActionState.error}
+            </div>
+          )}
+
           {activeProductTab === "pending" && (
             <div className="tab-content" style={{ display: "block" }}>
               <ProductTable
                 title="Pending"
                 products={data.pendingProducts}
                 type="pending"
+                onApprove={(id) => handleProductAction(id, "approve")}
+                onReject={(id) => handleProductAction(id, "reject")}
+                actionState={productActionState}
               />
             </div>
           )}
@@ -408,6 +468,9 @@ export default function ManagerDashboard() {
                 title="Approved"
                 products={data.approvedProducts}
                 type="approved"
+                onApprove={(id) => handleProductAction(id, "approve")}
+                onReject={(id) => handleProductAction(id, "reject")}
+                actionState={productActionState}
               />
             </div>
           )}
@@ -417,6 +480,9 @@ export default function ManagerDashboard() {
                 title="Rejected"
                 products={data.rejectedProducts}
                 type="rejected"
+                onApprove={(id) => handleProductAction(id, "approve")}
+                onReject={(id) => handleProductAction(id, "reject")}
+                actionState={productActionState}
               />
             </div>
           )}

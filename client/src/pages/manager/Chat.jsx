@@ -244,6 +244,7 @@ export default function ManagerChat() {
           boxShadow: palette.cardShadow,
           display: "grid",
           gridTemplateColumns: "320px 1fr",
+          minHeight: 0,
         }}
       >
         <aside
@@ -252,6 +253,7 @@ export default function ManagerChat() {
             background: palette.cardBg,
             display: "flex",
             flexDirection: "column",
+            minHeight: 0,
           }}
         >
           <div
@@ -316,7 +318,13 @@ export default function ManagerChat() {
             </button>
           </div>
           <div
-            style={{ flex: 1, overflowY: "auto", background: palette.cardBg }}
+            style={{
+              flex: 1,
+              minHeight: 0,
+              overflowY: "auto",
+              background: palette.cardBg,
+              WebkitOverflowScrolling: "touch",
+            }}
           >
             {(() => {
               const showingSearch = Boolean(search.trim());
@@ -440,7 +448,9 @@ export default function ManagerChat() {
             </button>
           </div>
         </aside>
-        <main style={{ display: "flex", flexDirection: "column" }}>
+        <main
+          style={{ display: "flex", flexDirection: "column", minHeight: 0 }}
+        >
           <div
             style={{
               padding: "18px 24px",
@@ -463,9 +473,11 @@ export default function ManagerChat() {
           <div
             style={{
               flex: 1,
+              minHeight: 0,
               overflowY: "auto",
               padding: "20px 24px",
               background: themeMode === "dark" ? "#0f131a" : "#f7f9fc",
+              WebkitOverflowScrolling: "touch",
             }}
           >
             {!activeCustomer ? (
@@ -503,7 +515,44 @@ export default function ManagerChat() {
                         lineHeight: 1.4,
                       }}
                     >
-                      <div style={{ whiteSpace: "pre-wrap" }}>{m.text}</div>
+                      {m.attachment?.url ? (
+                        m.attachment.type?.startsWith("image/") ? (
+                          <a
+                            href={m.attachment.url}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            <img
+                              src={m.attachment.url}
+                              alt={m.attachment.name || "attachment"}
+                              style={{
+                                maxWidth: "100%",
+                                borderRadius: 8,
+                                display: "block",
+                                marginBottom: m.text ? 8 : 0,
+                              }}
+                            />
+                          </a>
+                        ) : (
+                          <a
+                            href={m.attachment.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{
+                              color: mine ? "#fff" : palette.msgOtherText,
+                              textDecoration: "underline",
+                              display: "inline-block",
+                              marginBottom: m.text ? 8 : 0,
+                            }}
+                          >
+                            {m.attachment.name || "Download file"}
+                          </a>
+                        )
+                      ) : null}
+
+                      {m.text ? (
+                        <div style={{ whiteSpace: "pre-wrap" }}>{m.text}</div>
+                      ) : null}
                       <div style={{ fontSize: 11, opacity: 0.7, marginTop: 6 }}>
                         {new Date(m.createdAt).toLocaleTimeString([], {
                           hour: "2-digit",

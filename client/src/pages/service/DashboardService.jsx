@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import Chart from "chart.js/auto";
+import { fetchServiceDashboard } from "../../store/serviceSlice";
 
 function useLink(href) {
   useEffect(() => {
@@ -11,6 +13,10 @@ function useLink(href) {
   }, [href]);
 }
 
+const STALE_AFTER_MS = 1000 * 60 * 5;
+const FALLBACK_EARNINGS_LABELS = ["Week 1", "Week 2", "Week 3", "Week 4"];
+const FALLBACK_EARNINGS_DATA = [0, 0, 0, 0];
+
 export default function ServiceDashboard() {
   // Match legacy CSS and icons
   useLink("/styles/dashboardService.css");
@@ -20,21 +26,32 @@ export default function ServiceDashboard() {
 
   const [navOpen, setNavOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  const [serviceLabels, setServiceLabels] = useState([]);
-  const [serviceCounts, setServiceCounts] = useState([]);
-  const [earningsLabels, setEarningsLabels] = useState(["Week 1", "Week 2", "Week 3", "Week 4"]);
-  const [earningsData, setEarningsData] = useState([0, 0, 0, 0]);
-  const [activities, setActivities] = useState([]);
-  const [totals, setTotals] = useState({
+  const dispatch = useDispatch();
+  const { dashboard, status, error, lastFetched, hydratedFromStorage } =
+    useSelector((state) => state.service);
+  const hasData = Boolean(dashboard);
+  const loading = !hasData && (status === "loading" || status === "idle");
+  const refreshing = hasData && status === "loading";
+  const lastUpdatedText = lastFetched
+    ? `Last updated ${new Date(lastFetched).toLocaleString()}${
+        refreshing ? " • Refreshing..." : ""
+      }`
+    : loading
+    ? "Loading dashboard..."
+    : "Data will refresh shortly.";
+  const refreshDisabled = status === "loading";
+  const serviceLabels = dashboard?.serviceLabels || [];
+  const serviceCounts = dashboard?.serviceCounts || [];
+  const earningsLabels = dashboard?.earningsLabels || FALLBACK_EARNINGS_LABELS;
+  const earningsData = dashboard?.earningsData || FALLBACK_EARNINGS_DATA;
+  const activities = dashboard?.activities || [];
+  const totals = dashboard?.totals || {
     earnings: 0,
     ongoing: 0,
     completed: 0,
     avgRating: "N/A",
     totalReviews: 0,
-  });
+  };
 
   const pieRef = useRef(null);
   const barRef = useRef(null);
@@ -61,86 +78,23 @@ export default function ServiceDashboard() {
     window.location.href = `${backendBase}/logout?next=${next}`;
   }
 
-  // Fetch real earnings data from API
-  async function fetchEarningsData() {
-    try {
-      const res = await fetch("/service/api/earnings-data?timeRange=1");
-      if (!res.ok) throw new Error("Failed to fetch earnings data");
-      const data = await res.json();
-      return {
-        labels: data.labels || ["Week 1", "Week 2", "Week 3", "Week 4"],
-        data: data.data || [0, 0, 0, 0],
-      };
-    } catch (error) {
-      console.error("Error fetching earnings data:", error);
-      return { labels: ["Week 1", "Week 2", "Week 3", "Week 4"], data: [0, 0, 0, 0] };
+  // When data is coming from persisted cache, immediately fetch the
+  // server-authoritative snapshot so different providers don't see stale data.
+  useEffect(() => {
+    if (hydratedFromStorage) {
+      dispatch(fetchServiceDashboard());
     }
-  }
-
-  // Fetch recent activity from API
-  async function fetchRecentActivity() {
-    try {
-      const res = await fetch("/service/api/recent-activity?limit=5");
-      if (!res.ok) throw new Error("Failed to fetch recent activity");
-      const data = await res.json();
-      return data.activities || [];
-    } catch (error) {
-      console.error("Error fetching recent activity:", error);
-      return [];
-    }
-  }
+  }, [dispatch, hydratedFromStorage]);
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        setLoading(true);
-        const res = await fetch(`/service/api/dashboard`, {
-          headers: { Accept: "application/json" },
-        });
-        if (res.status === 401) {
-          window.location.href = "/login";
-          return;
-        }
-        if (!res.ok) throw new Error("Failed to fetch dashboard");
-        const ct = (res.headers.get("content-type") || "").toLowerCase();
-        if (!ct.includes("application/json")) {
-          // Likely got HTML (dev server index or login page). Treat as unauthenticated.
-          const text = await res.text().catch(() => "");
-          if (text.startsWith("<!DOCTYPE") || text.includes("<html")) {
-            window.location.href = "/login";
-            return;
-          }
-          throw new Error("Unexpected response format from server");
-        }
-        const data = await res.json();
-        if (cancelled) return;
-        setServiceLabels(data.serviceLabels || []);
-        setServiceCounts(data.serviceCounts || []);
-        setTotals(data.totals || {});
-
-        // Fetch real earnings data
-        const earningsRes = await fetchEarningsData();
-        if (!cancelled) {
-          setEarningsLabels(earningsRes.labels);
-          setEarningsData(earningsRes.data);
-        }
-
-        // Fetch recent activity
-        const activityRes = await fetchRecentActivity();
-        if (!cancelled) {
-          setActivities(activityRes);
-        }
-      } catch (e) {
-        if (!cancelled) setError(e.message || "Failed to load");
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    const shouldFetch =
+      status === "idle" ||
+      !lastFetched ||
+      Date.now() - lastFetched > STALE_AFTER_MS;
+    if (shouldFetch) {
+      dispatch(fetchServiceDashboard());
+    }
+  }, [dispatch, status, lastFetched]);
 
   useEffect(() => {
     // Build charts when data available
@@ -235,55 +189,24 @@ export default function ServiceDashboard() {
     };
   }, [serviceLabels, serviceCounts, earningsLabels, earningsData]);
 
-  // Initialize Socket.io for real-time earnings updates
+  // Initialize Socket.io for real-time updates
   useEffect(() => {
     if (typeof io === "undefined") return; // Socket.io not available
 
     const socket = io();
     socketRef.current = socket;
 
-    socket.on("connect", () => {
-      console.log("Connected to real-time server");
-    });
+    const refresh = () => dispatch(fetchServiceDashboard());
 
-    socket.on("earnings:updated", async (data) => {
-      console.log("Earnings updated in real-time:", data);
-      // Refresh earnings data
-      const earningsRes = await fetchEarningsData();
-      setEarningsLabels(earningsRes.labels);
-      setEarningsData(earningsRes.data);
-
-      // Refresh recent activity
-      const activityRes = await fetchRecentActivity();
-      setActivities(activityRes);
-
-      // Refresh dashboard totals
-      try {
-        const res = await fetch("/service/api/dashboard");
-        if (res.ok) {
-          const data = await res.json();
-          setTotals(data.totals || {});
-        }
-      } catch (e) {
-        console.error("Error refreshing dashboard:", e);
-      }
-    });
-
-    socket.on("disconnect", () => {
-      console.log("Disconnected from real-time server");
-    });
-
-    // Also listen for activity updates separately
-    socket.on("activity:updated", async (data) => {
-      console.log("Activity updated in real-time:", data);
-      const activityRes = await fetchRecentActivity();
-      setActivities(activityRes);
-    });
+    socket.on("earnings:updated", refresh);
+    socket.on("activity:updated", refresh);
 
     return () => {
+      socket.off("earnings:updated", refresh);
+      socket.off("activity:updated", refresh);
       socket.disconnect();
     };
-  }, []);
+  }, [dispatch]);
 
   return (
     <>
@@ -345,95 +268,128 @@ export default function ServiceDashboard() {
       <div className="dashboard-container">
         <div className="dashboard-header">
           <h2>Welcome! Here's your daily overview.</h2>
-        </div>
-
-        <div className="cards" id="metricCards">
-          <div className="card">
-            <div className="card-icon">
-              <i className="fas fa-rupee-sign"></i>
-            </div>
-            <div className="card-content">
-              <h2>Total Earnings</h2>
-              <p className="amount" id="earningsValue">
-                ₹{totals.earnings || 0}
-              </p>
-              <p className="subtext">After 20% commission</p>
-            </div>
-          </div>
-          <div className="card">
-            <div className="card-icon">
-              <i className="fas fa-tools"></i>
-            </div>
-            <div className="card-content">
-              <h2>Confirmed Services</h2>
-              <p className="amount" id="ongoingValue">
-                {totals.ongoing || 0}
-              </p>
-              <p className="subtext">Currently active</p>
-            </div>
-          </div>
-          <div className="card">
-            <div className="card-icon">
-              <i className="fas fa-check-circle"></i>
-            </div>
-            <div className="card-content">
-              <h2>Ready for Delivery</h2>
-              <p className="amount" id="completedValue">
-                {totals.completed || 0}
-              </p>
-              <p className="subtext">Total completed</p>
-            </div>
-          </div>
-          <div className="card">
-            <div className="card-icon">
-              <i className="fas fa-smile"></i>
-            </div>
-            <div className="card-content">
-              <h2>Customer Satisfaction</h2>
-              <p className="amount" id="ratingValue">
-                {totals.avgRating ?? "N/A"}
-              </p>
-              <p className="subtext" id="reviewsValue">
-                Based on {totals.totalReviews || 0} reviews
-              </p>
-            </div>
+          <div
+            className="dashboard-status"
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 12,
+              alignItems: "center",
+            }}
+          >
+            <span style={{ color: "#6b7280", fontSize: 14 }}>
+              {lastUpdatedText}
+            </span>
+            <button
+              className="btn"
+              onClick={() => dispatch(fetchServiceDashboard())}
+              disabled={refreshDisabled}
+              style={{ padding: "6px 14px" }}
+            >
+              {refreshDisabled ? "Refreshing" : "Refresh Data"}
+            </button>
           </div>
         </div>
 
-        <div className="charts">
-          <div className="chart-card">
-            <h2>Service Distribution</h2>
-            <div className="chart-wrapper" style={{ height: 300 }}>
-              <canvas ref={pieRef} id="servicePieChart"></canvas>
+        {loading && !hasData ? (
+          <p className="loading" style={{ marginTop: 24 }}>
+            Loading dashboard...
+          </p>
+        ) : !hasData && error ? (
+          <p className="no-data" style={{ marginTop: 24, color: "#c0392b" }}>
+            {error}
+          </p>
+        ) : (
+          <>
+            <div className="cards" id="metricCards">
+              <div className="card">
+                <div className="card-icon">
+                  <i className="fas fa-rupee-sign"></i>
+                </div>
+                <div className="card-content">
+                  <h2>Total Earnings</h2>
+                  <p className="amount" id="earningsValue">
+                    ₹{totals.earnings || 0}
+                  </p>
+                  <p className="subtext">After 20% commission</p>
+                </div>
+              </div>
+              <div className="card">
+                <div className="card-icon">
+                  <i className="fas fa-tools"></i>
+                </div>
+                <div className="card-content">
+                  <h2>Confirmed Services</h2>
+                  <p className="amount" id="ongoingValue">
+                    {totals.ongoing || 0}
+                  </p>
+                  <p className="subtext">Currently active</p>
+                </div>
+              </div>
+              <div className="card">
+                <div className="card-icon">
+                  <i className="fas fa-check-circle"></i>
+                </div>
+                <div className="card-content">
+                  <h2>Ready for Delivery</h2>
+                  <p className="amount" id="completedValue">
+                    {totals.completed || 0}
+                  </p>
+                  <p className="subtext">Total completed</p>
+                </div>
+              </div>
+              <div className="card">
+                <div className="card-icon">
+                  <i className="fas fa-smile"></i>
+                </div>
+                <div className="card-content">
+                  <h2>Customer Satisfaction</h2>
+                  <p className="amount" id="ratingValue">
+                    {totals.avgRating ?? "N/A"}
+                  </p>
+                  <p className="subtext" id="reviewsValue">
+                    Based on {totals.totalReviews || 0} reviews
+                  </p>
+                </div>
+              </div>
             </div>
-          </div>
-          <div className="chart-card">
-            <h2>Monthly Earnings Overview (Weekly Basis)</h2>
-            <div className="chart-wrapper" style={{ height: 300 }}>
-              <canvas ref={barRef} id="earningsBarChart"></canvas>
-            </div>
-          </div>
-        </div>
 
-        <div className="recent-activity">
-          <h2>Recent Activity</h2>
-          <ul className="activity-list" id="activityList">
-            {activities.length > 0 ? (
-              activities.map((a, idx) => (
-                <li key={idx}>
-                  <i className={`fas ${a.icon}`}></i>
-                  <span>{a.text}</span>
-                  <span className="time">{a.timeAgo}</span>
-                </li>
-              ))
-            ) : (
-              <li>
-                <i className="fas fa-info-circle"></i>
-                <span>No recent activity</span>
-              </li>
-            )}
-          </ul>
-        </div>
+            <div className="charts">
+              <div className="chart-card">
+                <h2>Service Distribution</h2>
+                <div className="chart-wrapper" style={{ height: 300 }}>
+                  <canvas ref={pieRef} id="servicePieChart"></canvas>
+                </div>
+              </div>
+              <div className="chart-card">
+                <h2>Monthly Earnings Overview (Weekly Basis)</h2>
+                <div className="chart-wrapper" style={{ height: 300 }}>
+                  <canvas ref={barRef} id="earningsBarChart"></canvas>
+                </div>
+              </div>
+            </div>
+
+            <div className="recent-activity">
+              <h2>Recent Activity</h2>
+              <ul className="activity-list" id="activityList">
+                {activities.length > 0 ? (
+                  activities.map((a, idx) => (
+                    <li key={idx}>
+                      <i className={`fas ${a.icon}`}></i>
+                      <span>{a.text}</span>
+                      <span className="time">{a.timeAgo}</span>
+                    </li>
+                  ))
+                ) : (
+                  <li>
+                    <i className="fas fa-info-circle"></i>
+                    <span>No recent activity</span>
+                  </li>
+                )}
+              </ul>
+            </div>
+          </>
+        )}
       </div>
 
       {error ? (

@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import CustomerNav from "../../components/CustomerNav";
+import { fetchCustomerHistory } from "../../store/customerSlice";
 
 function useLink(href) {
   useEffect(() => {
@@ -11,6 +13,87 @@ function useLink(href) {
   }, [href]);
 }
 
+const ORDER_STATUS_STYLES = {
+  pending: {
+    label: "Pending",
+    color: "#b45309",
+    background: "#fef3c7",
+  },
+  confirmed: {
+    label: "Confirmed",
+    color: "#1d4ed8",
+    background: "#dbeafe",
+  },
+  shipped: {
+    label: "Shipped",
+    color: "#6d28d9",
+    background: "#ede9fe",
+  },
+  delivered: {
+    label: "Delivered",
+    color: "#047857",
+    background: "#d1fae5",
+  },
+  cancelled: {
+    label: "Cancelled",
+    color: "#b91c1c",
+    background: "#fee2e2",
+  },
+  default: {
+    label: "Processing",
+    color: "#374151",
+    background: "#e5e7eb",
+  },
+};
+
+const SERVICE_STATUS_STYLES = {
+  waiting: {
+    label: "Waiting for Confirmation",
+    color: "#b45309",
+    background: "#fef3c7",
+  },
+  confirmed: {
+    label: "Confirmed",
+    color: "#1d4ed8",
+    background: "#dbeafe",
+  },
+  delivered: {
+    label: "Delivered",
+    color: "#047857",
+    background: "#d1fae5",
+  },
+  rejected: {
+    label: "Rejected",
+    color: "#b91c1c",
+    background: "#fee2e2",
+  },
+  default: {
+    label: "In Progress",
+    color: "#374151",
+    background: "#e5e7eb",
+  },
+};
+
+function renderStatusPill(style) {
+  return (
+    <span
+      className="status-pill"
+      style={{
+        background: style.background,
+        color: style.color,
+        borderColor: style.color,
+      }}
+    >
+      <span
+        className="status-dot"
+        style={{ background: style.color }}
+        aria-hidden="true"
+      />
+      {style.label}
+    </span>
+  );
+}
+
 export default function CustomerHistory() {
   useLink("/styles/styles.css");
   function handleLogout(e) {
@@ -20,6 +103,7 @@ export default function CustomerHistory() {
   }
 
   // Compute backend base URL for downloads. In dev (5173) point to 3000; in prod use same-origin.
+
   const backendBase = useMemo(() => {
     try {
       const hinted = window.__API_BASE__ || process.env.REACT_APP_API_BASE;
@@ -32,11 +116,10 @@ export default function CustomerHistory() {
     }
   }, []);
 
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [upcomingOrders, setUpcomingOrders] = useState([]);
-  const [pastOrders, setPastOrders] = useState([]);
-  const [bookings, setBookings] = useState([]);
+  const dispatch = useDispatch();
+  const { history, status, error } = useSelector((state) => state.customer);
+  const { upcomingOrders = [], pastOrders = [], bookings = [] } = history || {};
+  const loading = status === "loading" || status === "idle";
 
   // Rating modal state
   const [showRating, setShowRating] = useState(false);
@@ -45,34 +128,10 @@ export default function CustomerHistory() {
   const [ratingReview, setRatingReview] = useState("");
 
   useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      try {
-        setLoading(true);
-        const res = await fetch("/customer/api/history", {
-          headers: { Accept: "application/json" },
-        });
-        if (res.status === 401) {
-          window.location.href = "/login";
-          return;
-        }
-        if (!res.ok) throw new Error("Failed to load history");
-        const j = await res.json();
-        if (cancelled) return;
-        setUpcomingOrders(j.upcomingOrders || []);
-        setPastOrders(j.pastOrders || []);
-        setBookings(j.bookings || []);
-      } catch (e) {
-        if (!cancelled) setError(e.message || "Failed to load history");
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+    if (status === "idle") {
+      dispatch(fetchCustomerHistory());
     }
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  }, [dispatch, status]);
 
   function formatDate(d) {
     if (!d) return "";
@@ -80,31 +139,48 @@ export default function CustomerHistory() {
   }
 
   function statusSpan(status) {
-    if (["pending", "confirmed", "shipped"].includes(status)) {
-      return <span style={{ color: "orange" }}>{status}</span>;
-    }
-    return <span style={{ color: "green" }}>{status}</span>;
+    const key = String(status || "").toLowerCase();
+    const style = ORDER_STATUS_STYLES[key] || ORDER_STATUS_STYLES.default;
+    return renderStatusPill(style);
   }
 
   function serviceStatusSpan(status, id) {
-    if (status === "Open") {
-      return (
-        <>
-          <span style={{ color: "orange" }}>Waiting for Confirmation</span>
-          <br />
-          <button className="cancel-btn" onClick={() => cancelService(id)}>
-            Cancel Service
-          </button>
-        </>
-      );
-    }
-    return <span style={{ color: "green" }}>Confirmed</span>;
+    const normalized = String(status || "").toLowerCase();
+    const style =
+      normalized === "open"
+        ? SERVICE_STATUS_STYLES.waiting
+        : normalized === "confirmed"
+        ? SERVICE_STATUS_STYLES.confirmed
+        : normalized === "ready"
+        ? SERVICE_STATUS_STYLES.delivered
+        : normalized === "rejected"
+        ? SERVICE_STATUS_STYLES.rejected
+        : SERVICE_STATUS_STYLES.default;
+
+    return (
+      <>
+        {renderStatusPill(style)}
+        {normalized === "open" && (
+          <>
+            <br />
+            <button className="cancel-btn" onClick={() => cancelService(id)}>
+              Cancel Service
+            </button>
+          </>
+        )}
+      </>
+    );
   }
 
   function pastServiceStatusSpan(s) {
-    if (s.status === "Ready")
-      return <span style={{ color: "green" }}>Completed</span>;
-    return <span style={{ color: "red" }}>Rejected</span>;
+    const normalized = String(s.status || "").toLowerCase();
+    const style =
+      normalized === "ready"
+        ? SERVICE_STATUS_STYLES.delivered
+        : normalized === "rejected"
+        ? SERVICE_STATUS_STYLES.rejected
+        : SERVICE_STATUS_STYLES.default;
+    return renderStatusPill(style);
   }
 
   async function cancelOrder(id) {
@@ -160,8 +236,22 @@ export default function CustomerHistory() {
     setShowRating(false);
   }
 
+  function handleRateClick(service) {
+    const normalizedStatus = String(service?.status || "").toLowerCase();
+    if (normalizedStatus !== "ready") {
+      alert("You can only rate services that are marked Ready for delivery.");
+      return;
+    }
+    openRatingModal(service._id);
+  }
+
   async function submitRating(e) {
     e.preventDefault();
+    const numericRating = Number(ratingValue);
+    if (!Number.isFinite(numericRating) || numericRating < 1 || numericRating > 5) {
+      alert("Please enter a rating between 1 and 5.");
+      return;
+    }
     try {
       const res = await fetch(`/customer/rate-service/${ratingBookingId}`, {
         method: "POST",
@@ -169,7 +259,7 @@ export default function CustomerHistory() {
           "Content-Type": "application/json",
           Accept: "application/json",
         },
-        body: JSON.stringify({ rating: ratingValue, review: ratingReview }),
+        body: JSON.stringify({ rating: numericRating, review: ratingReview }),
       });
       if (res.status === 401) {
         window.location.href = "/login";
@@ -187,24 +277,7 @@ export default function CustomerHistory() {
   }
 
   function refresh() {
-    // simple reload of data
-    setLoading(true);
-    fetch("/customer/api/history", { headers: { Accept: "application/json" } })
-      .then((r) => {
-        if (r.status === 401) {
-          window.location.href = "/login";
-          return Promise.reject();
-        }
-        if (!r.ok) throw new Error();
-        return r.json();
-      })
-      .then((j) => {
-        setUpcomingOrders(j.upcomingOrders || []);
-        setPastOrders(j.pastOrders || []);
-        setBookings(j.bookings || []);
-      })
-      .catch(() => setError("Failed to load history"))
-      .finally(() => setLoading(false));
+    dispatch(fetchCustomerHistory());
   }
 
   const upcomingServices = useMemo(
@@ -284,7 +357,7 @@ export default function CustomerHistory() {
                     <strong>Placed on:</strong> {formatDate(o.placedAt)}
                   </p>
                   <p>
-                    <strong>Status:</strong> {o.orderStatus}
+                    <strong>Status:</strong> {statusSpan(o.orderStatus)}
                   </p>
                   <p>
                     <strong>Total Amount:</strong> ₹{o.totalAmount}
@@ -368,9 +441,13 @@ export default function CustomerHistory() {
           ) : pastServices.length === 0 ? (
             <p className="no-items">No past services found.</p>
           ) : (
-            pastServices.map((s) => (
-              <li key={s._id} className="history-item">
-                <div className="item-details">
+            pastServices.map((s) => {
+              const normalizedStatus = String(s.status || "").toLowerCase();
+              const showRateButton = !s.rating && normalizedStatus === "ready";
+              const hasRating = Boolean(s.rating);
+              return (
+                <li key={s._id} className="history-item">
+                  <div className="item-details">
                   <h3>{(s.selectedServices || []).join(", ")}</h3>
                   <p>
                     <strong>Service ID:</strong> {s._id}
@@ -394,25 +471,26 @@ export default function CustomerHistory() {
                   <p>
                     <strong>Status:</strong> {pastServiceStatusSpan(s)}
                   </p>
-                  {!s.rating ? (
-                    <button
-                      className="rate-btn"
-                      onClick={() => openRatingModal(s._id)}
-                    >
-                      Rate
-                    </button>
-                  ) : (
-                    <>
-                      <p>
-                        <strong>Your Rating:</strong> {s.rating}/5
-                      </p>
-                      {s.review ? (
+                    {showRateButton ? (
+                      <button
+                        className="rate-btn"
+                        onClick={() => handleRateClick(s)}
+                      >
+                        Rate
+                      </button>
+                    ) : null}
+                    {hasRating ? (
+                      <>
                         <p>
-                          <strong>Comment:</strong> {s.review}
+                          <strong>Your Rating:</strong> {s.rating}/5
                         </p>
-                      ) : null}
-                    </>
-                  )}
+                        {s.review ? (
+                          <p>
+                            <strong>Comment:</strong> {s.review}
+                          </p>
+                        ) : null}
+                      </>
+                    ) : null}
                   {s.status === "Ready" && (
                     <a
                       href={`${backendBase}/customer/service-receipt/${s._id}`}
@@ -423,9 +501,10 @@ export default function CustomerHistory() {
                       Download Receipt
                     </a>
                   )}
-                </div>
-              </li>
-            ))
+                  </div>
+                </li>
+              );
+            })
           )}
         </ul>
       </main>
@@ -469,6 +548,8 @@ export default function CustomerHistory() {
         .download-btn { background: var(--warning-color); color:#fff; text-decoration:none; line-height:1.2; }
         .download-btn:hover { filter:brightness(0.95); text-decoration:none; }
         .cancel-btn { background:#c0392b; }
+        .status-pill { display:inline-flex; align-items:center; gap:8px; font-weight:600; padding:4px 12px; border-radius:999px; border:1px solid transparent; font-size:13px; letter-spacing:0.01em; text-transform:capitalize; }
+        .status-dot { width:8px; height:8px; border-radius:50%; display:inline-block; }
         .rate-btn:hover, .cancel-btn:hover, .download-btn:hover { opacity:0.9; }
         .no-items { text-align:center; color:#888; padding:20px; font-style:italic; }
         .modal { position:fixed; z-index:999; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.4); display:flex; align-items:center; justify-content:center; }

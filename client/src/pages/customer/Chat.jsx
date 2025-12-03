@@ -239,6 +239,7 @@ export default function CustomerChat() {
           boxShadow: palette.cardShadow,
           display: "flex",
           flexDirection: "column",
+          minHeight: 0,
         }}
       >
         {/* Header */}
@@ -264,9 +265,11 @@ export default function CustomerChat() {
         <div
           style={{
             flex: 1,
+            minHeight: 0,
             overflowY: "auto",
             padding: "20px 24px",
             background: palette.msgsBg,
+            WebkitOverflowScrolling: "touch",
           }}
         >
           {loading ? (
