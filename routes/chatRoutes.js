@@ -14,6 +14,13 @@ const uploadDir = path.join(__dirname, "..", "tmp", "uploads");
 fs.mkdirSync(uploadDir, { recursive: true });
 const upload = multer({ dest: uploadDir });
 
+function cleanupLocalAttachment(attachment) {
+  if (!attachment?.url || attachment.provider !== "local") return;
+  const relative = attachment.url.replace(/^\/+/, "");
+  const fullPath = path.join(__dirname, "..", relative);
+  fs.unlink(fullPath, () => {});
+}
+
 // Auth helpers similar to other routes
 const isAuthenticated = (req, res, next) => {
   if (req.session?.user) return next();
@@ -261,6 +268,51 @@ router.post(
       res.json({ success: true, message: msg });
     } catch (e) {
       console.error("chat attachment", e);
+      res.status(500).json({ success: false, message: "Server error" });
+    }
+  }
+);
+
+// Delete a message from customer thread
+router.delete(
+  "/chat/customer/:customerId/messages/:messageId",
+  isAuthenticated,
+  canAccessCustomer,
+  async (req, res) => {
+    try {
+      const { customerId, messageId } = req.params;
+      const msg = await Message.findOne({
+        _id: messageId,
+        customerId,
+      });
+      if (!msg) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Message not found" });
+      }
+
+      const requester = req.session.user;
+      const isOwner = String(msg.senderId) === String(requester.id);
+      if (!isOwner && requester.role !== "manager") {
+        return res
+          .status(403)
+          .json({ success: false, message: "Cannot delete this message" });
+      }
+
+      cleanupLocalAttachment(msg.attachment);
+      await msg.deleteOne();
+
+      try {
+        const io = req.app.get("io");
+        if (io)
+          io.to(`customer_${customerId}`).emit("chat:deleted", {
+            _id: String(msg._id),
+          });
+      } catch {}
+
+      res.json({ success: true, deletedId: String(msg._id) });
+    } catch (e) {
+      console.error("chat delete", e);
       res.status(500).json({ success: false, message: "Server error" });
     }
   }

@@ -54,6 +54,16 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
+.auth-wrapper.single-panel {
+  grid-template-columns: minmax(0, 520px);
+  max-width: 520px;
+  border-radius: 28px;
+}
+
+.auth-wrapper.single-panel .auth-panel {
+  border-radius: 28px;
+}
+
 .auth-brand {
   background: linear-gradient(180deg, #0a101a 0%, #0d1726 100%);
   padding: 36px 32px;
@@ -162,7 +172,7 @@ body {
 .auth-actions {
   margin-top: 10px;
 }
-.auth-actions .submit-btn {
+.submit-btn {
   width: 100%;
   padding: 14px 16px;
   background: var(--auth-primary);
@@ -173,10 +183,10 @@ body {
   transition: background 0.2s, box-shadow 0.2s;
   box-shadow: 0 6px 0 rgba(0, 0, 0, 0.12);
 }
-.auth-actions .submit-btn:hover {
+.submit-btn:hover {
   background: var(--auth-primary-hover);
 }
-.auth-actions .submit-btn:disabled {
+.submit-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
@@ -192,6 +202,83 @@ body {
 }
 .auth-extra a:hover {
   text-decoration: underline;
+}
+
+/* Verify OTP tweaks */
+.verify-wrapper {
+  max-width: 520px;
+}
+.verify-panel {
+  position: relative;
+  background: linear-gradient(180deg, #ffffff 0%, #f5f7ff 100%);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 35px 80px rgba(15, 23, 42, 0.25);
+}
+.verify-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #0f172a;
+  color: #f9fafb;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.verify-lede {
+  margin-top: 12px;
+  color: var(--auth-muted);
+}
+.verify-form {
+  margin-top: 24px;
+}
+.otp-input {
+  letter-spacing: 0.4em;
+  text-align: center;
+  font-size: 24px;
+  font-weight: 600;
+  padding: 18px 16px;
+}
+.verify-alert {
+  margin-top: 16px;
+  border-radius: 14px;
+  padding: 14px 16px;
+  font-size: 14px;
+}
+.verify-alert.error {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+.verify-alert.success {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+.submit-btn.primary {
+  margin-top: 16px;
+}
+.submit-btn.ghost {
+  background: #111111;
+  margin-top: 16px;
+}
+.submit-btn.ghost:hover {
+  background: #1b1b1b;
+}
+.submit-btn.ghost:disabled {
+  opacity: 0.45;
+}
+.verify-secondary {
+  margin-top: 12px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.verify-secondary p {
+  margin: 0;
+  font-size: 14px;
 }
 
 /* Alerts */

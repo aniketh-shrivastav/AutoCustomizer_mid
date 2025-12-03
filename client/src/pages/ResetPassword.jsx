@@ -67,23 +67,40 @@ export default function ResetPassword() {
   }
 
   if (valid === null) {
-    return <div style={{ padding: 40 }}>Validating token...</div>;
+    return (
+      <div className="container auth-page">
+        <div className="auth-wrapper single-panel">
+          <div className="auth-panel" style={{ maxWidth: 520 }}>
+            <h2>Reset Password</h2>
+            <p className="subtitle">Validating your reset link...</p>
+          </div>
+        </div>
+      </div>
+    );
   }
   if (!valid) {
     return (
-      <div style={{ padding: 40 }}>
-        <h2>Reset Link Invalid</h2>
-        <p>The link is invalid or expired.</p>
-        <p>
-          <a href="/forgot-password">Request a new link</a>
-        </p>
+      <div className="container auth-page">
+        <div className="auth-wrapper single-panel">
+          <div className="auth-panel" style={{ maxWidth: 520 }}>
+            <h2>Reset Link Invalid</h2>
+            <p className="subtitle">
+              The link is invalid or has expired. Please request a fresh link.
+            </p>
+            <div className="auth-actions">
+              <a className="submit-btn" href="/forgot-password">
+                Request New Link
+              </a>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="container auth-page">
-      <div className="auth-wrapper" style={{ gridTemplateColumns: "1fr" }}>
+      <div className="auth-wrapper single-panel">
         <div className="auth-panel" style={{ maxWidth: 520 }}>
           <h2>Reset Password</h2>
           {message && <div className="alert alert-success">{message}</div>}
