@@ -114,13 +114,13 @@ export default function ServiceDashboard() {
             {
               data: serviceCounts,
               backgroundColor: [
-                "rgba(26,188,156,0.85)",
-                "rgba(52,152,219,0.85)",
-                "rgba(155,89,182,0.85)",
-                "rgba(241,196,15,0.85)",
-                "rgba(231,76,60,0.85)",
-                "rgba(46,204,113,0.85)",
-                "rgba(230,126,34,0.85)",
+                "rgba(131, 234, 213, 0.85)",
+                "rgba(128, 188, 228, 0.85)",
+                "rgba(210, 144, 236, 0.85)",
+                "rgba(227, 208, 131, 0.85)",
+                "rgba(235, 122, 109, 0.85)",
+                "rgba(121, 235, 168, 0.85)",
+                "rgba(242, 181, 129, 0.85)",
               ],
               hoverOffset: 8,
               borderColor: "rgba(15,42,68,0.06)",
@@ -275,16 +275,23 @@ export default function ServiceDashboard() {
               flexWrap: "wrap",
               gap: 12,
               alignItems: "center",
+              color: "#071f4eff"
             }}
           >
-            <span style={{ color: "#6b7280", fontSize: 14 }}>
+            <span style={{ color: "#071f4eff", fontSize: 14 }}>
               {lastUpdatedText}
             </span>
             <button
               className="btn"
               onClick={() => dispatch(fetchServiceDashboard())}
               disabled={refreshDisabled}
-              style={{ padding: "6px 14px" }}
+              style={{ padding: "6px 14px",
+                backgroundColor: "#071f4eff", 
+    color: "white",               
+    border: "1px solid #071f4eff", 
+    opacity: refreshDisabled ? 0.6 : 1, 
+    transition: "background-color 0.3s"
+               }}
             >
               {refreshDisabled ? "Refreshing" : "Refresh Data"}
             </button>

@@ -359,34 +359,6 @@ body {
 }
 
 .address-cell.active::before {
-<<<<<<< Updated upstream
-    content: '';
-    position: absolute;
-    border: 5px solid transparent;
-    border-top-color: #112240;
-    z-index: 1002;
-    bottom: 115%;
-    left: 10px;
-    transform: none;
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-=======
   content: "";
   position: absolute;
   border: 5px solid transparent;
@@ -405,4 +377,3 @@ body {
 .tab.active {
   color: white !important;
 }
->>>>>>> Stashed changes
