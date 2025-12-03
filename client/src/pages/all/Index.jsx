@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 function useExternalCss(href) {
   useEffect(() => {
@@ -11,6 +12,7 @@ function useExternalCss(href) {
 }
 
 export default function AllIndex() {
+  const navigate = useNavigate();
   const [session, setSession] = useState({ authenticated: false });
 
   // Load CSS exactly like index.html
@@ -38,6 +40,16 @@ export default function AllIndex() {
 
   const authed = !!session.authenticated;
 
+  const redirectOrLogin = (event, targetPath) => {
+    event.preventDefault();
+    navigate(authed ? targetPath : "/login");
+  };
+
+  const ctaProps = (targetPath) => ({
+    href: authed ? targetPath : "/login",
+    onClick: (event) => redirectOrLogin(event, targetPath),
+  });
+
   return (
     <>
       {/* ---------------- NAV ---------------- */}
@@ -48,16 +60,12 @@ export default function AllIndex() {
             <a href="/">Home</a>
           </li>
 
-          {!authed && (
-            <>
-              <li id="loginLink">
-                <a href="/login">Login</a>
-              </li>
-              <li id="signupLink">
-                <a href="/signup">Signup</a>
-              </li>
-            </>
-          )}
+          <li id="loginLink">
+            <a href="/login">Login</a>
+          </li>
+          <li id="signupLink">
+            <a href="/signup">Signup</a>
+          </li>
 
           <li>
             <a href="/contactus">Contact Us</a>
@@ -92,30 +100,16 @@ export default function AllIndex() {
           </p>
 
           <div className="cta-buttons">
-            {authed ? (
-              <>
-                <a href="/customer/index.html" className="btn">
-                  Browse Products
-                </a>
-                <a href="/customer/booking.html" className="btn">
-                  Book a Service
-                </a>
-              </>
-            ) : (
-              <>
-                <a href="/login" className="btn">
-                  Browse Products
-                </a>
-                <a href="/login" className="btn">
-                  Book a Service
-                </a>
-              </>
-            )}
-
-            <a href="/signup" className="btn seller-btn">
+            <a {...ctaProps("/customer/index")} className="btn">
+              Browse Products
+            </a>
+            <a {...ctaProps("/customer/booking")} className="btn">
+              Book a Service
+            </a>
+            <a {...ctaProps("/seller/dashboard")} className="btn seller-btn">
               Sell Products
             </a>
-            <a href="/signup" className="btn provider-btn">
+            <a {...ctaProps("/service/dashboard")} className="btn provider-btn">
               Offer Services
             </a>
           </div>

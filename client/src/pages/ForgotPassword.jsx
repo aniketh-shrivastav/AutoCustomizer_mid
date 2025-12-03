@@ -56,7 +56,7 @@ export default function ForgotPassword() {
 
   return (
     <div className="container auth-page">
-      <div className="auth-wrapper" style={{ gridTemplateColumns: "1fr" }}>
+      <div className="auth-wrapper single-panel">
         <div className="auth-panel" style={{ maxWidth: 520 }}>
           <h2>Forgot Password</h2>
           <p>Enter your account email to receive a reset link.</p>

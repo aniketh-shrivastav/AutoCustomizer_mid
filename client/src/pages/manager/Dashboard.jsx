@@ -1,6 +1,14 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import ManagerNav from "../../components/ManagerNav";
 import Chart from "chart.js/auto";
+import {
+  fetchManagerDashboard,
+  setActiveProductTab,
+  clearManagerError,
+} from "../../store/managerSlice";
+
+const STALE_AFTER_MS = 1000 * 60 * 5; // 5 minutes
 
 function formatCurrency(v) {
   return "₹" + Number(v || 0).toFixed(2);
@@ -110,10 +118,14 @@ function ProductTable({ title, products, type }) {
 }
 
 export default function ManagerDashboard() {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [data, setData] = useState(null);
-  const [activeTab, setActiveTab] = useState("pending");
+  const dispatch = useDispatch();
+  const {
+    dashboard: data,
+    status,
+    error,
+    activeProductTab,
+    lastFetched,
+  } = useSelector((state) => state.manager);
   const userDistRef = useRef(null);
   const revenueRef = useRef(null);
   const growthRef = useRef(null);
@@ -128,43 +140,19 @@ export default function ManagerDashboard() {
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      try {
-        const res = await fetch("/manager/api/dashboard", {
-          headers: { Accept: "application/json" },
-        });
-        if (res.status === 401 || res.status === 403) {
-          window.location.href = "/login";
-          return;
-        }
-        const ct = res.headers.get("content-type") || "";
-        if (!ct.includes("application/json")) {
-          window.location.href = "/login";
-          return;
-        }
-        if (!res.ok) throw new Error("Network error");
-        const d = await res.json();
-        if (!cancelled) {
-          setData(d);
-          setLoading(false);
-        }
-      } catch (e) {
-        if (!cancelled) {
-          setError("Failed to load dashboard data.");
-          setLoading(false);
-        }
-      }
+    const shouldFetch =
+      status === "idle" ||
+      !lastFetched ||
+      Date.now() - lastFetched > STALE_AFTER_MS;
+    if (shouldFetch) {
+      dispatch(fetchManagerDashboard());
     }
-    load();
     return () => {
-      cancelled = true;
-      // cleanup charts
       userDistChart.current?.destroy?.();
       revenueChart.current?.destroy?.();
       growthChart.current?.destroy?.();
     };
-  }, []);
+  }, [dispatch, status, lastFetched]);
 
   useEffect(() => {
     if (!data) return;
@@ -245,17 +233,29 @@ export default function ManagerDashboard() {
     }
   }, [data]);
 
-  if (loading) {
+  const hasData = Boolean(data);
+  const isInitialLoading =
+    !hasData && (status === "loading" || status === "idle");
+
+  if (isInitialLoading) {
     return (
       <div className="main-content">
         <p>Loading...</p>
       </div>
     );
   }
-  if (error) {
+  if (!hasData && error) {
     return (
       <div className="main-content">
         <p style={{ color: "red" }}>{error}</p>
+        <button
+          type="button"
+          className="btn"
+          onClick={() => dispatch(fetchManagerDashboard())}
+          style={{ marginTop: 12 }}
+        >
+          Retry
+        </button>
       </div>
     );
   }
@@ -273,6 +273,57 @@ export default function ManagerDashboard() {
 
       <div className="main-content">
         <h1>Dashboard Overview</h1>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: 16,
+            flexWrap: "wrap",
+            marginBottom: 16,
+          }}
+        >
+          <div style={{ fontSize: 14, color: "#6b7280" }}>
+            {lastFetched
+              ? `Last updated ${new Date(lastFetched).toLocaleString()}`
+              : "Data will refresh automatically."}
+            {status === "loading" && hasData && " • Refreshing..."}
+          </div>
+          <button
+            type="button"
+            className="btn"
+            onClick={() => dispatch(fetchManagerDashboard())}
+            disabled={status === "loading"}
+          >
+            {status === "loading" ? "Refreshing" : "Refresh Data"}
+          </button>
+        </div>
+
+        {error && hasData && (
+          <div
+            style={{
+              background: "#fee2e2",
+              color: "#991b1b",
+              padding: "12px 16px",
+              borderRadius: 8,
+              marginBottom: 16,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 12,
+            }}
+          >
+            <span>{error}</span>
+            <button
+              type="button"
+              className="btn"
+              style={{ background: "#fff", color: "#991b1b" }}
+              onClick={() => dispatch(clearManagerError())}
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
 
         <div className="stats-grid" id="stats-grid">
           <div className="stat-card">
@@ -314,29 +365,35 @@ export default function ManagerDashboard() {
           <h2>Product Approval</h2>
           <div className="tabs">
             <button
-              className={`tab-btn ${activeTab === "pending" ? "active" : ""}`}
-              onClick={() => setActiveTab("pending")}
+              className={`tab-btn ${
+                activeProductTab === "pending" ? "active" : ""
+              }`}
+              onClick={() => dispatch(setActiveProductTab("pending"))}
               data-tab="pending"
             >
               Pending
             </button>
             <button
-              className={`tab-btn ${activeTab === "approved" ? "active" : ""}`}
-              onClick={() => setActiveTab("approved")}
+              className={`tab-btn ${
+                activeProductTab === "approved" ? "active" : ""
+              }`}
+              onClick={() => dispatch(setActiveProductTab("approved"))}
               data-tab="approved"
             >
               Approved
             </button>
             <button
-              className={`tab-btn ${activeTab === "rejected" ? "active" : ""}`}
-              onClick={() => setActiveTab("rejected")}
+              className={`tab-btn ${
+                activeProductTab === "rejected" ? "active" : ""
+              }`}
+              onClick={() => dispatch(setActiveProductTab("rejected"))}
               data-tab="rejected"
             >
               Rejected
             </button>
           </div>
 
-          {activeTab === "pending" && (
+          {activeProductTab === "pending" && (
             <div className="tab-content" style={{ display: "block" }}>
               <ProductTable
                 title="Pending"
@@ -345,7 +402,7 @@ export default function ManagerDashboard() {
               />
             </div>
           )}
-          {activeTab === "approved" && (
+          {activeProductTab === "approved" && (
             <div className="tab-content" style={{ display: "block" }}>
               <ProductTable
                 title="Approved"
@@ -354,7 +411,7 @@ export default function ManagerDashboard() {
               />
             </div>
           )}
-          {activeTab === "rejected" && (
+          {activeProductTab === "rejected" && (
             <div className="tab-content" style={{ display: "block" }}>
               <ProductTable
                 title="Rejected"

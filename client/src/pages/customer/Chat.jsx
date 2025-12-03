@@ -20,7 +20,9 @@ export default function CustomerChat() {
   const [user, setUser] = useState(null);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
+  const [pendingFile, setPendingFile] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [themeMode, setThemeMode] = useState(
@@ -29,6 +31,7 @@ export default function CustomerChat() {
 
   const bottomRef = useRef(null);
   const socketRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   const scrollToBottom = () => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -80,6 +83,13 @@ export default function CustomerChat() {
           scrollToBottom();
         }
       });
+
+      socketRef.current.on("chat:deleted", (payload) => {
+        if (!payload?._id) return;
+        setMessages((list) =>
+          list.filter((msg) => String(msg._id) !== String(payload._id))
+        );
+      });
     })();
 
     return () => {
@@ -123,52 +133,86 @@ export default function CustomerChat() {
 
   async function sendMessage(e) {
     e.preventDefault();
+    if (!user || uploading) return;
     const text = input.trim();
-    if (!text || !user) return;
-
-    setInput("");
+    const hasFile = Boolean(pendingFile);
+    if (!text && !hasFile) return;
 
     try {
-      const res = await fetch(`/chat/customer/${user.id}/messages`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify({ text }),
-      });
+      setUploading(hasFile);
 
-      const j = await res.json();
-      if (!j.success) throw new Error(j.message || "Send failed");
+      if (hasFile) {
+        const form = new FormData();
+        form.append("file", pendingFile);
+        if (text) form.append("text", text);
+        const res = await fetch(`/chat/customer/${user.id}/attachments`, {
+          method: "POST",
+          body: form,
+        });
+        const j = await res.json();
+        if (!j.success) throw new Error(j.message || "Upload failed");
+        setMessages((list) => [...list, j.message]);
+      } else {
+        const res = await fetch(`/chat/customer/${user.id}/messages`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({ text }),
+        });
+        const j = await res.json();
+        if (!j.success) throw new Error(j.message || "Send failed");
+        setMessages((list) => [...list, j.message]);
+      }
 
-      setMessages((list) => [...list, j.message]);
+      setInput("");
+      setPendingFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
       scrollToBottom();
-    } catch (e) {
-      alert(e.message);
+    } catch (err) {
+      alert(err.message || "Message failed");
+    } finally {
+      setUploading(false);
     }
   }
 
-  async function onPickFile(e) {
+  function onPickFile(e) {
     const file = e.target.files?.[0];
-    if (!file || !user) return;
-    const form = new FormData();
-    form.append("file", file);
-    setUploading(true);
+    if (!file) {
+      setPendingFile(null);
+      return;
+    }
+    setPendingFile(file);
+  }
+
+  function clearPendingFile() {
+    setPendingFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  async function handleDeleteMessage(messageId) {
+    if (!user || !messageId) return;
+    const confirmed = window.confirm("Delete this message?");
+    if (!confirmed) return;
     try {
-      const res = await fetch(`/chat/customer/${user.id}/attachments`, {
-        method: "POST",
-        body: form,
-      });
+      setDeletingId(String(messageId));
+      const res = await fetch(
+        `/chat/customer/${user.id}/messages/${messageId}`,
+        {
+          method: "DELETE",
+          headers: { Accept: "application/json" },
+        }
+      );
       const j = await res.json();
-      if (!j.success) throw new Error(j.message || "Upload failed");
-      setMessages((list) => [...list, j.message]);
-      scrollToBottom();
-    } catch (e) {
-      alert(e.message || "Upload failed");
+      if (!j.success) throw new Error(j.message || "Delete failed");
+      setMessages((list) =>
+        list.filter((msg) => String(msg._id) !== String(messageId))
+      );
+    } catch (err) {
+      alert(err.message || "Delete failed");
     } finally {
-      setUploading(false);
-      // reset file input
-      if (e.target) e.target.value = "";
+      setDeletingId(null);
     }
   }
 
@@ -258,8 +302,33 @@ export default function CustomerChat() {
                           : "0 2px 6px rgba(0,0,0,0.12)",
                       fontSize: 15,
                       lineHeight: 1.4,
+                      position: "relative",
                     }}
                   >
+                    {mine && (
+                      <button
+                        onClick={() => handleDeleteMessage(m._id)}
+                        disabled={deletingId === String(m._id)}
+                        style={{
+                          position: "absolute",
+                          top: -10,
+                          right: -10,
+                          border: "none",
+                          background: mine ? "rgba(0,0,0,0.25)" : "#e11d48",
+                          color: "#fff",
+                          width: 24,
+                          height: 24,
+                          borderRadius: "50%",
+                          cursor:
+                            deletingId === String(m._id) ? "wait" : "pointer",
+                          fontSize: 14,
+                          lineHeight: "24px",
+                        }}
+                        title="Delete message"
+                      >
+                        ×
+                      </button>
+                    )}
                     {m.attachment?.url ? (
                       m.attachment.type?.startsWith("image/") ? (
                         <a
@@ -356,13 +425,46 @@ export default function CustomerChat() {
             }}
           />
 
-          <input
-            type="file"
-            accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            onChange={onPickFile}
-            disabled={uploading}
-            style={{ marginLeft: 12 }}
-          />
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              onChange={onPickFile}
+              disabled={uploading}
+              style={{ marginLeft: 12 }}
+            />
+            {pendingFile ? (
+              <div
+                style={{
+                  fontSize: 12,
+                  color: palette.textPrimary,
+                  marginLeft: 12,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                <span>
+                  Ready to send: {pendingFile.name} ({" "}
+                  {Math.round(pendingFile.size / 1024)} KB)
+                </span>
+                <button
+                  type="button"
+                  onClick={clearPendingFile}
+                  style={{
+                    border: "none",
+                    background: "transparent",
+                    color: "#ef4444",
+                    cursor: "pointer",
+                    fontWeight: 600,
+                  }}
+                >
+                  Remove
+                </button>
+              </div>
+            ) : null}
+          </div>
           {uploading && (
             <span style={{ marginLeft: 8, fontSize: 12, color: "#6b7280" }}>
               Uploading...
@@ -371,6 +473,7 @@ export default function CustomerChat() {
 
           <button
             type="submit"
+            disabled={uploading}
             style={{
               padding: "12px 22px",
               marginLeft: 12,
@@ -386,7 +489,7 @@ export default function CustomerChat() {
                   : "0 4px 10px rgba(0,0,0,0.15)",
             }}
           >
-            Send
+            {uploading ? "Sending..." : "Send"}
           </button>
         </form>
       </div>

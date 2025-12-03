@@ -255,7 +255,6 @@ export default function Signup() {
             <option value="customer">Customer</option>
             <option value="seller">Seller</option>
             <option value="service-provider">Service Provider</option>
-            <option value="manager">Manager</option>
           </select>
 
           <form

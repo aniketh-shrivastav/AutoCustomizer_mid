@@ -35,8 +35,8 @@ router.post("/signup", async (req, res) => {
   let error = null;
   if (!finalName || !email || !password || !role) {
     error = "All fields are required";
-  } else if (!emailRegex.test(email) || !email.endsWith(".com")) {
-    error = "Please enter a valid email ending in .com";
+  } else if (!emailRegex.test(email) || !/(\.com|\.in)$/i.test(email)) {
+    error = "Please enter a valid email ending in .com or .in";
   } else if (!nameRegex.test(finalName)) {
     error = "Name should not contain numbers or special characters";
   } else if (!phone || !/^\d{10}$/.test(String(phone).trim())) {
