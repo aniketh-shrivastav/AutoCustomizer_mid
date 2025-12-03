@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 function useExternalCss(href) {
   useEffect(() => {
@@ -11,6 +12,7 @@ function useExternalCss(href) {
 }
 
 export default function AllIndex() {
+  const navigate = useNavigate();
   const [session, setSession] = useState({ authenticated: false });
 
   // Load CSS exactly like index.html
@@ -38,6 +40,11 @@ export default function AllIndex() {
 
   const authed = !!session.authenticated;
 
+  const handleBrowseProducts = (event) => {
+    event.preventDefault();
+    navigate("/customer/index");
+  };
+
   return (
     <>
       {/* ---------------- NAV ---------------- */}
@@ -48,16 +55,12 @@ export default function AllIndex() {
             <a href="/">Home</a>
           </li>
 
-          {!authed && (
-            <>
-              <li id="loginLink">
-                <a href="/login">Login</a>
-              </li>
-              <li id="signupLink">
-                <a href="/signup">Signup</a>
-              </li>
-            </>
-          )}
+          <li id="loginLink">
+            <a href="/login">Login</a>
+          </li>
+          <li id="signupLink">
+            <a href="/signup">Signup</a>
+          </li>
 
           <li>
             <a href="/contactus">Contact Us</a>
@@ -94,7 +97,11 @@ export default function AllIndex() {
           <div className="cta-buttons">
             {authed ? (
               <>
-                <a href="/customer/index.html" className="btn">
+                <a
+                  href="/customer/index"
+                  className="btn"
+                  onClick={handleBrowseProducts}
+                >
                   Browse Products
                 </a>
                 <a href="/customer/booking.html" className="btn">
