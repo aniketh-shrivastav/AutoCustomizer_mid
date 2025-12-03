@@ -81,58 +81,66 @@ export default function VerifyOtp() {
 
   return (
     <div className="container auth-page">
-      <div className="auth-wrapper" style={{ gridTemplateColumns: "1fr" }}>
-        <div className="auth-panel" style={{ maxWidth: 520 }}>
+      <div className="auth-wrapper single-panel verify-wrapper">
+        <div className="auth-panel verify-panel">
+          <div className="verify-pill">Secure sign-up</div>
           <h2>Verify your email</h2>
-          <p style={{ marginTop: 8 }}>
-            We sent a 6-digit code to <b>{email || "(no email)"}</b>.
+          <p className="verify-lede">
+            We sent a 6-digit code to <b>{email || "(no email)"}</b>. Enter it
+            below to activate your account.
           </p>
+
           {error ? (
-            <div style={{ color: "#b91c1c", marginTop: 8 }}>{error}</div>
+            <div className="verify-alert error" role="alert">
+              {error}
+            </div>
           ) : null}
           {info ? (
-            <div style={{ color: "#065f46", marginTop: 8 }}>{info}</div>
-          ) : null}
-          <form onSubmit={submit} className="auth-form">
-            <div className="form-group">
-              <label htmlFor="otp">Verification Code</label>
-              <input
-                id="otp"
-                name="otp"
-                type="text"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                maxLength={6}
-                pattern="[0-9]{6}"
-                placeholder="Enter 6-digit code"
-                value={otp}
-                onChange={(e) =>
-                  setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))
-                }
-                required
-              />
+            <div className="verify-alert success" role="status">
+              {info}
             </div>
+          ) : null}
+
+          <form onSubmit={submit} className="auth-form verify-form">
+            <label htmlFor="otp">Verification Code</label>
+            <input
+              id="otp"
+              name="otp"
+              type="text"
+              className="otp-input"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={6}
+              pattern="[0-9]{6}"
+              placeholder="Enter 6-digit code"
+              value={otp}
+              onChange={(e) =>
+                setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))
+              }
+              required
+            />
             <button
               type="submit"
-              className="submit-btn"
+              className="submit-btn primary"
               disabled={loading || !email}
             >
               {loading ? "Verifying…" : "Verify Email"}
             </button>
           </form>
-          <div className="auth-actions" style={{ marginTop: 10 }}>
+
+          <div className="verify-secondary">
             <button
               onClick={resend}
-              className="submit-btn"
+              className="submit-btn ghost"
               disabled={loading || !email}
               type="button"
             >
               Resend Code
             </button>
+            <p>
+              Already verified? <a href="/login">Login</a>
+            </p>
           </div>
-          <p className="auth-extra">
-            Already verified? <a href="/login">Login</a>
-          </p>
         </div>
       </div>
     </div>

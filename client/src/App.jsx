@@ -103,26 +103,70 @@ export default function App() {
       <Route path="/customer/product/:id" element={<ProductDetails />} />
 
       {/* Service Provider */}
-      <Route path="/service/dashboard" element={<ServiceDashboard />} />
-      <Route path="/service/dashboardService" element={<ServiceDashboard />} />
+      <Route
+        path="/service/dashboard"
+        element={
+          <RequireRole role="service-provider">
+            <ServiceDashboard />
+          </RequireRole>
+        }
+      />
+      <Route
+        path="/service/dashboardService"
+        element={
+          <RequireRole role="service-provider">
+            <ServiceDashboard />
+          </RequireRole>
+        }
+      />
       <Route
         path="/service/profileSettings"
-        element={<ServiceProfileSettings />}
+        element={
+          <RequireRole role="service-provider">
+            <ServiceProfileSettings />
+          </RequireRole>
+        }
       />
       <Route
         path="/service/profileSettings.html"
-        element={<ServiceProfileSettings />}
+        element={
+          <RequireRole role="service-provider">
+            <ServiceProfileSettings />
+          </RequireRole>
+        }
       />
       <Route
         path="/service/bookingManagement"
-        element={<ServiceBookingManagement />}
+        element={
+          <RequireRole role="service-provider">
+            <ServiceBookingManagement />
+          </RequireRole>
+        }
       />
       <Route
         path="/service/bookingManagement.html"
-        element={<ServiceBookingManagement />}
+        element={
+          <RequireRole role="service-provider">
+            <ServiceBookingManagement />
+          </RequireRole>
+        }
       />
-      <Route path="/service/reviews" element={<ServiceReviews />} />
-      <Route path="/service/reviews.html" element={<ServiceReviews />} />
+      <Route
+        path="/service/reviews"
+        element={
+          <RequireRole role="service-provider">
+            <ServiceReviews />
+          </RequireRole>
+        }
+      />
+      <Route
+        path="/service/reviews.html"
+        element={
+          <RequireRole role="service-provider">
+            <ServiceReviews />
+          </RequireRole>
+        }
+      />
 
       {/* Manager (protected) */}
       <Route

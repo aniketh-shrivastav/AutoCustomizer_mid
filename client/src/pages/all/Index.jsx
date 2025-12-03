@@ -40,10 +40,15 @@ export default function AllIndex() {
 
   const authed = !!session.authenticated;
 
-  const handleBrowseProducts = (event) => {
+  const redirectOrLogin = (event, targetPath) => {
     event.preventDefault();
-    navigate("/customer/index");
+    navigate(authed ? targetPath : "/login");
   };
+
+  const ctaProps = (targetPath) => ({
+    href: authed ? targetPath : "/login",
+    onClick: (event) => redirectOrLogin(event, targetPath),
+  });
 
   return (
     <>
@@ -95,34 +100,16 @@ export default function AllIndex() {
           </p>
 
           <div className="cta-buttons">
-            {authed ? (
-              <>
-                <a
-                  href="/customer/index"
-                  className="btn"
-                  onClick={handleBrowseProducts}
-                >
-                  Browse Products
-                </a>
-                <a href="/customer/booking.html" className="btn">
-                  Book a Service
-                </a>
-              </>
-            ) : (
-              <>
-                <a href="/login" className="btn">
-                  Browse Products
-                </a>
-                <a href="/login" className="btn">
-                  Book a Service
-                </a>
-              </>
-            )}
-
-            <a href="/signup" className="btn seller-btn">
+            <a {...ctaProps("/customer/index")} className="btn">
+              Browse Products
+            </a>
+            <a {...ctaProps("/customer/booking")} className="btn">
+              Book a Service
+            </a>
+            <a {...ctaProps("/seller/dashboard")} className="btn seller-btn">
               Sell Products
             </a>
-            <a href="/signup" className="btn provider-btn">
+            <a {...ctaProps("/service/dashboard")} className="btn provider-btn">
               Offer Services
             </a>
           </div>
