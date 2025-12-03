@@ -1,10 +1,12 @@
 :root {
+  /* Default to dark look for public/auth pages */
   --primary-color: #333333;
   --primary-dark: #1a1a1a;
-  --text-color: #1f2937;
-  --text-light: #6b7280;
-  --bg-color: #f3f4f6;
-  --white: #ffffff;
+  --text-color: #e5e7eb;
+  --text-light: #9ca3af;
+  --bg-color: #111827;
+  --white: #0f172a;
+  --app-bg: linear-gradient(135deg, #0b0b0b, #1a1a1a);
   --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
     0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
@@ -18,10 +20,32 @@
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, sans-serif;
-  background: linear-gradient(135deg, #404040, #262626);
+  background: var(--app-bg);
   color: var(--text-color);
   line-height: 1.5;
   min-height: 100vh;
+}
+
+/* Manager: light theme variables (scoped to manager pages only) */
+html[data-theme="light"] body.manager-theme {
+  --primary-color: #333333;
+  --primary-dark: #1a1a1a;
+  --text-color: #1f2937;
+  --text-light: #6b7280;
+  --bg-color: #f3f4f6;
+  --white: #ffffff;
+  --app-bg: linear-gradient(135deg, #f3f4f6, #e5e7eb);
+}
+
+/* Manager: dark theme variables (explicit, though base is already dark) */
+html[data-theme="dark"] body.manager-theme {
+  --primary-color: #111827;
+  --primary-dark: #0b1220;
+  --text-color: #e5e7eb;
+  --text-light: #9ca3af;
+  --bg-color: #0f172a;
+  --white: #0b1220;
+  --app-bg: linear-gradient(135deg, #0b0b0b, #1a1a1a);
 }
 
 .container {
@@ -86,6 +110,14 @@ body {
   padding: 2rem;
   width: 50%;
   overflow-y: auto;
+}
+
+/* Headings inside auth areas */
+.auth-section h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+  color: var(--text-color);
 }
 
 .auth-toggle {
@@ -233,4 +265,17 @@ select:focus {
   .auth-section {
     padding: 1.5rem;
   }
+}
+
+/* Theme toggle default style */
+.theme-toggle {
+  background: var(--primary-color);
+  color: var(--white);
+  border: none;
+  border-radius: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+.theme-toggle:hover {
+  background: var(--primary-dark);
 }

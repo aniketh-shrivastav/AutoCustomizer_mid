@@ -66,27 +66,95 @@ router.post("/signup", async (req, res) => {
     // Hash the password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Save user in MongoDB
+    // Save user in MongoDB (unverified until OTP confirmed)
     const newUser = new User({
       name: finalName,
       email,
       phone, // <-- Added phone here
       password: hashedPassword,
       role,
+      emailVerified: false,
     });
 
+    // Generate 6-digit OTP and store hashed
+    const rawOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    const hashedOtp = crypto.createHash("sha256").update(rawOtp).digest("hex");
+    newUser.signupOtp = hashedOtp;
+    newUser.signupOtpExpires = Date.now() + 1000 * 60 * 10; // 10 minutes
+    newUser.signupOtpAttempts = 0;
+
     await newUser.save();
-    console.log("MongoDB user inserted:", newUser);
+    console.log("MongoDB user inserted (pending verification):", newUser._id);
+
+    // Prepare transporter: prefer SMTP env, fallback to Ethereal in dev
+    let emailSent = false;
+    let previewUrl = null;
+    try {
+      if (
+        process.env.SMTP_HOST &&
+        process.env.SMTP_USER &&
+        process.env.SMTP_PASS
+      ) {
+        const transporter = nodemailer.createTransport({
+          host: process.env.SMTP_HOST,
+          port: process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : 587,
+          secure: false,
+          auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+        });
+        await transporter.sendMail({
+          from: process.env.SMTP_FROM || process.env.SMTP_USER,
+          to: email,
+          subject: "Verify your AutoCustomizer account",
+          text: `Your verification code is ${rawOtp}. It expires in 10 minutes.`,
+          html: `<p>Welcome to AutoCustomizer!</p><p>Your verification code is <b>${rawOtp}</b>. It expires in 10 minutes.</p>`,
+        });
+        emailSent = true;
+      }
+    } catch (e) {
+      console.error("Signup OTP email send failed", e.message);
+    }
+    if (!emailSent && process.env.NODE_ENV !== "production") {
+      try {
+        const testAccount = await nodemailer.createTestAccount();
+        const transporter = nodemailer.createTransport({
+          host: testAccount.smtp.host,
+          port: testAccount.smtp.port,
+          secure: testAccount.smtp.secure,
+          auth: { user: testAccount.user, pass: testAccount.pass },
+        });
+        const info = await transporter.sendMail({
+          from: "AutoCustomizer <no-reply@autocustomizer.test>",
+          to: email,
+          subject: "Verify your AutoCustomizer account (Test)",
+          text: `Your verification code is ${rawOtp}. It expires in 10 minutes.`,
+          html: `<p>Welcome!</p><p>Your verification code is <b>${rawOtp}</b>. It expires in 10 minutes.</p>`,
+        });
+        previewUrl = nodemailer.getTestMessageUrl(info);
+        emailSent = true;
+      } catch (e) {
+        console.log("Ethereal signup email failed; showing code in logs.");
+      }
+    }
+    if (!emailSent) {
+      console.log("Signup OTP for", email, "=", rawOtp);
+    }
+
+    const frontendBase = process.env.FRONTEND_URL || "http://localhost:5173";
+    const redirect = `${frontendBase.replace(
+      /\/$/,
+      ""
+    )}/verify-otp?email=${encodeURIComponent(email)}`;
 
     if (wantsJson) {
       return res.json({
         success: true,
-        message: "Signup successful. Redirecting to login...",
-        redirect: "/login",
+        requiresOtp: true,
+        message: "We've sent a 6-digit verification code to your email.",
+        redirect,
+        previewUrl,
       });
-    } else {
-      return res.redirect("/login");
     }
+    return res.redirect(redirect);
   } catch (error) {
     console.error("MongoDB error:", error.message);
     if (wantsJson) {
@@ -117,6 +185,17 @@ router.post("/login", async (req, res) => {
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(401).json({ message: "Invalid credentials" });
+    }
+    if (user.emailVerified === false) {
+      const frontendBase = process.env.FRONTEND_URL || "http://localhost:5173";
+      const verifyUrl = `${frontendBase.replace(
+        /\/$/,
+        ""
+      )}/verify-otp?email=${encodeURIComponent(email)}`;
+      return res.status(403).json({
+        message: "Please verify your email to continue.",
+        redirect: verifyUrl,
+      });
     }
 
     // Check if the user is suspended
@@ -248,7 +327,6 @@ router.post("/forgot-password", async (req, res) => {
   try {
     const user = await User.findOne({ email });
     if (!user) {
-      // Do not reveal existence
       return res.json({
         success: true,
         message: "If that email exists, a reset link was sent.",
@@ -263,9 +341,11 @@ router.post("/forgot-password", async (req, res) => {
     user.resetPasswordExpires = Date.now() + 1000 * 60 * 15; // 15 minutes
     await user.save();
 
-    const resetLink = `${req.protocol}://${req.get(
-      "host"
-    )}/reset-password/${rawToken}`;
+    // Build a reset link that points to the SPA if FRONTEND_URL is provided
+    const frontendBase = process.env.FRONTEND_URL; // e.g. http://localhost:5173
+    const resetLink = frontendBase
+      ? `${frontendBase.replace(/\/$/, "")}/reset-password/${rawToken}`
+      : `${req.protocol}://${req.get("host")}/reset-password/${rawToken}`;
 
     // Attempt email send if SMTP env configured, otherwise log.
     let emailSent = false;
@@ -381,6 +461,149 @@ router.post("/reset-password/:token", async (req, res) => {
     });
   } catch (e) {
     console.error("Reset password error", e);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+// ─────────────────────────────────────────────
+// POST Verify Signup OTP
+// ─────────────────────────────────────────────
+router.post("/verify-otp", async (req, res) => {
+  const { email, otp } = req.body || {};
+  if (!email || !otp) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Email and code are required" });
+  }
+  try {
+    const user = await User.findOne({ email });
+    if (!user)
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    if (user.emailVerified === true) {
+      return res.json({ success: true, message: "Already verified" });
+    }
+    if (!user.signupOtp || !user.signupOtpExpires) {
+      return res
+        .status(400)
+        .json({ success: false, message: "No active code. Please resend." });
+    }
+    if (Date.now() > user.signupOtpExpires) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Code expired. Please resend." });
+    }
+    // Rate limit attempts
+    if (user.signupOtpAttempts >= 5) {
+      return res
+        .status(429)
+        .json({ success: false, message: "Too many attempts. Please resend." });
+    }
+    const hashedOtp = crypto
+      .createHash("sha256")
+      .update(String(otp))
+      .digest("hex");
+    if (hashedOtp !== user.signupOtp) {
+      user.signupOtpAttempts = (user.signupOtpAttempts || 0) + 1;
+      await user.save();
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid code. Please try again." });
+    }
+
+    // Success
+    user.emailVerified = true;
+    user.signupOtp = undefined;
+    user.signupOtpExpires = undefined;
+    user.signupOtpAttempts = 0;
+    await user.save();
+    return res.json({ success: true, message: "Verification successful." });
+  } catch (e) {
+    console.error("Verify OTP error", e);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+// ─────────────────────────────────────────────
+// POST Resend Signup OTP
+// ─────────────────────────────────────────────
+router.post("/resend-otp", async (req, res) => {
+  const { email } = req.body || {};
+  if (!email)
+    return res
+      .status(400)
+      .json({ success: false, message: "Email is required" });
+  try {
+    const user = await User.findOne({ email });
+    if (!user)
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    if (user.emailVerified === true) {
+      return res.json({ success: true, message: "Already verified" });
+    }
+    const rawOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    const hashedOtp = crypto.createHash("sha256").update(rawOtp).digest("hex");
+    user.signupOtp = hashedOtp;
+    user.signupOtpExpires = Date.now() + 1000 * 60 * 10;
+    user.signupOtpAttempts = 0;
+    await user.save();
+
+    let emailSent = false;
+    let previewUrl = null;
+    try {
+      if (
+        process.env.SMTP_HOST &&
+        process.env.SMTP_USER &&
+        process.env.SMTP_PASS
+      ) {
+        const transporter = nodemailer.createTransport({
+          host: process.env.SMTP_HOST,
+          port: process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : 587,
+          secure: false,
+          auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+        });
+        await transporter.sendMail({
+          from: process.env.SMTP_FROM || process.env.SMTP_USER,
+          to: email,
+          subject: "Your verification code",
+          text: `Your verification code is ${rawOtp}. It expires in 10 minutes.`,
+          html: `<p>Your verification code is <b>${rawOtp}</b>. It expires in 10 minutes.</p>`,
+        });
+        emailSent = true;
+      }
+    } catch (e) {
+      console.error("Resend OTP email failed", e.message);
+    }
+    if (!emailSent && process.env.NODE_ENV !== "production") {
+      try {
+        const testAccount = await nodemailer.createTestAccount();
+        const transporter = nodemailer.createTransport({
+          host: testAccount.smtp.host,
+          port: testAccount.smtp.port,
+          secure: testAccount.smtp.secure,
+          auth: { user: testAccount.user, pass: testAccount.pass },
+        });
+        const info = await transporter.sendMail({
+          from: "AutoCustomizer <no-reply@autocustomizer.test>",
+          to: email,
+          subject: "Your verification code (Test)",
+          text: `Your verification code is ${rawOtp}. It expires in 10 minutes.`,
+          html: `<p>Your verification code is <b>${rawOtp}</b>. It expires in 10 minutes.</p>`,
+        });
+        previewUrl = nodemailer.getTestMessageUrl(info);
+        emailSent = true;
+      } catch (e) {
+        console.log("Ethereal resend failed; showing code in logs.");
+      }
+    }
+    if (!emailSent) {
+      console.log("Resent OTP for", email, "=", rawOtp);
+    }
+    return res.json({ success: true, previewUrl });
+  } catch (e) {
+    console.error("Resend OTP error", e);
     return res.status(500).json({ success: false, message: "Server error" });
   }
 });

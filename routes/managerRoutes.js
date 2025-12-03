@@ -127,9 +127,15 @@ router.get("/api/orders", isAuthenticated, isManager, async (req, res) => {
       )
       .map((o) => {
         // Derive a manager-visible status from per-item statuses
-        const itemStatuses = (o.items || []).map((it) => it.itemStatus || o.orderStatus || "pending");
-        const allCancelled = itemStatuses.length > 0 && itemStatuses.every((s) => s === "cancelled");
-        const allDelivered = itemStatuses.length > 0 && itemStatuses.every((s) => s === "delivered");
+        const itemStatuses = (o.items || []).map(
+          (it) => it.itemStatus || o.orderStatus || "pending"
+        );
+        const allCancelled =
+          itemStatuses.length > 0 &&
+          itemStatuses.every((s) => s === "cancelled");
+        const allDelivered =
+          itemStatuses.length > 0 &&
+          itemStatuses.every((s) => s === "delivered");
         const anyCancelled = itemStatuses.some((s) => s === "cancelled");
         const anyDelivered = itemStatuses.some((s) => s === "delivered");
 
@@ -481,12 +487,10 @@ router.post(
           .json({ success: false, message: "Invalid email" });
       }
       if (password.length < 6) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message: "Password must be at least 6 characters",
-          });
+        return res.status(400).json({
+          success: false,
+          message: "Password must be at least 6 characters",
+        });
       }
       if (phone && !/^\d{10}$/.test(String(phone).trim())) {
         return res

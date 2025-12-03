@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { NavLink } from "react-router-dom";
 import "./Nav.css";
+import ThemeToggle from "./../components/ThemeToggle";
 
 /**
  * ManagerNav - navigation bar for manager role with responsive toggle.
@@ -70,6 +71,9 @@ export default function ManagerNav() {
               <a href="/logout" onClick={handleLogout}>
                 Logout
               </a>
+            </li>
+            <li>
+              <ThemeToggle />
             </li>
           </ul>
         </div>
