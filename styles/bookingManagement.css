@@ -133,21 +133,63 @@ body {
 
 .filter-section {
     margin: 15px 0;
-    display: flex;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
     gap: 10px;
+    position: relative;
+}
+
+.filter-left {
+    display: flex;
+    gap: 8px;
+    align-items: center;
 }
 .search-input {
     padding: 8px;
     border-radius: 5px;
     border: 1px solid #ccc;
-    flex: 1; 
-    margin-right: 10px; 
+    flex: 0 0 320px;
+    max-width: 420px;
+    min-width: 160px;
+    margin-right: 10px;
 }
 .dropdown, .filter-btn {
     padding: 8px;
     border-radius: 5px;
     border: 1px solid #ccc;
     cursor: pointer;
+    flex: 0 0 220px;
+    max-width: 260px;
+}
+
+.filter-info {
+    color: #213040;
+    font-size: 15px;
+    font-weight: 600;
+    padding: 4px 12px 4px 10px;
+    justify-self: center;
+    letter-spacing: 0.2px;
+}
+
+@media (max-width: 720px) {
+    .filter-section {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .filter-left {
+        width: 100%;
+        display: flex;
+        gap: 8px;
+    }
+    .filter-info {
+        position: static;
+        margin-top: 8px;
+        text-align: left;
+        justify-self: start;
+        padding-left: 0;
+    }
 }
 
 .filter-btn {
@@ -163,9 +205,18 @@ body {
 }
 
 .order-table th, .order-table td {
-    padding: 10px;
+    padding: 6px 8px;
     text-align: left;
     border-bottom: 1px solid #ddd;
+    font-size: 13px;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    max-width: none;
+    position: relative;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 .order-table th {

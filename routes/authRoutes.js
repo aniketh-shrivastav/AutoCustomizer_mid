@@ -35,8 +35,8 @@ router.post("/signup", async (req, res) => {
   let error = null;
   if (!finalName || !email || !password || !role) {
     error = "All fields are required";
-  } else if (!emailRegex.test(email) || !email.endsWith(".com")) {
-    error = "Please enter a valid email ending in .com";
+  } else if (!emailRegex.test(email) || !/(\.com|\.in)$/i.test(email)) {
+    error = "Please enter a valid email ending in .com or .in";
   } else if (!nameRegex.test(finalName)) {
     error = "Name should not contain numbers or special characters";
   } else if (!phone || !/^\d{10}$/.test(String(phone).trim())) {
@@ -192,12 +192,10 @@ router.post("/login", async (req, res) => {
         /\/$/,
         ""
       )}/verify-otp?email=${encodeURIComponent(email)}`;
-      return res
-        .status(403)
-        .json({
-          message: "Please verify your email to continue.",
-          redirect: verifyUrl,
-        });
+      return res.status(403).json({
+        message: "Please verify your email to continue.",
+        redirect: verifyUrl,
+      });
     }
 
     // Check if the user is suspended
@@ -329,7 +327,6 @@ router.post("/forgot-password", async (req, res) => {
   try {
     const user = await User.findOne({ email });
     if (!user) {
-      // Do not reveal existence
       return res.json({
         success: true,
         message: "If that email exists, a reset link was sent.",

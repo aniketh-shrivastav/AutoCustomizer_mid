@@ -200,7 +200,7 @@ export default function ProductManagement() {
 
       <div className="container">
         <a
-          href="/Seller/bulk-upload"
+          href="/seller/bulk-upload"
           className="btn-add"
           style={{ marginBottom: 20 }}
         >

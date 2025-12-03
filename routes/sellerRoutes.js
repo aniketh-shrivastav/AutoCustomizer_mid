@@ -17,6 +17,17 @@ const Product = require("../models/Product");
 const Order = require("../models/Orders");
 const Cart = require("../models/Cart");
 
+function deriveOrderStatus(items, fallback = "pending") {
+  if (!Array.isArray(items) || items.length === 0) return fallback;
+  const statuses = items.map((item) => item.itemStatus || fallback);
+
+  if (statuses.every((s) => s === "cancelled")) return "cancelled";
+  if (statuses.every((s) => s === "delivered")) return "delivered";
+  if (statuses.some((s) => s === "shipped")) return "shipped";
+  if (statuses.some((s) => s === "confirmed")) return "confirmed";
+  return "pending";
+}
+
 // Ensure tmp upload dir exists
 const UPLOAD_DIR = path.join(__dirname, "..", "tmp", "uploads");
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
@@ -55,15 +66,17 @@ const isAuthenticated = (req, res, next) => {
 
 const isSeller = (req, res, next) => {
   if (req.session.user?.role === "seller") return next();
-  
+
   // Check if request wants JSON
   const wantsJSON =
     (req.headers.accept && req.headers.accept.includes("application/json")) ||
     req.xhr ||
     req.path.startsWith("/api/");
-  
+
   if (wantsJSON) {
-    return res.status(403).json({ success: false, message: "Access Denied: Sellers Only" });
+    return res
+      .status(403)
+      .json({ success: false, message: "Access Denied: Sellers Only" });
   }
   res.status(403).send("Access Denied: Sellers Only");
 };
@@ -103,17 +116,17 @@ router.get("/api/dashboard", isAuthenticated, isSeller, async (req, res) => {
     // Calculate Total Earnings: Sum of item prices * quantities for delivered items
     let totalEarnings = 0;
     let deliveredItemsCount = 0;
-    
+
     allOrders.forEach((order) => {
       if (!order.items || !Array.isArray(order.items)) return;
-      
+
       order.items.forEach((item) => {
         // Compare seller IDs - item.seller is an ObjectId when using .lean()
         const itemSellerId = item.seller ? String(item.seller) : null;
         if (itemSellerId === sellerIdStr) {
           // Use itemStatus if available, otherwise fall back to orderStatus
           const itemStatus = item.itemStatus || order.orderStatus || "pending";
-          
+
           // Only count delivered items for earnings
           if (itemStatus === "delivered") {
             const price = Number(item.price) || 0;
@@ -124,8 +137,10 @@ router.get("/api/dashboard", isAuthenticated, isSeller, async (req, res) => {
         }
       });
     });
-    
-    console.log(`[Dashboard] Seller ${sellerIdStr}: Total Earnings = ${totalEarnings} from ${deliveredItemsCount} delivered items`);
+
+    console.log(
+      `[Dashboard] Seller ${sellerIdStr}: Total Earnings = ${totalEarnings} from ${deliveredItemsCount} delivered items`
+    );
 
     // Get Stock Alerts: Products with quantity <= 5
     const lowStockProducts = await Product.find({
@@ -149,7 +164,9 @@ router.get("/api/dashboard", isAuthenticated, isSeller, async (req, res) => {
         (item) => String(item.seller) === String(sellerId)
       );
       // Prefer item-specific status, fall back to order status
-      const itemStatus = sellerItem ? (sellerItem.itemStatus || order.orderStatus || "pending") : (order.orderStatus || "pending");
+      const itemStatus = sellerItem
+        ? sellerItem.itemStatus || order.orderStatus || "pending"
+        : order.orderStatus || "pending";
       return {
         orderId: order._id.toString().substring(0, 8).toUpperCase(),
         customer: order.userId?.name || "Unknown",
@@ -166,7 +183,8 @@ router.get("/api/dashboard", isAuthenticated, isSeller, async (req, res) => {
       order.items.forEach((item) => {
         if (String(item.seller) !== sellerIdStr) return;
         const itemStatus = item.itemStatus || order.orderStatus || "pending";
-        statusDistribution[itemStatus] = (statusDistribution[itemStatus] || 0) + 1;
+        statusDistribution[itemStatus] =
+          (statusDistribution[itemStatus] || 0) + 1;
       });
     });
 
@@ -518,15 +536,17 @@ router.post(
           );
       }
 
-// Provide clearer Cloudinary-related error messages
-if (error.message && error.message.includes("api_key")) {
-  return res.status(500).send(
-    "Cloudinary configuration error: Please configure CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in your .env file."
-  );
-}
+      // Provide clearer Cloudinary-related error messages
+      if (error.message && error.message.includes("api_key")) {
+        return res
+          .status(500)
+          .send(
+            "Cloudinary configuration error: Please configure CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in your .env file."
+          );
+      }
 
-// Bubble up clearer message for troubleshooting (but still return 500)
-res.status(500).send(msg || ("Internal Server Error: " + error.message));
+      // Bubble up clearer message for troubleshooting (but still return 500)
+      res.status(500).send(msg || "Internal Server Error: " + error.message);
     }
   }
 );
@@ -641,9 +661,22 @@ router.post(
 
         // Update the specific item's status
         order.items[itemIndex].itemStatus = newStatus;
+
+        const derivedStatus = deriveOrderStatus(
+          order.items,
+          order.orderStatus || "pending"
+        );
+        if (derivedStatus !== order.orderStatus) {
+          order.previousStatus = order.orderStatus;
+          order.orderStatus = derivedStatus;
+        }
+
         await order.save();
 
-        return res.json({ success: true, message: "Item status updated successfully" });
+        return res.json({
+          success: true,
+          message: "Item status updated successfully",
+        });
       }
 
       // Fallback: Update entire order status (for backward compatibility)
@@ -659,6 +692,9 @@ router.post(
 
       order.previousStatus = order.orderStatus;
       order.orderStatus = newStatus;
+      order.items.forEach((item, idx) => {
+        order.items[idx].itemStatus = newStatus;
+      });
       await order.save();
 
       res.json({ success: true });
@@ -695,31 +731,32 @@ async function parseExcelFile(filePath) {
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.readFile(filePath);
   const worksheet = workbook.worksheets[0]; // Get first sheet
-  
+
   const rows = [];
   const headers = [];
-  
+
   // Get headers from first row
   worksheet.getRow(1).eachCell({ includeEmpty: true }, (cell, colNumber) => {
     headers[colNumber] = (cell.value || "").toString().trim().toLowerCase();
   });
-  
+
   // Convert rows to JSON objects
   worksheet.eachRow((row, rowNumber) => {
     if (rowNumber === 1) return; // Skip header row
-    
+
     const rowData = {};
     row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
       const header = headers[colNumber];
       if (header) {
-        rowData[header] = cell.value !== null && cell.value !== undefined 
-          ? cell.value.toString().trim() 
-          : "";
+        rowData[header] =
+          cell.value !== null && cell.value !== undefined
+            ? cell.value.toString().trim()
+            : "";
       }
     });
     rows.push(rowData);
   });
-  
+
   return rows;
 }
 

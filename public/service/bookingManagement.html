@@ -159,7 +159,7 @@
             <td>${order.customerName}</td>
             <td>${order.customerEmail}</td>
             <td>${order.phone}</td>
-            <td>${order.address}</td>
+            <td><span class="address-cell" data-full-address="${order.address}">${order.address}</span></td>
             <td>${order.district}</td>
             <td>${order.status}</td>
             <td>${new Date(order.createdAt).toLocaleDateString()}</td>
@@ -209,6 +209,27 @@
             }
           });
         });
+        
+        // Address cell click handler
+        document.querySelectorAll(".address-cell").forEach((cell) => {
+          cell.addEventListener("click", (e) => {
+            e.stopPropagation();
+            // Remove active class from all address cells
+            document.querySelectorAll(".address-cell").forEach((c) => {
+              c.classList.remove("active");
+            });
+            // Add active class to clicked cell
+            cell.classList.add("active");
+          });
+        });
+        
+        // Close tooltip when clicking elsewhere
+        document.addEventListener("click", () => {
+          document.querySelectorAll(".address-cell").forEach((cell) => {
+            cell.classList.remove("active");
+          });
+        }, { capture: false });
+        
         document.querySelector(".confirm-btn").onclick = () =>
           bulkUpdate("Confirmed");
         document.querySelector(".reject-btn").onclick = () =>

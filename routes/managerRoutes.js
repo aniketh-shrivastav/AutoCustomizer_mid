@@ -215,7 +215,7 @@ router.get("/api/dashboard", isAuthenticated, isManager, async (req, res) => {
       (a, c) => ((a[c._id] = c.count), a),
       {}
     );
-    const roles = ["customer", "service-provider", "seller", "admin"];
+    const roles = ["customer", "service-provider", "seller", "manager"];
     const userCounts = roles.map((r) => userDistribution[r] || 0);
     const [pendingProducts, approvedProducts, rejectedProducts] =
       await Promise.all([
@@ -265,7 +265,7 @@ router.get("/dashboard", isAuthenticated, isManager, async (req, res) => {
       return acc;
     }, {});
 
-    const roles = ["customer", "service-provider", "seller", "admin"];
+    const roles = ["customer", "service-provider", "seller", "manager"];
     const formattedCounts = roles.map((role) => userDistribution[role] || 0);
 
     // ✅ Fetch products by status

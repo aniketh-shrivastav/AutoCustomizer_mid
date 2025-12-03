@@ -2,81 +2,96 @@
 const ctx = document.getElementById('earningsChart').getContext('2d');
 let earningsChart;
 
+// Socket.IO for real-time updates
+let socket = null;
+function initializeSocketIO() {
+    // Check if Socket.IO is available
+    if (typeof io !== 'undefined') {
+        socket = io();
+        
+        // Join earnings room with provider ID (provider ID should be passed from server)
+        socket.on('connect', () => {
+            console.log('Connected to earnings server');
+            // Join earnings room - you can extract provider ID from DOM or session
+            socket.emit('earnings:join', { providerId: getProviderId() });
+        });
+        
+        // Listen for earnings updates
+        socket.on('earnings:updated', (data) => {
+            console.log('Earnings updated:', data);
+            // Refresh chart immediately when earnings change
+            updateChart();
+            updateTodaysEarnings();
+        });
+        
+        socket.on('disconnect', () => {
+            console.log('Disconnected from earnings server');
+        });
+    }
+}
+
+// Extract provider ID from DOM or page context
+function getProviderId() {
+    // Try to get from data attribute or meta tag
+    const providerElement = document.querySelector('[data-provider-id]');
+    if (providerElement) {
+        return providerElement.getAttribute('data-provider-id');
+    }
+    // Try from meta tag
+    const metaTag = document.querySelector('meta[name="provider-id"]');
+    if (metaTag) {
+        return metaTag.getAttribute('content');
+    }
+    return null;
+}
+
+// Fetch real earnings data from API
+async function fetchEarningsData(timeRange = 1) {
+    try {
+        const response = await fetch(`/service/api/earnings-data?timeRange=${timeRange}`);
+        if (!response.ok) {
+            throw new Error('Failed to fetch earnings data');
+        }
+        const data = await response.json();
+        return {
+            labels: data.labels,
+            data: data.data,
+            totalEarnings: data.totalEarnings
+        };
+    } catch (error) {
+        console.error('Error fetching earnings data:', error);
+        // Fallback to empty data if API fails
+        return { labels: [], data: [], totalEarnings: 0 };
+    }
+}
 
 function getMonthName(monthIndex) {
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     return months[monthIndex];
 }
 
+// Update chart with real data
+async function updateChart() {
+    const timeRange = parseInt(document.getElementById('timeRange').value);
+    const { labels, data, totalEarnings } = await fetchEarningsData(timeRange);
 
-const monthlyEarnings = [1200, 1500, 1800, 2000, 2200, 2500, 3000, 2800, 3200, 3500, 4000, 4200]; 
-
-
-function generateEarningsData(timeRange) {
-    const currentDate = new Date();
-    const labels = [];
-    const data = [];
-    let totalEarnings = 0;
-
-    if (timeRange === 1) {
-       
-        const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
-        const monthName = getMonthName(currentDate.getMonth());
-
-        
-        let baseEarnings = monthlyEarnings[currentDate.getMonth()] / 4; 
-        for (let weekStart = 1; weekStart <= daysInMonth; weekStart += 7) {
-            const weekEnd = Math.min(weekStart + 6, daysInMonth); 
-            labels.push(`${monthName} ${weekStart}-${weekEnd}`); 
-
-           
-            if (weekStart <= 7) {
-                baseEarnings += Math.floor(Math.random() * 200); 
-            } else if (weekStart <= 14) {
-                baseEarnings -= Math.floor(Math.random() * 100);
-            } else if (weekStart <= 21) {
-                baseEarnings += Math.floor(Math.random() * 150); 
-            } else {
-                baseEarnings += Math.floor(Math.random() * 100); 
-            }
-            totalEarnings += baseEarnings;
-            data.push(baseEarnings); 
-        }
-    } else {
-       //6months/1year
-        for (let i = 0; i < timeRange; i++) {
-            const date = new Date(currentDate);
-            date.setMonth(currentDate.getMonth() - i); // Go back 'i' months from the current date
-            const monthName = getMonthName(date.getMonth());
-            labels.unshift(monthName); //start
-
-           
-            const monthlyEarning = monthlyEarnings[date.getMonth()];
-            totalEarnings += monthlyEarning;
-            data.unshift(monthlyEarning); 
-        }
-    }
-
-    
+    // Update total earnings display
     document.getElementById('totalEarnings').textContent = `Total Earnings: ₹${totalEarnings.toLocaleString()}`;
 
-    return { labels, data };
+    // Update chart data
+    if (earningsChart) {
+        earningsChart.data.labels = labels;
+        earningsChart.data.datasets[0].data = data;
+        earningsChart.options.scales.x.title.text = timeRange === 1 ? 'Weeks' : 'Months';
+        earningsChart.update();
+    }
 }
 
+async function initializeChart() {
+    const { labels, data, totalEarnings } = await fetchEarningsData(1); // Show current month by default
 
-function updateChart() {
-    const timeRange = parseInt(document.getElementById('timeRange').value);
-    const { labels, data } = generateEarningsData(timeRange);
-
-    
-    earningsChart.data.labels = labels;
-    earningsChart.data.datasets[0].data = data;
-    earningsChart.update();
-}
-
-
-function initializeChart() {
-    const { labels, data } = generateEarningsData(1); // Show last month by default
+    // Update total earnings display
+    document.getElementById('totalEarnings').textContent = `Total Earnings: ₹${totalEarnings.toLocaleString()}`;
 
     earningsChart = new Chart(ctx, {
         type: 'line',
@@ -123,7 +138,7 @@ function initializeChart() {
                     },
                     title: {
                         display: true,
-                        text: timeRange === 1 ? 'Weeks' : 'months' 
+                        text: 'Weeks'
                     }
                 }
             }
@@ -160,16 +175,56 @@ function calculateTodaysEarnings() {
     return todaysEarnings;
 }
 
+// Fetch today's earnings from real data
+async function fetchTodaysEarnings() {
+    try {
+        const response = await fetch(`/service/api/earnings-data?timeRange=1`);
+        if (!response.ok) {
+            throw new Error('Failed to fetch earnings data');
+        }
+        const data = await response.json();
+        
+        // If we have data for today, use the last week's data (which includes today)
+        // Otherwise, return 0
+        if (data.data.length > 0) {
+            const lastWeekEarnings = data.data[data.data.length - 1] || 0;
+            return lastWeekEarnings;
+        }
+        return 0;
+    } catch (error) {
+        console.error('Error fetching today earnings:', error);
+        return 0;
+    }
+}
 
 function updateTodaysEarnings() {
-    const todaysEarnings = calculateTodaysEarnings();
-    document.getElementById('todaysEarnings').textContent = `₹${todaysEarnings.toLocaleString()}`;
+    fetchTodaysEarnings().then(todaysEarnings => {
+        document.getElementById('todaysEarnings').textContent = `₹${todaysEarnings.toLocaleString()}`;
+    });
 }
 
 
+// Set up polling to refresh earnings data every 30 seconds
+function setupEarningsRefresh() {
+    setInterval(() => {
+        updateChart();
+        updateTodaysEarnings();
+    }, 30000); // Refresh every 30 seconds
+}
+
+// Set up auto-refresh when time range changes
+document.addEventListener('DOMContentLoaded', () => {
+    const timeRangeSelect = document.getElementById('timeRange');
+    if (timeRangeSelect) {
+        timeRangeSelect.addEventListener('change', updateChart);
+    }
+});
+
 window.onload = function () {
     initializeChart();
-    updateTodaysEarnings(); 
+    updateTodaysEarnings();
+    setupEarningsRefresh();
+    initializeSocketIO(); // Initialize real-time updates
 };
 
 
