@@ -493,7 +493,7 @@ export default function ServiceProfileSettings() {
               className="delete-btn"
               onClick={onDeleteAccount}
             >
-              Delete My Account
+              Delete My Account  
             </button>
           </div>
         )}
