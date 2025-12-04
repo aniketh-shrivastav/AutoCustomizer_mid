@@ -125,8 +125,12 @@ export default function CustomerIndex() {
     <>
       <CustomerNav />
 
-      <main>
-        <div
+            <main
+        className="py-4"
+        style={{ backgroundColor: "#f8f9fa", minHeight: "100vh" }}
+      >
+
+                <div
           className="search-bar"
           style={{
             display: "flex",
@@ -134,8 +138,13 @@ export default function CustomerIndex() {
             flexWrap: "wrap",
             alignItems: "center",
             margin: "0 16px",
+            padding: "12px 16px",
+            borderRadius: "12px",
+            backgroundColor: "#ffffff",
+            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.03)",
           }}
         >
+
           <input
             type="text"
             placeholder="Search for car parts..."
@@ -179,49 +188,64 @@ export default function CustomerIndex() {
           <p className="mb-0">Let's start customizing our car! 🚗</p>
         </section>
 
-        <h2>Available Car Parts</h2>
+                <h2 className="mx-3 mt-4 mb-3 fw-semibold">Available Car Parts</h2>
+
 
         {loading && <div className="mx-3">Loading products...</div>}
         {error && <div className="mx-3 text-danger">{error}</div>}
 
         {!loading && !error && (
-          <div className="parts-list" id="parts-list">
+                    <div
+            className="parts-list row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4 mx-2"
+            id="parts-list"
+          >
+
             {filtered.length === 0 ? (
               <p>No products available.</p>
             ) : (
               filtered.map((product) => (
                 <div
                   key={productId(product)}
-                  className="part"
+                  className="part col"
                   data-name={product.name || ""}
                   data-category={product.category || ""}
                 >
-                  <div className="card mb-4 shadow-sm">
+                                    <div className="card mb-4 h-100 shadow-sm border-0 product-card">
                     <img
                       src={product.image || "/images/placeholder.jpg"}
-                      className="card-img-top"
+                      className="card-img-top product-card-img"
                       alt={product.name || "Product"}
                     />
-                    <div className="card-body">
-                      <h5 className="card-title">
+                    <div className="card-body d-flex flex-column">
+                      <h5 className="card-title mb-1">
                         {product.name || "Unnamed Product"}
                       </h5>
-                      <p className="card-text">₹{product.price || "0"}</p>
+                      <p className="card-text mb-2 text-primary fw-semibold">
+                        ₹{product.price || "0"}
+                      </p>
+
                       <Link
                         to={`/customer/product/${productId(product)}`}
                         className="btn btn-sm btn-outline-primary"
+                        style={{ borderRadius: "999px", paddingInline: "16px" }}
                       >
                         View Details
                       </Link>
+
                       <div className="mt-3">
-                        <button
+                                                <button
                           className="btn btn-primary w-100"
+                          style={{
+                            borderRadius: "999px",
+                            boxShadow: "0 6px 16px rgba(13, 110, 253, 0.25)",
+                          }}
                           onClick={(e) =>
                             addToCart(productId(product), e.currentTarget)
                           }
                         >
                           Add to Cart
                         </button>
+
                       </div>
                     </div>
                   </div>
