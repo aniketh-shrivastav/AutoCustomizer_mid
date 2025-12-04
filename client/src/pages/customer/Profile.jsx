@@ -219,18 +219,18 @@ export default function CustomerProfile() {
   return (
     <>
       <CustomerNav />
-      <div
+ <div
         className="profile-wrapper"
         style={{
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
           minHeight: "100vh",
-          background: "linear-gradient(135deg, #e2eafc, #cfd9df)",
+          background: "var(--page-bg)",
           margin: 0,
           paddingTop: 90,
+          paddingBottom: 40,
         }}
-      >
         <div
           className="profile-container"
           style={{
