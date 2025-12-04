@@ -98,6 +98,7 @@ export default function CustomerChat() {
     };
   }, []);
 
+  // THEME COLOR PALETTE (kept from main)
   const palette =
     themeMode === "dark"
       ? {
@@ -131,20 +132,27 @@ export default function CustomerChat() {
           textPrimary: "#111",
         };
 
+  // CLEAN SEND MESSAGE (merged)
   async function sendMessage(e) {
     e.preventDefault();
     if (!user || uploading) return;
+
     const text = input.trim();
     const hasFile = Boolean(pendingFile);
-    if (!text && !hasFile) return;
+
+    if (!text && !hasFile) {
+      alert("Please type a message or upload a file before sending.");
+      return;
+    }
 
     try {
-      setUploading(hasFile);
+      setUploading(true);
 
       if (hasFile) {
         const form = new FormData();
         form.append("file", pendingFile);
         if (text) form.append("text", text);
+
         const res = await fetch(`/chat/customer/${user.id}/attachments`, {
           method: "POST",
           body: form,
@@ -179,11 +187,7 @@ export default function CustomerChat() {
 
   function onPickFile(e) {
     const file = e.target.files?.[0];
-    if (!file) {
-      setPendingFile(null);
-      return;
-    }
-    setPendingFile(file);
+    setPendingFile(file || null);
   }
 
   function clearPendingFile() {
@@ -195,6 +199,7 @@ export default function CustomerChat() {
     if (!user || !messageId) return;
     const confirmed = window.confirm("Delete this message?");
     if (!confirmed) return;
+
     try {
       setDeletingId(String(messageId));
       const res = await fetch(
@@ -206,6 +211,7 @@ export default function CustomerChat() {
       );
       const j = await res.json();
       if (!j.success) throw new Error(j.message || "Delete failed");
+
       setMessages((list) =>
         list.filter((msg) => String(msg._id) !== String(messageId))
       );
@@ -314,7 +320,7 @@ export default function CustomerChat() {
                           top: -10,
                           right: -10,
                           border: "none",
-                          background: mine ? "rgba(0,0,0,0.25)" : "#e11d48",
+                          background: "rgba(0,0,0,0.25)",
                           color: "#fff",
                           width: 24,
                           height: 24,
@@ -329,6 +335,8 @@ export default function CustomerChat() {
                         ×
                       </button>
                     )}
+
+                    {/* Attachment */}
                     {m.attachment?.url ? (
                       m.attachment.type?.startsWith("image/") ? (
                         <a
@@ -361,6 +369,7 @@ export default function CustomerChat() {
                       )
                     ) : null}
 
+                    {/* Text */}
                     {m.text ? (
                       <div
                         style={{
@@ -372,6 +381,7 @@ export default function CustomerChat() {
                       </div>
                     ) : null}
 
+                    {/* Timestamp */}
                     <div
                       style={{
                         fontSize: 11,
@@ -425,6 +435,7 @@ export default function CustomerChat() {
             }}
           />
 
+          {/* File input + file info */}
           <div style={{ display: "flex", flexDirection: "column" }}>
             <input
               ref={fileInputRef}
@@ -465,6 +476,7 @@ export default function CustomerChat() {
               </div>
             ) : null}
           </div>
+
           {uploading && (
             <span style={{ marginLeft: 8, fontSize: 12, color: "#6b7280" }}>
               Uploading...
