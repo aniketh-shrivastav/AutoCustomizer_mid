@@ -244,7 +244,7 @@ export default function CustomerProfile() {
             fontFamily: "Inter, sans-serif",
           }}
         >
-          <a
+                    <a
             className="back-link"
             href="/customer/index"
             style={{
@@ -253,10 +253,12 @@ export default function CustomerProfile() {
               textDecoration: "none",
               color: "#3498db",
               fontWeight: 600,
+              fontSize: 14,
             }}
           >
             ← Back to Dashboard
           </a>
+
           <div
             className="header"
             style={{ textAlign: "center", marginBottom: 25 }}
