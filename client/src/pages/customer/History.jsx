@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import CustomerNav from "../../components/CustomerNav";
-
+//History of orders and services
 function useLink(href) {
   useEffect(() => {
     const link = document.createElement("link");
@@ -43,7 +43,7 @@ export default function CustomerHistory() {
   const [ratingBookingId, setRatingBookingId] = useState("");
   const [ratingValue, setRatingValue] = useState("");
   const [ratingReview, setRatingReview] = useState("");
-
+//use effect used
   useEffect(() => {
     let cancelled = false;
     async function load() {
@@ -128,7 +128,8 @@ export default function CustomerHistory() {
       alert("Error cancelling order");
     }
   }
-
+//cancel service
+  
   async function cancelService(id) {
     if (!window.confirm("Cancel this service request?")) return;
     try {
@@ -207,6 +208,7 @@ export default function CustomerHistory() {
       .finally(() => setLoading(false));
   }
 
+  //upcoming services
   const upcomingServices = useMemo(
     () => bookings.filter((b) => ["Open", "Confirmed"].includes(b.status)),
     [bookings]
