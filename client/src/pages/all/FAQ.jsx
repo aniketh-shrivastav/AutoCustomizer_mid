@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import AllNav from "../../components/AllNav";
 
 function useExternalCss(href) {
   useEffect(() => {
@@ -13,8 +14,11 @@ function useExternalCss(href) {
 }
 
 export default function FAQ() {
-  useExternalCss("/styles/index.css");
+  useExternalCss("/styles/index.css"); // your global page styling
+  useExternalCss("/styles/faq-theme.css"); // theme-specific styling only
+
   const [authed, setAuthed] = useState(false);
+  const [theme, setTheme] = useState("light");
 
   useEffect(() => {
     let cancelled = false;
@@ -36,62 +40,40 @@ export default function FAQ() {
   }, []);
 
   return (
-    <div>
-      <nav>
-        <div className="logo">AutoCustomizer</div>
-        <ul className="nav-links" id="globalNav">
-          <li>
-            <a href="/">Home</a>
-          </li>
-          {!authed && (
-            <>
-              <li id="loginLink">
-                <a href="/login">Login</a>
-              </li>
-              <li id="signupLink">
-                <a href="/signup">Signup</a>
-              </li>
-            </>
-          )}
-          <li>
-            <a href="/contactus">Contact Us</a>
-          </li>
-          <li>
-            <a href="/faq" className="active">
-              FAQ
-            </a>
-          </li>
-        </ul>
-      </nav>
+    <div className={`faq-page ${theme}`}>
+      <AllNav
+        authed={authed}
+        active="faq"
+        onToggleTheme={() =>
+          setTheme((prev) => (prev === "light" ? "dark" : "light"))
+        }
+        themeLabel={theme === "light" ? "Dark Mode" : "Light Mode"}
+      />
 
       <header>
         <h1>Frequently Asked Questions</h1>
         <p>Everything you need to know about using AutoCustomizer.</p>
       </header>
 
-      <section
-        className="features"
-        style={{ flexDirection: "column", gap: 40 }}
-      >
+      <section className="faq-content">
         <div className="feature">
           <h2>For Customers</h2>
           <p>
             <strong>Q:</strong> How do I book a service?
             <br />
-            <strong>A:</strong> Go to the service section, choose a provider,
-            and click "Book Now".
+            <strong>A:</strong> Go to the service section and click "Book Now".
           </p>
+
           <p>
             <strong>Q:</strong> Can I cancel a booking?
             <br />
-            <strong>A:</strong> Yes, from your dashboard. Cancellations must be
-            made 24 hours in advance.
+            <strong>A:</strong> Yes, at least 24 hours before the appointment.
           </p>
+
           <p>
             <strong>Q:</strong> What payment options are available?
             <br />
-            <strong>A:</strong> UPI, credit/debit cards, and net banking are
-            accepted.
+            <strong>A:</strong> UPI, credit/debit cards & net banking.
           </p>
         </div>
 
@@ -100,54 +82,52 @@ export default function FAQ() {
           <p>
             <strong>Q:</strong> How do I list a product?
             <br />
-            <strong>A:</strong> Sign up as a seller, then go to your dashboard
-            to add products.
+            <strong>A:</strong> Create a seller account and add items.
           </p>
+
           <p>
             <strong>Q:</strong> Can I manage inventory?
             <br />
-            <strong>A:</strong> Yes, sellers have access to inventory management
-            tools.
+            <strong>A:</strong> Yes, you can update stock anytime.
           </p>
+
           <p>
             <strong>Q:</strong> How are payments handled?
             <br />
-            <strong>A:</strong> Payments are securely processed and transferred
-            to your linked account.
+            <strong>A:</strong> Secure transfers to your linked account.
           </p>
+
           <p>
-            <strong>Q:</strong> Is there any commission on sales?
+            <strong>Q:</strong> Is there a commission?
             <br />
-            <strong>A:</strong> Yes, a 20% commission is charged on every
-            transaction made through the platform.
+            <strong>A:</strong> Yes, 20% per sale.
           </p>
         </div>
 
         <div className="feature">
           <h2>For Service Providers</h2>
           <p>
-            <strong>Q:</strong> How do I register my workshop?
+            <strong>Q:</strong> How do I register?
             <br />
-            <strong>A:</strong> Choose "Service Provider" on signup and fill in
-            your workshop details.
+            <strong>A:</strong> Choose "Service Provider" during signup.
           </p>
+
           <p>
             <strong>Q:</strong> Where can I manage bookings?
             <br />
-            <strong>A:</strong> You can view, accept, or reschedule bookings via
-            your provider dashboard.
+            <strong>A:</strong> Your provider dashboard.
           </p>
+
           <p>
-            <strong>Q:</strong> Can I update my service list?
+            <strong>Q:</strong> Can I update services?
             <br />
-            <strong>A:</strong> Yes, your dashboard allows you to manage all
-            listed services.
+            <strong>A:</strong> Yes, anytime from dashboard.
           </p>
+
           <p>
-            <strong>Q:</strong> Is there any commission for services provided?
+            <strong>Q:</strong> Commission?
             <br />
-            <strong>A:</strong> Yes, AutoCustomizer charges a 20% commission on
-            all completed service transactions.
+            <strong>A:</strong> 20% per completed job.
           </p>
         </div>
       </section>

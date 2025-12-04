@@ -3,6 +3,8 @@ import { useDispatch, useSelector } from "react-redux";
 import CustomerNav from "../../components/CustomerNav";
 import { fetchCustomerHistory } from "../../store/customerSlice";
 
+const STALE_AFTER_MS = 1000 * 60 * 5; // 5 minutes
+
 function useLink(href) {
   useEffect(() => {
     const link = document.createElement("link");
@@ -117,7 +119,9 @@ export default function CustomerHistory() {
   }, []);
 
   const dispatch = useDispatch();
-  const { history, status, error } = useSelector((state) => state.customer);
+  const { history, status, error, lastFetched } = useSelector(
+    (state) => state.customer
+  );
   const { upcomingOrders = [], pastOrders = [], bookings = [] } = history || {};
   const loading = status === "loading" || status === "idle";
 
@@ -128,10 +132,14 @@ export default function CustomerHistory() {
   const [ratingReview, setRatingReview] = useState("");
 
   useEffect(() => {
-    if (status === "idle") {
+    const isStale =
+      !lastFetched ||
+      Date.now() - lastFetched > STALE_AFTER_MS ||
+      status === "idle";
+    if (isStale && status !== "loading") {
       dispatch(fetchCustomerHistory());
     }
-  }, [dispatch, status]);
+  }, [dispatch, status, lastFetched]);
 
   function formatDate(d) {
     if (!d) return "";
@@ -248,7 +256,11 @@ export default function CustomerHistory() {
   async function submitRating(e) {
     e.preventDefault();
     const numericRating = Number(ratingValue);
-    if (!Number.isFinite(numericRating) || numericRating < 1 || numericRating > 5) {
+    if (
+      !Number.isFinite(numericRating) ||
+      numericRating < 1 ||
+      numericRating > 5
+    ) {
       alert("Please enter a rating between 1 and 5.");
       return;
     }
@@ -294,6 +306,39 @@ export default function CustomerHistory() {
       <CustomerNav />
 
       <main>
+        <section
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            gap: 12,
+            flexWrap: "wrap",
+            marginBottom: 16,
+            alignItems: "center",
+          }}
+        >
+          <div style={{ color: "#4b5563", fontSize: 14 }}>
+            {lastFetched
+              ? `Last updated ${new Date(lastFetched).toLocaleString()}`
+              : "History loads automatically when you visit this page."}
+            {loading && " • Refreshing..."}
+          </div>
+          <button
+            type="button"
+            style={{
+              background: "#111827",
+              color: "white",
+              border: "none",
+              padding: "8px 16px",
+              borderRadius: 6,
+              cursor: loading ? "not-allowed" : "pointer",
+            }}
+            disabled={loading}
+            onClick={refresh}
+          >
+            {loading ? "Refreshing" : "Refresh"}
+          </button>
+        </section>
+
         <h2>Upcoming Orders</h2>
         <ul id="upcoming-orders" className="parts-list">
           {loading ? (
@@ -448,29 +493,29 @@ export default function CustomerHistory() {
               return (
                 <li key={s._id} className="history-item">
                   <div className="item-details">
-                  <h3>{(s.selectedServices || []).join(", ")}</h3>
-                  <p>
-                    <strong>Service ID:</strong> {s._id}
-                  </p>
-                  <p>
-                    <strong>Service Provider:</strong>{" "}
-                    {s.providerId?.name || ""} | {s.providerId?.phone || ""}
-                  </p>
-                  <p>
-                    <strong>Booked on:</strong> {formatDate(s.createdAt)}
-                  </p>
-                  <p>
-                    <strong>Car Model:</strong> {s.carModel || ""}
-                  </p>
-                  <p>
-                    <strong>Description:</strong> {s.description || ""}
-                  </p>
-                  <p>
-                    <strong>Cost:</strong> ₹{s.totalCost || 0}
-                  </p>
-                  <p>
-                    <strong>Status:</strong> {pastServiceStatusSpan(s)}
-                  </p>
+                    <h3>{(s.selectedServices || []).join(", ")}</h3>
+                    <p>
+                      <strong>Service ID:</strong> {s._id}
+                    </p>
+                    <p>
+                      <strong>Service Provider:</strong>{" "}
+                      {s.providerId?.name || ""} | {s.providerId?.phone || ""}
+                    </p>
+                    <p>
+                      <strong>Booked on:</strong> {formatDate(s.createdAt)}
+                    </p>
+                    <p>
+                      <strong>Car Model:</strong> {s.carModel || ""}
+                    </p>
+                    <p>
+                      <strong>Description:</strong> {s.description || ""}
+                    </p>
+                    <p>
+                      <strong>Cost:</strong> ₹{s.totalCost || 0}
+                    </p>
+                    <p>
+                      <strong>Status:</strong> {pastServiceStatusSpan(s)}
+                    </p>
                     {showRateButton ? (
                       <button
                         className="rate-btn"
@@ -491,16 +536,16 @@ export default function CustomerHistory() {
                         ) : null}
                       </>
                     ) : null}
-                  {s.status === "Ready" && (
-                    <a
-                      href={`${backendBase}/customer/service-receipt/${s._id}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="download-btn"
-                    >
-                      Download Receipt
-                    </a>
-                  )}
+                    {s.status === "Ready" && (
+                      <a
+                        href={`${backendBase}/customer/service-receipt/${s._id}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="download-btn"
+                      >
+                        Download Receipt
+                      </a>
+                    )}
                   </div>
                 </li>
               );

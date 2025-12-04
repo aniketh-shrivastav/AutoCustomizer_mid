@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import AllNav from "../../components/AllNav";
 
 function useExternalCss(href) {
   useEffect(() => {
@@ -22,6 +23,17 @@ export default function ContactUs() {
     subject: "",
     message: "",
   });
+  const [theme, setTheme] = useState("dark");
+
+  useEffect(() => {
+    const saved = localStorage.getItem("theme");
+    if (saved) setTheme(saved);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("theme", theme);
+  }, [theme]);
+
   const [errors, setErrors] = useState({});
   const [submittedFlag, setSubmittedFlag] = useState(false);
   const formRef = useRef(null);
@@ -114,11 +126,15 @@ export default function ContactUs() {
   const styles = useMemo(
     () => ({
       page: {
-        backgroundImage: "radial-gradient(#4b4a4a, #2d2b2b)",
+        backgroundImage:
+          theme === "dark"
+            ? "radial-gradient(#4b4a4a, #2d2b2b)"
+            : "radial-gradient(#d6d6d6, #ffffff)",
         minHeight: "100vh",
-        color: "white",
+        color: theme === "dark" ? "white" : "black",
         paddingBottom: 40,
       },
+
       shell: {
         display: "flex",
         justifyContent: "center",
@@ -127,34 +143,38 @@ export default function ContactUs() {
       card: {
         width: "100%",
         maxWidth: 700,
-        backgroundColor: "rgba(51,49,49,0.95)",
+        backgroundColor: theme === "dark" ? "rgba(51,49,49,0.95)" : "#ffffff",
         borderRadius: 16,
-        boxShadow: "0 10px 30px rgba(0,0,0,0.35)",
+        boxShadow: "0 10px 30px rgba(0,0,0,0.25)",
         padding: 24,
+        color: theme === "dark" ? "white" : "black",
       },
+
       heading: { margin: 0, fontSize: 28 },
       label: {
         display: "block",
         marginBottom: 6,
-        color: "#e5e7eb",
+        color: theme === "dark" ? "#e5e7eb" : "#222",
         fontWeight: 600,
       },
+
       inputBase: {
         display: "block",
         width: "100%",
         padding: "12px 14px",
         borderRadius: 8,
         border: "1px solid #d1d5db",
-        background: "#fff",
+        background: theme === "dark" ? "#fff" : "#f5f5f5",
         color: "#111827",
         outline: "none",
         boxShadow: "inset 0 1px 2px rgba(0,0,0,0.05)",
       },
+
       error: { color: "#ef4444", fontSize: 12, marginTop: 6 },
       textarea: { minHeight: 140, resize: "vertical" },
       button: {
-        backgroundColor: "#1e1e2d",
-        color: "white",
+        backgroundColor: theme === "dark" ? "#1e1e2d" : "#e6e6e6",
+        color: theme === "dark" ? "white" : "black",
         padding: "12px 16px",
         border: "none",
         cursor: "pointer",
@@ -164,6 +184,7 @@ export default function ContactUs() {
         marginTop: 12,
         fontWeight: 700,
       },
+
       buttonWrap: { display: "flex", justifyContent: "flex-end" },
       success: {
         background: "#064e3b",
@@ -173,8 +194,18 @@ export default function ContactUs() {
         margin: "12px 0",
       },
       fieldWrap: { marginBottom: 14 },
+      navToggle: {
+        marginLeft: 20,
+        padding: "6px 12px",
+        borderRadius: 8,
+        background: theme === "dark" ? "rgba(255,255,255,0.08)" : "#1e1e2d",
+        border: "1px solid #ffffff",
+        color: "#ffffff",
+        cursor: "pointer",
+        fontWeight: 600,
+      },
     }),
-    []
+    [theme]
   );
 
   const inputStyle = (key) => ({
@@ -184,32 +215,13 @@ export default function ContactUs() {
 
   return (
     <div className="bg-container" style={styles.page}>
-      <nav>
-        <div className="logo">AutoCustomizer</div>
-        <ul className="nav-links" id="globalNav">
-          <li>
-            <a href="/">Home</a>
-          </li>
-          {!authed && (
-            <>
-              <li id="loginLink">
-                <a href="/login">Login</a>
-              </li>
-              <li id="signupLink">
-                <a href="/signup">Signup</a>
-              </li>
-            </>
-          )}
-          <li>
-            <a href="/contactus" className="active">
-              Contact Us
-            </a>
-          </li>
-          <li>
-            <a href="/faq">FAQ</a>
-          </li>
-        </ul>
-      </nav>
+      <AllNav
+        authed={authed}
+        active="contact"
+        onToggleTheme={() => setTheme(theme === "dark" ? "light" : "dark")}
+        themeLabel={theme === "dark" ? "Light Mode" : "Dark Mode"}
+        themeButtonStyle={styles.navToggle}
+      />
 
       <div style={styles.shell}>
         <div style={styles.card}>

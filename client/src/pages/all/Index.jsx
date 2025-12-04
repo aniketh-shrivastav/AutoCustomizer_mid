@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import AllNav from "../../components/AllNav";
 
 function useExternalCss(href) {
   useEffect(() => {
@@ -53,28 +54,7 @@ export default function AllIndex() {
   return (
     <>
       {/* ---------------- NAV ---------------- */}
-      <nav>
-        <div className="logo">AutoCustomizer</div>
-        <ul className="nav-links" id="globalNav">
-          <li>
-            <a href="/">Home</a>
-          </li>
-
-          <li id="loginLink">
-            <a href="/login">Login</a>
-          </li>
-          <li id="signupLink">
-            <a href="/signup">Signup</a>
-          </li>
-
-          <li>
-            <a href="/contactus">Contact Us</a>
-          </li>
-          <li>
-            <a href="/faq">FAQ</a>
-          </li>
-        </ul>
-      </nav>
+      <AllNav authed={authed} active="home" />
 
       {/* ---------------- HEADER (MISSING IN YOUR BUILD BEFORE) ---------------- */}
       <header>

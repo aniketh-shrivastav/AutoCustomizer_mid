@@ -11,6 +11,214 @@ const Product = require("../models/Product");
 const managerController = require("../controllers/managerController");
 const Order = require("../models/Orders");
 const ContactMessage = require("../models/ContactMessage");
+const PDFDocument = require("pdfkit");
+
+const MONTH_HISTORY = 6;
+
+function buildMonthBuckets(count = MONTH_HISTORY) {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth() - (count - 1), 1);
+  const buckets = [];
+  for (let i = 0; i < count; i += 1) {
+    const current = new Date(start.getFullYear(), start.getMonth() + i, 1);
+    buckets.push({
+      year: current.getFullYear(),
+      month: current.getMonth() + 1,
+      label: current.toLocaleString("default", { month: "short" }),
+    });
+  }
+  return { buckets, startDate: start };
+}
+
+function monthKey(year, month) {
+  return `${year}-${month}`;
+}
+
+async function collectDashboardStats() {
+  const roles = ["customer", "service-provider", "seller", "manager"];
+  const { buckets: monthBuckets, startDate } = buildMonthBuckets();
+
+  const [
+    totalUsers,
+    userCountsAgg,
+    pendingProducts,
+    approvedProducts,
+    rejectedProducts,
+    orderEarningsResult,
+    serviceEarningsResult,
+    orderRevenueAgg,
+    serviceRevenueAgg,
+    baseUserCountsAgg,
+    monthlyUserGrowthAgg,
+  ] = await Promise.all([
+    User.countDocuments({ suspended: { $ne: true } }),
+    User.aggregate([
+      { $match: { suspended: { $ne: true } } },
+      { $group: { _id: "$role", count: { $sum: 1 } } },
+    ]),
+    Product.find({ status: "pending" }).populate("seller", "name"),
+    Product.find({ status: "approved" }).populate("seller", "name"),
+    Product.find({ status: "rejected" }).populate("seller", "name"),
+    Order.aggregate([
+      { $match: { orderStatus: "pending" } },
+      { $group: { _id: null, total: { $sum: "$totalAmount" } } },
+    ]),
+    ServiceBooking.aggregate([
+      { $match: { status: "Ready" } },
+      { $group: { _id: null, total: { $sum: "$totalCost" } } },
+    ]),
+    Order.aggregate([
+      {
+        $match: {
+          orderStatus: "pending",
+          placedAt: { $gte: startDate },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            year: { $year: "$placedAt" },
+            month: { $month: "$placedAt" },
+          },
+          total: { $sum: "$totalAmount" },
+        },
+      },
+    ]),
+    ServiceBooking.aggregate([
+      {
+        $match: {
+          status: "Ready",
+          createdAt: { $gte: startDate },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            year: { $year: "$createdAt" },
+            month: { $month: "$createdAt" },
+          },
+          total: { $sum: "$totalCost" },
+        },
+      },
+    ]),
+    User.aggregate([
+      {
+        $match: {
+          createdAt: { $lt: startDate },
+          suspended: { $ne: true },
+        },
+      },
+      { $group: { _id: "$role", count: { $sum: 1 } } },
+    ]),
+    User.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: startDate },
+          suspended: { $ne: true },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            role: "$role",
+            year: { $year: "$createdAt" },
+            month: { $month: "$createdAt" },
+          },
+          count: { $sum: 1 },
+        },
+      },
+    ]),
+  ]);
+
+  const userDistribution = userCountsAgg.reduce(
+    (a, c) => ((a[c._id] = c.count), a),
+    {}
+  );
+  const userCounts = roles.map((r) => userDistribution[r] || 0);
+
+  const orderEarnings = orderEarningsResult[0]?.total || 0;
+  const serviceEarnings = serviceEarningsResult[0]?.total || 0;
+  const totalEarnings = orderEarnings + serviceEarnings;
+  const commission = totalEarnings * 0.2;
+
+  const revenueByMonth = {};
+  [...orderRevenueAgg, ...serviceRevenueAgg].forEach(({ _id, total }) => {
+    if (!_id) return;
+    const key = monthKey(_id.year, _id.month);
+    revenueByMonth[key] = (revenueByMonth[key] || 0) + total;
+  });
+
+  const monthlyRevenue = {
+    labels: monthBuckets.map((b) => b.label),
+    totalRevenue: [],
+    commission: [],
+  };
+
+  monthBuckets.forEach((bucket) => {
+    const key = monthKey(bucket.year, bucket.month);
+    const revenue = revenueByMonth[key] || 0;
+    monthlyRevenue.totalRevenue.push(revenue);
+    monthlyRevenue.commission.push(revenue * 0.2);
+  });
+
+  const baseUserCounts = roles.reduce((acc, role) => {
+    acc[role] = 0;
+    return acc;
+  }, {});
+  baseUserCountsAgg.forEach((entry) => {
+    baseUserCounts[entry._id] = entry.count;
+  });
+
+  const growthByMonth = {};
+  monthlyUserGrowthAgg.forEach(({ _id, count }) => {
+    if (!_id) return;
+    const key = monthKey(_id.year, _id.month);
+    if (!growthByMonth[key]) {
+      growthByMonth[key] = roles.reduce((acc, role) => {
+        acc[role] = 0;
+        return acc;
+      }, {});
+    }
+    growthByMonth[key][_id.role] = count;
+  });
+
+  const runningTotals = { ...baseUserCounts };
+  const userGrowth = {
+    labels: monthBuckets.map((b) => b.label),
+    totalUsers: [],
+    serviceProviders: [],
+    sellers: [],
+  };
+
+  monthBuckets.forEach((bucket) => {
+    const key = monthKey(bucket.year, bucket.month);
+    const additions = growthByMonth[key] || {};
+    roles.forEach((role) => {
+      runningTotals[role] = (runningTotals[role] || 0) + (additions[role] || 0);
+    });
+    const totalForMonth = roles.reduce(
+      (sum, role) => sum + (runningTotals[role] || 0),
+      0
+    );
+    userGrowth.totalUsers.push(totalForMonth);
+    userGrowth.serviceProviders.push(runningTotals["service-provider"] || 0);
+    userGrowth.sellers.push(runningTotals["seller"] || 0);
+  });
+
+  return {
+    totalUsers,
+    userCounts,
+    pendingProducts,
+    approvedProducts,
+    rejectedProducts,
+    totalEarnings,
+    commission,
+    charts: {
+      monthlyRevenue,
+      userGrowth,
+    },
+  };
+}
 // Middleware
 const isAuthenticated = (req, res, next) => {
   if (req.session.user) return next();
@@ -206,49 +414,120 @@ router.get("/api/support", isAuthenticated, isManager, async (req, res) => {
 // API endpoint for dashboard data (used by static HTML)
 router.get("/api/dashboard", isAuthenticated, isManager, async (req, res) => {
   try {
-    const totalUsers = await User.countDocuments({ suspended: { $ne: true } });
-    const userCountsAgg = await User.aggregate([
-      { $match: { suspended: { $ne: true } } },
-      { $group: { _id: "$role", count: { $sum: 1 } } },
-    ]);
-    const userDistribution = userCountsAgg.reduce(
-      (a, c) => ((a[c._id] = c.count), a),
-      {}
-    );
-    const roles = ["customer", "service-provider", "seller", "manager"];
-    const userCounts = roles.map((r) => userDistribution[r] || 0);
-    const [pendingProducts, approvedProducts, rejectedProducts] =
-      await Promise.all([
-        Product.find({ status: "pending" }).populate("seller", "name"),
-        Product.find({ status: "approved" }).populate("seller", "name"),
-        Product.find({ status: "rejected" }).populate("seller", "name"),
-      ]);
-    const orderEarningsResult = await Order.aggregate([
-      { $match: { orderStatus: "pending" } },
-      { $group: { _id: null, total: { $sum: "$totalAmount" } } },
-    ]);
-    const orderEarnings = orderEarningsResult[0]?.total || 0;
-    const serviceEarningsResult = await ServiceBooking.aggregate([
-      { $match: { status: "Ready" } },
-      { $group: { _id: null, total: { $sum: "$totalCost" } } },
-    ]);
-    const serviceEarnings = serviceEarningsResult[0]?.total || 0;
-    const totalEarnings = orderEarnings + serviceEarnings;
-    const commission = totalEarnings * 0.2;
-    res.json({
-      totalUsers,
-      userCounts,
-      pendingProducts,
-      approvedProducts,
-      rejectedProducts,
-      totalEarnings,
-      commission,
-    });
+    const stats = await collectDashboardStats();
+    res.json(stats);
   } catch (err) {
     console.error("Dashboard API error", err);
     res.status(500).json({ error: "Failed to load dashboard data" });
   }
 });
+
+router.get(
+  "/api/dashboard/report",
+  isAuthenticated,
+  isManager,
+  async (req, res) => {
+    try {
+      const stats = await collectDashboardStats();
+      const doc = new PDFDocument({ margin: 40, size: "A4" });
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename=manager-dashboard-${Date.now()}.pdf`
+      );
+      doc.pipe(res);
+
+      const currency = (val) => `₹${Number(val || 0).toLocaleString("en-IN")}`;
+
+      doc
+        .fontSize(22)
+        .font("Helvetica-Bold")
+        .text("Manager Dashboard Report", { align: "center" });
+      doc
+        .moveDown(0.3)
+        .fontSize(12)
+        .font("Helvetica")
+        .text(`Generated on ${new Date().toLocaleString()}`, {
+          align: "center",
+        });
+      doc.moveDown(1);
+
+      doc.fontSize(16).font("Helvetica-Bold").text("Summary");
+      doc.moveDown(0.3);
+      doc.fontSize(12).font("Helvetica");
+      doc.text(`Total Users: ${stats.totalUsers}`);
+      doc.text(`Total Earnings: ${currency(stats.totalEarnings)}`);
+      doc.text(`Commission (20%): ${currency(stats.commission)}`);
+      doc.text(`Pending Products: ${stats.pendingProducts.length}`);
+      doc.text(`Approved Products: ${stats.approvedProducts.length}`);
+      doc.text(`Rejected Products: ${stats.rejectedProducts.length}`);
+      doc.moveDown(1);
+
+      doc.fontSize(16).font("Helvetica-Bold").text("User Distribution");
+      doc.moveDown(0.3);
+      const roleLabels = [
+        { label: "Customers", idx: 0 },
+        { label: "Service Providers", idx: 1 },
+        { label: "Sellers", idx: 2 },
+        { label: "Managers", idx: 3 },
+      ];
+      doc.fontSize(12).font("Helvetica");
+      roleLabels.forEach((role) => {
+        doc.text(`${role.label}: ${stats.userCounts[role.idx] || 0}`);
+      });
+      doc.moveDown(1);
+
+      const revenueChart = stats?.charts?.monthlyRevenue;
+      if (revenueChart) {
+        doc
+          .fontSize(16)
+          .font("Helvetica-Bold")
+          .text("Monthly Revenue & Commission");
+        doc.moveDown(0.3);
+        doc.fontSize(12).font("Helvetica");
+        revenueChart.labels.forEach((label, idx) => {
+          doc.text(`${label}`, { continued: true });
+          doc.text(`Revenue: ${currency(revenueChart.totalRevenue[idx] || 0)}`);
+          doc.text(
+            `Commission: ${currency(revenueChart.commission[idx] || 0)}`
+          );
+          doc.moveDown(0.5);
+        });
+        doc.moveDown(1);
+      }
+
+      const userGrowthChart = stats?.charts?.userGrowth;
+      if (userGrowthChart) {
+        doc.fontSize(16).font("Helvetica-Bold").text("User Growth");
+        doc.moveDown(0.3);
+        doc.fontSize(12).font("Helvetica");
+        userGrowthChart.labels.forEach((label, idx) => {
+          const total = userGrowthChart.totalUsers[idx] || 0;
+          const providers = userGrowthChart.serviceProviders[idx] || 0;
+          const sellers = userGrowthChart.sellers[idx] || 0;
+          doc.text(`${label}`);
+          doc.text(`Total Users: ${total}`);
+          doc.text(`Service Providers: ${providers}`);
+          doc.text(`Sellers: ${sellers}`);
+          doc.moveDown(0.5);
+        });
+        doc.moveDown(1);
+      }
+
+      doc
+        .fontSize(10)
+        .fillColor("#6b7280")
+        .text("AutoCustomizer © 2025", 40, doc.page.height - 50, {
+          align: "center",
+        });
+
+      doc.end();
+    } catch (err) {
+      console.error("Dashboard report error", err);
+      res.status(500).json({ error: "Failed to generate report" });
+    }
+  }
+);
 
 // Routes
 router.get("/dashboard", isAuthenticated, isManager, async (req, res) => {

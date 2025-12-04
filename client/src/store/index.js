@@ -12,6 +12,10 @@ import serviceReducer, {
   SERVICE_STATE_STORAGE_KEY,
   selectServicePersistedState,
 } from "./serviceSlice";
+import sellerReducer, {
+  SELLER_STATE_STORAGE_KEY,
+  selectSellerPersistedState,
+} from "./sellerSlice";
 
 export const store = configureStore({
   reducer: {
@@ -19,6 +23,7 @@ export const store = configureStore({
     manager: managerReducer,
     customer: customerReducer,
     service: serviceReducer,
+    seller: sellerReducer,
   },
 });
 
@@ -53,6 +58,16 @@ if (typeof window !== "undefined") {
       );
     } catch (err) {
       console.warn("Failed to persist service state", err);
+    }
+
+    try {
+      const sellerSnapshot = selectSellerPersistedState(state.seller);
+      window.localStorage.setItem(
+        SELLER_STATE_STORAGE_KEY,
+        JSON.stringify(sellerSnapshot)
+      );
+    } catch (err) {
+      console.warn("Failed to persist seller state", err);
     }
   });
 }
