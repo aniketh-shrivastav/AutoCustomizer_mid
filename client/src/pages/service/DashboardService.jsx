@@ -284,7 +284,14 @@ export default function ServiceDashboard() {
               className="btn"
               onClick={() => dispatch(fetchServiceDashboard())}
               disabled={refreshDisabled}
-              style={{ padding: "6px 14px" }}
+              style={{
+                padding: "6px 14px",
+                backgroundColor: "#071f4eff",
+                color: "white",
+                border: "1px solid #071f4eff",
+                opacity: refreshDisabled ? 0.6 : 1,
+                transition: "background-color 0.3s",
+              }}
             >
               {refreshDisabled ? "Refreshing" : "Refresh Data"}
             </button>
