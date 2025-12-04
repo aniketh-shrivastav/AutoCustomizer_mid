@@ -1,3 +1,4 @@
+//customer nav component
 import React, { useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import "./Nav.css";
