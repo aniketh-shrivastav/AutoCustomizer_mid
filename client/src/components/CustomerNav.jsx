@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import "./Nav.css";
 
@@ -11,6 +11,7 @@ import "./Nav.css";
  */
 export default function CustomerNav({ cartCount = 0 }) {
   const [open, setOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const location = useLocation();
 
   const links = [
@@ -33,6 +34,29 @@ export default function CustomerNav({ cartCount = 0 }) {
     const next = encodeURIComponent(`${window.location.origin}/login`);
     window.location.href = `${backendBase()}/logout?next=${next}`;
   }
+
+  // Poll unread count periodically
+  useEffect(() => {
+    let timer;
+    let cancelled = false;
+    async function loadCount() {
+      try {
+        const res = await fetch(`${backendBase()}/chat/unread-count`, {
+          headers: { Accept: "application/json" },
+          credentials: "include",
+        });
+        const j = await res.json().catch(() => ({}));
+        if (!cancelled && j && j.success) setUnreadCount(j.count || 0);
+      } catch {}
+    }
+    loadCount();
+    timer = setInterval(loadCount, 20000); // 20s
+    return () => {
+      cancelled = true;
+      if (timer) clearInterval(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <>
@@ -76,6 +100,24 @@ export default function CustomerNav({ cartCount = 0 }) {
                           {cartCount}
                         </span>
                       )}
+                    </span>
+                  ) : l.label === "Chat" ? (
+                    <span
+                      style={{
+                        display: "inline-flex",
+                        gap: 6,
+                        alignItems: "center",
+                      }}
+                    >
+                      {l.label}
+                      <span
+                        className="badge"
+                        title={`Unread messages: ${unreadCount}`}
+                        aria-label={`Unread messages: ${unreadCount}`}
+                        style={{ opacity: unreadCount === 0 ? 0.6 : 1 }}
+                      >
+                        {unreadCount}
+                      </span>
                     </span>
                   ) : (
                     l.label

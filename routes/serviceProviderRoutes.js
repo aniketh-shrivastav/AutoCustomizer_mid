@@ -140,21 +140,27 @@ router.post("/updateBookingStatus", serviceOnly, async (req, res) => {
     if (newStatus === "Ready" || newStatus === "Completed") {
       const io = req.app.get("io");
       if (io && booking.providerId) {
-        io.to(`provider_earnings_${booking.providerId}`).emit("earnings:updated", {
-          providerId: booking.providerId,
-          newEarning: booking.totalCost,
-          timestamp: new Date()
-        });
+        io.to(`provider_earnings_${booking.providerId}`).emit(
+          "earnings:updated",
+          {
+            providerId: booking.providerId,
+            newEarning: booking.totalCost,
+            timestamp: new Date(),
+          }
+        );
       }
     }
 
     // Also emit activity update for all booking status changes
     const io = req.app.get("io");
     if (io && booking.providerId) {
-      io.to(`provider_earnings_${booking.providerId}`).emit("activity:updated", {
-        providerId: booking.providerId,
-        timestamp: new Date()
-      });
+      io.to(`provider_earnings_${booking.providerId}`).emit(
+        "activity:updated",
+        {
+          providerId: booking.providerId,
+          timestamp: new Date(),
+        }
+      );
     }
 
     res.json({ success: true });
@@ -235,7 +241,11 @@ router.get("/api/earnings-data", serviceOnly, async (req, res) => {
 
     if (timeRange === "1") {
       // Weekly breakdown for current month
-      const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
+      const daysInMonth = new Date(
+        currentDate.getFullYear(),
+        currentDate.getMonth() + 1,
+        0
+      ).getDate();
       const monthName = getMonthName(currentDate.getMonth());
 
       for (let weekStart = 1; weekStart <= daysInMonth; weekStart += 7) {
@@ -243,8 +253,16 @@ router.get("/api/earnings-data", serviceOnly, async (req, res) => {
         labels.push(`${monthName} ${weekStart}-${weekEnd}`);
 
         // Get earnings for this week
-        const weekStartDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), weekStart);
-        const weekEndDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), weekEnd + 1);
+        const weekStartDate = new Date(
+          currentDate.getFullYear(),
+          currentDate.getMonth(),
+          weekStart
+        );
+        const weekEndDate = new Date(
+          currentDate.getFullYear(),
+          currentDate.getMonth(),
+          weekEnd + 1
+        );
 
         const weeklyEarnings = await ServiceBooking.aggregate([
           {
@@ -252,15 +270,15 @@ router.get("/api/earnings-data", serviceOnly, async (req, res) => {
               providerId,
               status: "Ready",
               totalCost: { $exists: true },
-              createdAt: { $gte: weekStartDate, $lt: weekEndDate }
-            }
+              createdAt: { $gte: weekStartDate, $lt: weekEndDate },
+            },
           },
           {
             $group: {
               _id: null,
-              total: { $sum: "$totalCost" }
-            }
-          }
+              total: { $sum: "$totalCost" },
+            },
+          },
         ]);
 
         const weekTotal = weeklyEarnings[0]?.total || 0;
@@ -278,7 +296,11 @@ router.get("/api/earnings-data", serviceOnly, async (req, res) => {
 
         // Get earnings for this month
         const monthStartDate = new Date(date.getFullYear(), date.getMonth(), 1);
-        const monthEndDate = new Date(date.getFullYear(), date.getMonth() + 1, 1);
+        const monthEndDate = new Date(
+          date.getFullYear(),
+          date.getMonth() + 1,
+          1
+        );
 
         const monthlyEarnings = await ServiceBooking.aggregate([
           {
@@ -286,15 +308,15 @@ router.get("/api/earnings-data", serviceOnly, async (req, res) => {
               providerId,
               status: "Ready",
               totalCost: { $exists: true },
-              createdAt: { $gte: monthStartDate, $lt: monthEndDate }
-            }
+              createdAt: { $gte: monthStartDate, $lt: monthEndDate },
+            },
           },
           {
             $group: {
               _id: null,
-              total: { $sum: "$totalCost" }
-            }
-          }
+              total: { $sum: "$totalCost" },
+            },
+          },
         ]);
 
         const monthTotal = monthlyEarnings[0]?.total || 0;
@@ -304,14 +326,14 @@ router.get("/api/earnings-data", serviceOnly, async (req, res) => {
     }
 
     // Apply 80% commission (20% deduction)
-    const commissionData = data.map(amount => Math.round(amount * 0.8));
+    const commissionData = data.map((amount) => Math.round(amount * 0.8));
     const commissionTotalEarnings = Math.round(totalEarnings * 0.8);
 
     res.json({
       labels,
       data: commissionData,
       totalEarnings: commissionTotalEarnings,
-      timeRange
+      timeRange,
     });
   } catch (err) {
     console.error("Earnings API error", err);
@@ -320,7 +342,20 @@ router.get("/api/earnings-data", serviceOnly, async (req, res) => {
 });
 
 function getMonthName(monthIndex) {
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const months = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
   return months[monthIndex];
 }
 
@@ -486,10 +521,19 @@ router.get("/api/profile", serviceOnly, async (req, res) => {
       phone,
       district = "",
       servicesOffered = [],
+      paintColors = [],
     } = user;
     res.json({
       success: true,
-      user: { id, name, email, phone: phone || "", district, servicesOffered },
+      user: {
+        id,
+        name,
+        email,
+        phone: phone || "",
+        district,
+        servicesOffered,
+        paintColors,
+      },
     });
   } catch (err) {
     console.error("Profile API error", err);
@@ -512,11 +556,11 @@ router.get("/api/recent-activity", serviceOnly, async (req, res) => {
 
     const activities = [];
     const statusIcons = {
-      "Open": "fa-calendar",
-      "Confirmed": "fa-tools",
-      "Ready": "fa-check-circle",
-      "Completed": "fa-check-double",
-      "Rejected": "fa-times-circle"
+      Open: "fa-calendar",
+      Confirmed: "fa-tools",
+      Ready: "fa-check-circle",
+      Completed: "fa-check-double",
+      Rejected: "fa-times-circle",
     };
 
     for (const booking of recentBookings) {
@@ -552,14 +596,16 @@ router.get("/api/recent-activity", serviceOnly, async (req, res) => {
         text,
         timeAgo,
         status,
-        bookingId: booking._id
+        bookingId: booking._id,
       });
     }
 
     res.json({ success: true, activities });
   } catch (error) {
     console.error("Recent activity API error:", error);
-    res.status(500).json({ success: false, message: "Failed to load recent activity" });
+    res
+      .status(500)
+      .json({ success: false, message: "Failed to load recent activity" });
   }
 });
 

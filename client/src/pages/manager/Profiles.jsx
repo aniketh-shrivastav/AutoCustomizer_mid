@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import ManagerNav from "../../components/ManagerNav";
 
 const ROLE_TABS = [
@@ -16,6 +17,18 @@ function Card({ type, data, onView }) {
     const servicesArr = Array.isArray(data.servicesOffered)
       ? data.servicesOffered
       : [];
+    const ratingCount = Number(data.ratingCount || 0);
+    const ratingAvg =
+      typeof data.ratingAvg === "number" && Number.isFinite(data.ratingAvg)
+        ? data.ratingAvg
+        : null;
+    const latestReview =
+      typeof data.latestReview === "string" ? data.latestReview : "";
+    const latestReviewShort = latestReview
+      ? latestReview.length > 90
+        ? `${latestReview.slice(0, 90)}…`
+        : latestReview
+      : "";
     const services = servicesArr.length ? (
       <ul>
         {servicesArr.map((s, idx) => (
@@ -49,6 +62,20 @@ function Card({ type, data, onView }) {
             <p>
               <strong>Phone:</strong> <span>{text(data.phone)}</span>
             </p>
+            <p>
+              <strong>Rating:</strong>{" "}
+              <span>
+                {ratingCount > 0 && ratingAvg !== null
+                  ? `${ratingAvg.toFixed(1)} / 5 (${ratingCount})`
+                  : "No ratings yet"}
+              </span>
+            </p>
+            {latestReviewShort ? (
+              <p>
+                <strong>Latest Review:</strong>{" "}
+                <span>“{latestReviewShort}”</span>
+              </p>
+            ) : null}
           </div>
           <h3>Services Offered:</h3>
           {services}
@@ -190,6 +217,7 @@ function Card({ type, data, onView }) {
 }
 
 export default function Profiles() {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [data, setData] = useState({
@@ -277,23 +305,8 @@ export default function Profiles() {
     });
   }, [active, term, data]);
 
-  async function viewProfile(id) {
-    try {
-      const resp = await fetch(`/manager/profile-data/${id}`);
-      if (resp.status === 401 || resp.status === 403) {
-        window.location.href = "/login";
-        return;
-      }
-      const j = await resp.json();
-      const extra = j.extraDetails || "";
-      alert(
-        `\n${j.role} Profile\n\nName: ${j.name || ""}\nEmail: ${
-          j.email || ""
-        }\nPhone: ${j.phone || ""}\n\n${extra.replace(/<[^>]+>/g, "")}`
-      );
-    } catch (e) {
-      alert("Error loading profile.");
-    }
+  function viewProfile(id) {
+    navigate(`/manager/profiles/${id}`);
   }
 
   if (loading)

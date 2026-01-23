@@ -31,6 +31,9 @@ const messageSchema = new mongoose.Schema(
     senderRole: { type: String, enum: ["customer", "manager"], required: true },
     text: { type: String, trim: true, maxlength: 2000 },
     attachment: attachmentSchema,
+    // Unread tracking by role
+    readByCustomer: { type: Boolean, default: false, index: true },
+    readByManager: { type: Boolean, default: false, index: true },
   },
   { timestamps: { createdAt: true, updatedAt: false } }
 );

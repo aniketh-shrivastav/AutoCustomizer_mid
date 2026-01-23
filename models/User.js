@@ -26,6 +26,8 @@ const UserSchema = new mongoose.Schema({
   address: String,
   district: String,
   servicesOffered: [ServiceSchema], // array of { name, cost }
+  // For service providers offering Car Painting: list of available paint colors (hex strings like #ff0000)
+  paintColors: { type: [String], default: [] },
   // Password reset flow
   resetPasswordToken: { type: String },
   resetPasswordExpires: { type: Date },

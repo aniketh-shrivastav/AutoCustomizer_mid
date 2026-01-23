@@ -132,7 +132,7 @@ async function collectDashboardStats() {
 
   const userDistribution = userCountsAgg.reduce(
     (a, c) => ((a[c._id] = c.count), a),
-    {}
+    {},
   );
   const userCounts = roles.map((r) => userDistribution[r] || 0);
 
@@ -198,7 +198,7 @@ async function collectDashboardStats() {
     });
     const totalForMonth = roles.reduce(
       (sum, role) => sum + (runningTotals[role] || 0),
-      0
+      0,
     );
     userGrowth.totalUsers.push(totalForMonth);
     userGrowth.serviceProviders.push(runningTotals["service-provider"] || 0);
@@ -233,7 +233,7 @@ const isManager = (req, res, next) => {
 // Static dashboard HTML (will be added separately). Keep EJS route untouched.
 router.get("/dashboard.html", isAuthenticated, isManager, (req, res) => {
   res.sendFile(
-    path.join(__dirname, "..", "public", "manager", "dashboard.html")
+    path.join(__dirname, "..", "public", "manager", "dashboard.html"),
   );
 });
 
@@ -245,14 +245,14 @@ router.get("/users.html", isAuthenticated, isManager, (req, res) => {
 // Static services HTML
 router.get("/services.html", isAuthenticated, isManager, (req, res) => {
   res.sendFile(
-    path.join(__dirname, "..", "public", "manager", "services.html")
+    path.join(__dirname, "..", "public", "manager", "services.html"),
   );
 });
 
 // Static payments HTML
 router.get("/payments.html", isAuthenticated, isManager, (req, res) => {
   res.sendFile(
-    path.join(__dirname, "..", "public", "manager", "payments.html")
+    path.join(__dirname, "..", "public", "manager", "payments.html"),
   );
 });
 
@@ -280,23 +280,66 @@ router.get("/api/users", isAuthenticated, isManager, async (req, res) => {
 // Services API (profiles) for static services page
 router.get("/api/services", isAuthenticated, isManager, async (req, res) => {
   try {
-    const serviceProviders = await User.find(
+    const serviceProvidersRaw = await User.find(
       { role: "service-provider", suspended: { $ne: true } },
-      "name email phone servicesOffered district"
+      "name email phone servicesOffered district",
     );
+
+    const providerIds = serviceProvidersRaw.map((p) => p._id).filter(Boolean);
+    const ratingAgg = providerIds.length
+      ? await ServiceBooking.aggregate([
+          {
+            $match: {
+              providerId: { $in: providerIds },
+              rating: { $gte: 1 },
+            },
+          },
+          { $sort: { createdAt: -1 } },
+          {
+            $group: {
+              _id: "$providerId",
+              ratingAvg: { $avg: "$rating" },
+              ratingCount: { $sum: 1 },
+              latestRating: { $first: "$rating" },
+              latestReview: { $first: "$review" },
+              latestRatedAt: { $first: "$createdAt" },
+            },
+          },
+        ])
+      : [];
+
+    const statsByProviderId = new Map(
+      (ratingAgg || []).map((r) => [String(r._id), r]),
+    );
+
+    const serviceProviders = serviceProvidersRaw.map((sp) => {
+      const stats = statsByProviderId.get(String(sp._id));
+      return {
+        ...sp.toObject(),
+        ratingAvg:
+          typeof stats?.ratingAvg === "number" ? Number(stats.ratingAvg) : null,
+        ratingCount:
+          typeof stats?.ratingCount === "number" ? stats.ratingCount : 0,
+        latestRating:
+          typeof stats?.latestRating === "number" ? stats.latestRating : null,
+        latestReview:
+          typeof stats?.latestReview === "string" ? stats.latestReview : "",
+        latestRatedAt: stats?.latestRatedAt || null,
+      };
+    });
     const sellersAll = await SellerProfile.find().populate(
       "sellerId",
-      "name email phone suspended"
+      "name email phone suspended",
     );
     const sellers = sellersAll.filter(
-      (s) => s.sellerId && !s.sellerId.suspended
+      (s) => s.sellerId && !s.sellerId.suspended,
     );
     const customersAll = await CustomerProfile.find().populate(
       "userId",
-      "name email phone suspended"
+      "name email phone suspended",
     );
     const customers = customersAll.filter(
-      (c) => c.userId && !c.userId.suspended
+      (c) => c.userId && !c.userId.suspended,
     );
 
     res.json({ serviceProviders, sellers, customers });
@@ -319,7 +362,7 @@ router.get("/api/orders", isAuthenticated, isManager, async (req, res) => {
         b.customerId &&
         !b.customerId.suspended &&
         b.providerId &&
-        !b.providerId.suspended
+        !b.providerId.suspended,
     );
 
     const ordersRaw = await Order.find()
@@ -331,12 +374,12 @@ router.get("/api/orders", isAuthenticated, isManager, async (req, res) => {
         (o) =>
           o.userId &&
           !o.userId.suspended &&
-          o.items.every((it) => it.seller && !it.seller.suspended)
+          o.items.every((it) => it.seller && !it.seller.suspended),
       )
       .map((o) => {
         // Derive a manager-visible status from per-item statuses
         const itemStatuses = (o.items || []).map(
-          (it) => it.itemStatus || o.orderStatus || "pending"
+          (it) => it.itemStatus || o.orderStatus || "pending",
         );
         const allCancelled =
           itemStatuses.length > 0 &&
@@ -378,7 +421,7 @@ router.get("/api/payments", isAuthenticated, isManager, async (req, res) => {
         s.customerId &&
         !s.customerId.suspended &&
         s.providerId &&
-        !s.providerId.suspended
+        !s.providerId.suspended,
     );
 
     // Product orders (all) filtered for active users/sellers
@@ -390,7 +433,7 @@ router.get("/api/payments", isAuthenticated, isManager, async (req, res) => {
       (o) =>
         o.userId &&
         !o.userId.suspended &&
-        o.items.every((it) => it.seller && !it.seller.suspended)
+        o.items.every((it) => it.seller && !it.seller.suspended),
     );
 
     res.json({ orders, serviceOrders });
@@ -433,7 +476,7 @@ router.get(
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader(
         "Content-Disposition",
-        `attachment; filename=manager-dashboard-${Date.now()}.pdf`
+        `attachment; filename=manager-dashboard-${Date.now()}.pdf`,
       );
       doc.pipe(res);
 
@@ -489,7 +532,7 @@ router.get(
           doc.text(`${label}`, { continued: true });
           doc.text(`Revenue: ${currency(revenueChart.totalRevenue[idx] || 0)}`);
           doc.text(
-            `Commission: ${currency(revenueChart.commission[idx] || 0)}`
+            `Commission: ${currency(revenueChart.commission[idx] || 0)}`,
           );
           doc.moveDown(0.5);
         });
@@ -526,7 +569,7 @@ router.get(
       console.error("Dashboard report error", err);
       res.status(500).json({ error: "Failed to generate report" });
     }
-  }
+  },
 );
 
 // Routes
@@ -600,7 +643,7 @@ router.get("/orders", isAuthenticated, isManager, async (req, res) => {
         b.customerId &&
         !b.customerId.suspended &&
         b.providerId &&
-        !b.providerId.suspended
+        !b.providerId.suspended,
     );
 
     const orders = (
@@ -612,7 +655,7 @@ router.get("/orders", isAuthenticated, isManager, async (req, res) => {
       (o) =>
         o.userId &&
         !o.userId.suspended &&
-        o.items.every((item) => item.seller && !item.seller.suspended)
+        o.items.every((item) => item.seller && !item.seller.suspended),
     );
 
     res.render("manager/orders", { bookings, orders });
@@ -626,7 +669,7 @@ router.get(
   "/payments",
   isAuthenticated,
   isManager,
-  managerController.getPayments
+  managerController.getPayments,
 );
 
 router.get("/services", isAuthenticated, isManager, async (req, res) => {
@@ -640,20 +683,20 @@ router.get("/services", isAuthenticated, isManager, async (req, res) => {
     // Active sellers (with valid associated User)
     const sellers = await SellerProfile.find().populate(
       "sellerId",
-      "name email phone suspended"
+      "name email phone suspended",
     );
     const activeSellers = sellers.filter(
-      (seller) => seller.sellerId && !seller.sellerId.suspended
+      (seller) => seller.sellerId && !seller.sellerId.suspended,
     );
 
     // Fetch customers and populate user info
     const customers = await CustomerProfile.find().populate(
       "userId",
-      "name email phone suspended"
+      "name email phone suspended",
     );
 
     const activeCustomers = customers.filter(
-      (c) => c.userId && !c.userId.suspended
+      (c) => c.userId && !c.userId.suspended,
     );
 
     // Render view
@@ -669,6 +712,14 @@ router.get("/services", isAuthenticated, isManager, async (req, res) => {
 });
 
 router.get("/profile-data/:id", managerController.getProfileData);
+
+// Rich profile overview API (used by React manager profile page)
+router.get(
+  "/api/profile-overview/:id",
+  isAuthenticated,
+  isManager,
+  managerController.getProfileOverview,
+);
 
 router.get("/users", isAuthenticated, isManager, async (req, res) => {
   try {
@@ -714,7 +765,7 @@ router.post(
       console.error("Error suspending user:", error);
       res.status(500).json({ success: false, message: "Server error" });
     }
-  }
+  },
 );
 
 router.post(
@@ -741,7 +792,7 @@ router.post(
       console.error("Error restoring user:", error);
       res.status(500).json({ success: false, message: "Server error" });
     }
-  }
+  },
 );
 
 // Create a new Manager user (manager-only)
@@ -810,7 +861,7 @@ router.post(
         .status(500)
         .json({ success: false, message: "Server error creating manager" });
     }
-  }
+  },
 );
 
 router.post(
@@ -845,7 +896,7 @@ router.post(
           .json({ success: false, message: "Error cancelling booking" });
       res.status(500).send("Error cancelling booking");
     }
-  }
+  },
 );
 
 router.post(
@@ -880,7 +931,7 @@ router.post(
           .json({ success: false, message: "Error restoring booking" });
       res.status(500).send("Error restoring booking");
     }
-  }
+  },
 );
 
 router.post(
@@ -896,7 +947,7 @@ router.post(
       const product = await Product.findByIdAndUpdate(
         req.params.id,
         { status: "approved" },
-        { new: true }
+        { new: true },
       );
 
       if (!product) {
@@ -927,7 +978,7 @@ router.post(
       }
       res.status(500).send("Error approving product");
     }
-  }
+  },
 );
 
 router.post(
@@ -943,7 +994,7 @@ router.post(
       const product = await Product.findByIdAndUpdate(
         req.params.id,
         { status: "rejected" },
-        { new: true }
+        { new: true },
       );
 
       if (!product) {
@@ -974,7 +1025,7 @@ router.post(
       }
       res.status(500).send("Error rejecting product");
     }
-  }
+  },
 );
 
 router.post(
@@ -1007,7 +1058,7 @@ router.post(
           .json({ success: false, message: "Error cancelling order" });
       res.status(500).send("Error cancelling order");
     }
-  }
+  },
 );
 
 router.post(
@@ -1047,7 +1098,7 @@ router.post(
           .json({ success: false, message: "Error restoring order" });
       res.status(500).send("Error restoring order");
     }
-  }
+  },
 );
 
 module.exports = router;

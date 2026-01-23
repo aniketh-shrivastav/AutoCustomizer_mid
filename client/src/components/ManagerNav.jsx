@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { NavLink } from "react-router-dom";
 import "./Nav.css";
 import ThemeToggle from "./../components/ThemeToggle";
@@ -9,6 +9,7 @@ import ThemeToggle from "./../components/ThemeToggle";
  */
 export default function ManagerNav() {
   const [open, setOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const links = useMemo(
     () => [
       { to: "/manager/dashboard", label: "Dashboard" },
@@ -32,6 +33,29 @@ export default function ManagerNav() {
     const next = encodeURIComponent(`${window.location.origin}/login`);
     window.location.href = `${backendBase()}/logout?next=${next}`;
   }
+
+  // Poll unread count for manager
+  useEffect(() => {
+    let timer;
+    let cancelled = false;
+    async function loadCount() {
+      try {
+        const res = await fetch(`${backendBase()}/chat/unread-count`, {
+          headers: { Accept: "application/json" },
+          credentials: "include",
+        });
+        const j = await res.json().catch(() => ({}));
+        if (!cancelled && j && j.success) setUnreadCount(j.count || 0);
+      } catch {}
+    }
+    loadCount();
+    timer = setInterval(loadCount, 15000); // 15s for managers
+    return () => {
+      cancelled = true;
+      if (timer) clearInterval(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <>
@@ -63,7 +87,27 @@ export default function ManagerNav() {
                   }
                   end={false}
                 >
-                  {l.label}
+                  {l.label === "Chat" ? (
+                    <span
+                      style={{
+                        display: "inline-flex",
+                        gap: 6,
+                        alignItems: "center",
+                      }}
+                    >
+                      {l.label}
+                      <span
+                        className="badge"
+                        title={`Unread messages: ${unreadCount}`}
+                        aria-label={`Unread messages: ${unreadCount}`}
+                        style={{ opacity: unreadCount === 0 ? 0.6 : 1 }}
+                      >
+                        {unreadCount}
+                      </span>
+                    </span>
+                  ) : (
+                    l.label
+                  )}
                 </NavLink>
               </li>
             ))}
