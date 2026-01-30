@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import ManagerNav from "../../components/ManagerNav";
 import Chart from "chart.js/auto";
@@ -10,11 +10,31 @@ import {
 
 const STALE_AFTER_MS = 1000 * 60 * 5; // 5 minutes
 
+const DEFAULT_REVENUE_CHART = {
+  labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+  totalRevenue: [8500, 9200, 7800, 10500, 11200, 9800],
+  commission: [1700, 1840, 1560, 2100, 2240, 1960],
+};
+
+const DEFAULT_USER_GROWTH_CHART = {
+  labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+  totalUsers: [850, 950, 1050, 1150, 1200, 1234],
+  serviceProviders: [200, 230, 260, 290, 320, 340],
+  sellers: [100, 120, 150, 180, 210, 230],
+};
+
 function formatCurrency(v) {
   return "₹" + Number(v || 0).toFixed(2);
 }
 
-function ProductTable({ title, products, type }) {
+function ProductTable({
+  title,
+  products,
+  type,
+  onApprove,
+  onReject,
+  actionState,
+}) {
   if (!products || products.length === 0) {
     return (
       <div className="product-tabs">
@@ -65,47 +85,53 @@ function ProductTable({ title, products, type }) {
                 <td>
                   {type === "pending" && (
                     <>
-                      <form
-                        method="POST"
-                        action={`/manager/products/${p._id}/approve`}
-                        style={{ display: "inline" }}
+                      <button
+                        type="button"
+                        className="btn btn-approve"
+                        onClick={() => onApprove?.(p._id)}
+                        disabled={
+                          actionState?.loadingKey === `${p._id}:approve`
+                        }
                       >
-                        <button type="submit" className="btn btn-approve">
-                          Approve
-                        </button>
-                      </form>
-                      <form
-                        method="POST"
-                        action={`/manager/products/${p._id}/reject`}
-                        style={{ display: "inline" }}
+                        {actionState?.loadingKey === `${p._id}:approve`
+                          ? "Approving..."
+                          : "Approve"}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-suspend"
+                        onClick={() => onReject?.(p._id)}
+                        disabled={actionState?.loadingKey === `${p._id}:reject`}
                       >
-                        <button type="submit" className="btn btn-suspend">
-                          Reject
-                        </button>
-                      </form>
+                        {actionState?.loadingKey === `${p._id}:reject`
+                          ? "Rejecting..."
+                          : "Reject"}
+                      </button>
                     </>
                   )}
                   {type === "approved" && (
-                    <form
-                      method="POST"
-                      action={`/manager/products/${p._id}/reject`}
-                      style={{ display: "inline" }}
+                    <button
+                      type="button"
+                      className="btn btn-suspend"
+                      onClick={() => onReject?.(p._id)}
+                      disabled={actionState?.loadingKey === `${p._id}:reject`}
                     >
-                      <button type="submit" className="btn btn-suspend">
-                        Reject
-                      </button>
-                    </form>
+                      {actionState?.loadingKey === `${p._id}:reject`
+                        ? "Rejecting..."
+                        : "Reject"}
+                    </button>
                   )}
                   {type === "rejected" && (
-                    <form
-                      method="POST"
-                      action={`/manager/products/${p._id}/approve`}
-                      style={{ display: "inline" }}
+                    <button
+                      type="button"
+                      className="btn btn-approve"
+                      onClick={() => onApprove?.(p._id)}
+                      disabled={actionState?.loadingKey === `${p._id}:approve`}
                     >
-                      <button type="submit" className="btn btn-approve">
-                        Approve
-                      </button>
-                    </form>
+                      {actionState?.loadingKey === `${p._id}:approve`
+                        ? "Approving..."
+                        : "Approve"}
+                    </button>
                   )}
                 </td>
               </tr>
@@ -132,6 +158,88 @@ export default function ManagerDashboard() {
   const userDistChart = useRef();
   const revenueChart = useRef();
   const growthChart = useRef();
+  const [productActionState, setProductActionState] = useState({
+    loadingKey: null,
+    error: null,
+  });
+  const [reportState, setReportState] = useState({ loading: false, error: "" });
+
+  const revenueChartData = useMemo(() => {
+    if (data?.charts?.monthlyRevenue) {
+      return data.charts.monthlyRevenue;
+    }
+    return DEFAULT_REVENUE_CHART;
+  }, [data]);
+
+  const userGrowthChartData = useMemo(() => {
+    if (data?.charts?.userGrowth) {
+      return data.charts.userGrowth;
+    }
+    return DEFAULT_USER_GROWTH_CHART;
+  }, [data]);
+
+  const handleProductAction = async (productId, action) => {
+    if (!productId || !["approve", "reject"].includes(action)) return;
+    setProductActionState({
+      loadingKey: `${productId}:${action}`,
+      error: null,
+    });
+    try {
+      const res = await fetch(`/manager/products/${productId}/${action}`, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "X-Requested-With": "XMLHttpRequest",
+        },
+        credentials: "include",
+      });
+
+      const ct = res.headers.get("content-type") || "";
+      const payload = ct.includes("application/json") ? await res.json() : null;
+      if (!res.ok) {
+        throw new Error(
+          payload?.message || `Failed to ${action} product. Try again.`
+        );
+      }
+
+      await dispatch(fetchManagerDashboard()).unwrap();
+      setProductActionState({ loadingKey: null, error: null });
+    } catch (err) {
+      setProductActionState({
+        loadingKey: null,
+        error: err.message || "Something went wrong.",
+      });
+    }
+  };
+
+  const handleDownloadReport = async () => {
+    setReportState({ loading: true, error: "" });
+    try {
+      const res = await fetch("/manager/api/dashboard/report", {
+        headers: { Accept: "application/pdf" },
+      });
+      if (!res.ok) {
+        throw new Error("Failed to generate report");
+      }
+      const blob = await res.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = `manager-dashboard-report-${new Date()
+        .toISOString()
+        .slice(0, 10)}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(blobUrl);
+      setReportState({ loading: false, error: "" });
+    } catch (err) {
+      setReportState({
+        loading: false,
+        error: err.message || "Unable to download report",
+      });
+    }
+  };
 
   useEffect(() => {
     // Ensure manager pages render on a light background and not auth gradient
@@ -178,20 +286,25 @@ export default function ManagerDashboard() {
     }
 
     if (revenueRef.current) {
+      const {
+        labels,
+        totalRevenue,
+        commission: commissionSeries,
+      } = revenueChartData;
       revenueChart.current = new Chart(revenueRef.current, {
         type: "bar",
         data: {
-          labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+          labels,
           datasets: [
             {
               label: "Total Revenue",
-              data: [8500, 9200, 7800, 10500, 11200, 9800],
+              data: totalRevenue,
               backgroundColor: "#4299e1",
               borderRadius: 5,
             },
             {
               label: "Commission (20%)",
-              data: [1700, 1840, 1560, 2100, 2240, 1960],
+              data: commissionSeries,
               backgroundColor: "#48bb78",
               borderRadius: 5,
             },
@@ -201,28 +314,34 @@ export default function ManagerDashboard() {
     }
 
     if (growthRef.current) {
+      const {
+        labels,
+        totalUsers: totalUsersSeries,
+        serviceProviders: serviceProvidersSeries,
+        sellers: sellerSeries,
+      } = userGrowthChartData;
       growthChart.current = new Chart(growthRef.current, {
         type: "line",
         data: {
-          labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+          labels,
           datasets: [
             {
               label: "Total Users",
-              data: [850, 950, 1050, 1150, 1200, 1234],
+              data: totalUsersSeries,
               borderColor: "#4299e1",
               tension: 0.3,
               fill: false,
             },
             {
               label: "Service Providers",
-              data: [200, 230, 260, 290, 320, 340],
+              data: serviceProvidersSeries,
               borderColor: "#48bb78",
               tension: 0.3,
               fill: false,
             },
             {
               label: "Sellers",
-              data: [100, 120, 150, 180, 210, 230],
+              data: sellerSeries,
               borderColor: "#ed8936",
               tension: 0.3,
               fill: false,
@@ -231,7 +350,7 @@ export default function ManagerDashboard() {
         },
       });
     }
-  }, [data]);
+  }, [data, revenueChartData, userGrowthChartData]);
 
   const hasData = Boolean(data);
   const isInitialLoading =
@@ -289,15 +408,41 @@ export default function ManagerDashboard() {
               : "Data will refresh automatically."}
             {status === "loading" && hasData && " • Refreshing..."}
           </div>
-          <button
-            type="button"
-            className="btn"
-            onClick={() => dispatch(fetchManagerDashboard())}
-            disabled={status === "loading"}
-          >
-            {status === "loading" ? "Refreshing" : "Refresh Data"}
-          </button>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              type="button"
+              className="btn"
+              onClick={() => dispatch(fetchManagerDashboard())}
+              disabled={status === "loading"}
+            >
+              {status === "loading" ? "Refreshing" : "Refresh Data"}
+            </button>
+            <button
+              type="button"
+              className="btn"
+              style={{ background: "#111827" }}
+              onClick={handleDownloadReport}
+              disabled={reportState.loading}
+            >
+              {reportState.loading ? "Preparing Report" : "Download Report"}
+            </button>
+          </div>
         </div>
+
+        {reportState.error && (
+          <div
+            style={{
+              background: "#fef2f2",
+              color: "#b91c1c",
+              border: "1px solid #fecaca",
+              borderRadius: 8,
+              padding: "8px 12px",
+              marginBottom: 12,
+            }}
+          >
+            {reportState.error}
+          </div>
+        )}
 
         {error && hasData && (
           <div
@@ -393,12 +538,21 @@ export default function ManagerDashboard() {
             </button>
           </div>
 
+          {productActionState.error && (
+            <div className="error-banner" style={{ marginBottom: 16 }}>
+              {productActionState.error}
+            </div>
+          )}
+
           {activeProductTab === "pending" && (
             <div className="tab-content" style={{ display: "block" }}>
               <ProductTable
                 title="Pending"
                 products={data.pendingProducts}
                 type="pending"
+                onApprove={(id) => handleProductAction(id, "approve")}
+                onReject={(id) => handleProductAction(id, "reject")}
+                actionState={productActionState}
               />
             </div>
           )}
@@ -408,6 +562,9 @@ export default function ManagerDashboard() {
                 title="Approved"
                 products={data.approvedProducts}
                 type="approved"
+                onApprove={(id) => handleProductAction(id, "approve")}
+                onReject={(id) => handleProductAction(id, "reject")}
+                actionState={productActionState}
               />
             </div>
           )}
@@ -417,6 +574,9 @@ export default function ManagerDashboard() {
                 title="Rejected"
                 products={data.rejectedProducts}
                 type="rejected"
+                onApprove={(id) => handleProductAction(id, "approve")}
+                onReject={(id) => handleProductAction(id, "reject")}
+                actionState={productActionState}
               />
             </div>
           )}

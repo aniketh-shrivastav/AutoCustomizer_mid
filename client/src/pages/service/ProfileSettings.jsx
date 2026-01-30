@@ -31,9 +31,53 @@ export default function ServiceProfileSettings() {
   });
   const [services, setServices] = useState([]); // [{name, cost}]
 
+  // Car Painting color options (hex strings)
+  const [paintColors, setPaintColors] = useState([]);
+  const [newPaintColor, setNewPaintColor] = useState("#ff0000");
+
   const [newService, setNewService] = useState("");
   const [newCost, setNewCost] = useState("");
   const [errors, setErrors] = useState({});
+
+  const hasCarPainting = useMemo(() => {
+    return services.some((s) => {
+      const name = String(s?.name || "").toLowerCase();
+      // Matches: "Car Painting", "Car paint", "Car Paint Job", etc.
+      return (
+        name.includes("car") &&
+        (name.includes("paint") || name.includes("painting"))
+      );
+    });
+  }, [services]);
+
+  function normalizeHexColor(v) {
+    const c = String(v || "")
+      .trim()
+      .toLowerCase();
+    return /^#[0-9a-f]{6}$/.test(c) ? c : "";
+  }
+
+  function addPaintColor(color) {
+    const normalized = normalizeHexColor(color);
+    if (!normalized) {
+      setErrors((e) => ({ ...e, paintColors: "Please pick a valid color" }));
+      return;
+    }
+    setPaintColors((prev) => {
+      const next = Array.from(
+        new Set([
+          ...(prev || []).map(normalizeHexColor).filter(Boolean),
+          normalized,
+        ])
+      );
+      return next.slice(0, 24);
+    });
+    setErrors((e) => ({ ...e, paintColors: undefined }));
+  }
+
+  function removePaintColor(idx) {
+    setPaintColors((prev) => (prev || []).filter((_, i) => i !== idx));
+  }
 
   const backendBase = useMemo(() => {
     try {
@@ -90,12 +134,24 @@ export default function ServiceProfileSettings() {
             cost: s.cost ?? 0,
           }))
         );
+        setPaintColors(
+          (u.paintColors || [])
+            .map((c) => normalizeHexColor(c))
+            .filter(Boolean)
+            .slice(0, 24)
+        );
       } catch (e) {
         setStatus(e.message || "Failed to load");
         setStatusColor("red");
       }
     })();
   }, []);
+
+  // If provider removes Car Painting from services, clear colors locally (server also clears)
+  useEffect(() => {
+    if (!hasCarPainting && paintColors.length) setPaintColors([]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasCarPainting]);
 
   function setField(name, value) {
     setForm((f) => ({ ...f, [name]: value }));
@@ -115,6 +171,15 @@ export default function ServiceProfileSettings() {
     );
     if (bad)
       errs.services = "Please ensure all services have a name and a valid cost";
+
+    if (hasCarPainting) {
+      const validColors = (paintColors || [])
+        .map(normalizeHexColor)
+        .filter(Boolean);
+      if (validColors.length === 0) {
+        errs.paintColors = "Add at least one paint color for Car Painting";
+      }
+    }
     setErrors(errs);
     return Object.keys(errs).length === 0;
   }
@@ -163,6 +228,9 @@ export default function ServiceProfileSettings() {
           phone: form.phone.trim(),
           district: form.district.trim(),
           servicesOffered: services,
+          paintColors: (paintColors || [])
+            .map(normalizeHexColor)
+            .filter(Boolean),
         }),
       });
       const out = await res.json().catch(() => ({}));
@@ -199,6 +267,12 @@ export default function ServiceProfileSettings() {
             name: s.name || "",
             cost: s.cost ?? 0,
           }))
+        );
+        setPaintColors(
+          (u.paintColors || [])
+            .map((c) => normalizeHexColor(c))
+            .filter(Boolean)
+            .slice(0, 24)
         );
       } catch {}
     })();
@@ -455,6 +529,123 @@ export default function ServiceProfileSettings() {
               </div>
             ) : null}
           </div>
+
+          {/* Car Painting color options */}
+          {hasCarPainting && (
+            <div className="services-container" style={{ marginTop: 16 }}>
+              <h2>Car Painting Colors Offered</h2>
+              <div
+                style={{ fontSize: "0.9em", color: "#555", marginBottom: 8 }}
+              >
+                Customers will be able to select one of these colors while
+                booking.
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  gap: 10,
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                }}
+              >
+                <input
+                  type="color"
+                  value={newPaintColor}
+                  disabled={!editing}
+                  onChange={(e) => setNewPaintColor(e.target.value)}
+                  aria-label="Pick a paint color"
+                  style={{
+                    width: 44,
+                    height: 36,
+                    padding: 0,
+                    border: "1px solid #ccc",
+                    borderRadius: 8,
+                  }}
+                />
+                <input
+                  type="text"
+                  value={newPaintColor}
+                  disabled={!editing}
+                  onChange={(e) => setNewPaintColor(e.target.value)}
+                  placeholder="#rrggbb"
+                  style={{ width: 120 }}
+                />
+                {editing ? (
+                  <button
+                    type="button"
+                    className="btn add-service-btn"
+                    onClick={() => addPaintColor(newPaintColor)}
+                  >
+                    Add Color
+                  </button>
+                ) : null}
+                <div
+                  style={{ marginLeft: "auto", fontSize: 12, color: "#666" }}
+                >
+                  {(paintColors || []).length}/24
+                </div>
+              </div>
+
+              {errors.paintColors ? (
+                <div
+                  className="error"
+                  style={{ display: "block", marginTop: 6 }}
+                >
+                  {errors.paintColors}
+                </div>
+              ) : (
+                <div className="error" />
+              )}
+
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 10,
+                  marginTop: 12,
+                }}
+              >
+                {(paintColors || []).map((c, idx) => (
+                  <div
+                    key={`${c}-${idx}`}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      border: "1px solid #e5e7eb",
+                      borderRadius: 10,
+                      padding: "6px 10px",
+                      background: "#fff",
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: 18,
+                        height: 18,
+                        borderRadius: 6,
+                        background: c,
+                        border: "1px solid #bbb",
+                      }}
+                    />
+                    <span style={{ fontFamily: "monospace", fontSize: 12 }}>
+                      {c}
+                    </span>
+                    {editing ? (
+                      <button
+                        type="button"
+                        className="delete-btn"
+                        onClick={() => removePaintColor(idx)}
+                        style={{ padding: "4px 10px" }}
+                      >
+                        Remove
+                      </button>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="buttons">
             {!editing ? (

@@ -89,8 +89,17 @@ router.get("/booking", customerOnly, async (req, res) => {
     });
 
     const serviceProvidersData = await User.find(
-      { role: "service-provider", suspended: { $ne: true } },
-      "name servicesOffered district cost"
+      {
+        role: "service-provider",
+        suspended: { $ne: true },
+        servicesOffered: {
+          $elemMatch: {
+            name: { $exists: true, $ne: "" },
+            cost: { $gt: 0 },
+          },
+        },
+      },
+      "name servicesOffered district paintColors"
     );
 
     const uniqueServicesSet = new Set();
@@ -99,19 +108,28 @@ router.get("/booking", customerOnly, async (req, res) => {
     const serviceCostMap = {};
 
     serviceProvidersData.forEach((provider) => {
-      if (provider.servicesOffered && provider.servicesOffered.length > 0) {
-        provider.servicesOffered.forEach((service) => {
-          if (service.name) {
-            uniqueServicesSet.add(service.name);
-            // Save cost only if it's not already stored
-            if (!serviceCostMap[service.name]) {
-              serviceCostMap[service.name] = service.cost;
-            }
-          }
-        });
-        if (provider.district) uniqueDistrictsSet.add(provider.district);
-        serviceProviders.push(provider);
-      }
+      const services = Array.isArray(provider.servicesOffered)
+        ? provider.servicesOffered
+            .map((s) => ({
+              name: String(s?.name || "").trim(),
+              cost: Number(s?.cost),
+            }))
+            .filter((s) => s.name && !isNaN(s.cost) && s.cost > 0)
+        : [];
+
+      if (services.length === 0) return;
+
+      services.forEach((service) => {
+        uniqueServicesSet.add(service.name);
+        if (!serviceCostMap[service.name]) {
+          serviceCostMap[service.name] = service.cost;
+        }
+      });
+      if (provider.district) uniqueDistrictsSet.add(provider.district);
+      serviceProviders.push({
+        ...provider.toObject(),
+        servicesOffered: services,
+      });
     });
 
     // ✅ Convert Sets to sorted Arrays
@@ -153,8 +171,17 @@ router.get("/api/booking", customerOnly, async (req, res) => {
     });
 
     const serviceProvidersData = await User.find(
-      { role: "service-provider", suspended: { $ne: true } },
-      "name servicesOffered district cost"
+      {
+        role: "service-provider",
+        suspended: { $ne: true },
+        servicesOffered: {
+          $elemMatch: {
+            name: { $exists: true, $ne: "" },
+            cost: { $gt: 0 },
+          },
+        },
+      },
+      "name servicesOffered district paintColors"
     );
 
     const uniqueServicesSet = new Set();
@@ -163,18 +190,28 @@ router.get("/api/booking", customerOnly, async (req, res) => {
     const serviceCostMap = {};
 
     serviceProvidersData.forEach((provider) => {
-      if (provider.servicesOffered && provider.servicesOffered.length > 0) {
-        provider.servicesOffered.forEach((service) => {
-          if (service.name) {
-            uniqueServicesSet.add(service.name);
-            if (!serviceCostMap[service.name]) {
-              serviceCostMap[service.name] = service.cost;
-            }
-          }
-        });
-        if (provider.district) uniqueDistrictsSet.add(provider.district);
-        serviceProviders.push(provider);
-      }
+      const services = Array.isArray(provider.servicesOffered)
+        ? provider.servicesOffered
+            .map((s) => ({
+              name: String(s?.name || "").trim(),
+              cost: Number(s?.cost),
+            }))
+            .filter((s) => s.name && !isNaN(s.cost) && s.cost > 0)
+        : [];
+
+      if (services.length === 0) return;
+
+      services.forEach((service) => {
+        uniqueServicesSet.add(service.name);
+        if (!serviceCostMap[service.name]) {
+          serviceCostMap[service.name] = service.cost;
+        }
+      });
+      if (provider.district) uniqueDistrictsSet.add(provider.district);
+      serviceProviders.push({
+        ...provider.toObject(),
+        servicesOffered: services,
+      });
     });
 
     const uniqueServices = Array.from(uniqueServicesSet).sort((a, b) =>
@@ -184,6 +221,36 @@ router.get("/api/booking", customerOnly, async (req, res) => {
       a.localeCompare(b)
     );
 
+    // Aggregate ratings and review counts per provider
+    const providerIds = serviceProviders.map((p) => p?._id).filter(Boolean);
+    let ratingsMap = {};
+    if (providerIds.length > 0) {
+      try {
+        const agg = await ServiceBooking.aggregate([
+          { $match: { providerId: { $in: providerIds } } },
+          { $match: { rating: { $exists: true } } },
+          {
+            $group: {
+              _id: "$providerId",
+              avgRating: { $avg: "$rating" },
+              totalReviews: { $sum: 1 },
+            },
+          },
+        ]);
+        ratingsMap = Object.fromEntries(
+          agg.map((r) => [
+            String(r._id),
+            {
+              avgRating: Number(r.avgRating?.toFixed?.(1) || 0),
+              totalReviews: r.totalReviews || 0,
+            },
+          ])
+        );
+      } catch (e) {
+        ratingsMap = {};
+      }
+    }
+
     res.json({
       uniqueServices,
       uniqueDistricts,
@@ -192,6 +259,7 @@ router.get("/api/booking", customerOnly, async (req, res) => {
       selectedServiceType: "",
       selectedDistrict: "",
       serviceCostMap,
+      ratingsMap,
     });
   } catch (err) {
     console.error("Booking API error:", err);

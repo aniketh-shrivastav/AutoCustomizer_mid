@@ -1,16 +1,10 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import Chart from "chart.js/auto";
 import "../../Css/sellerDashboard.css";
+import { fetchSellerDashboard } from "../../store/sellerSlice";
 
-function useLink(href) {
-  useEffect(() => {
-    const link = document.createElement("link");
-    link.rel = "stylesheet";
-    link.href = href;
-    document.head.appendChild(link);
-    return () => document.head.removeChild(link);
-  }, [href]);
-}
+const STALE_AFTER_MS = 1000 * 60 * 5;
 
 export default function SellerDashboard() {
   // Add class to <body> for dashboard-specific CSS
@@ -21,67 +15,59 @@ export default function SellerDashboard() {
     };
   }, []);
 
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [stats, setStats] = useState({
+  const dispatch = useDispatch();
+  const { dashboard, status, error, lastFetched, hydratedFromStorage } =
+    useSelector((state) => state.seller);
+
+  const hasData = Boolean(dashboard);
+  const loading = !hasData && (status === "loading" || status === "idle");
+  const refreshing = hasData && status === "loading";
+  const stats = dashboard?.stats || {
     totalSales: 0,
     totalEarnings: 0,
     totalOrders: 0,
-  });
-  const [stockAlerts, setStockAlerts] = useState([]);
-  const [recentOrders, setRecentOrders] = useState([]);
-  const [statusDistribution, setStatusDistribution] = useState({});
+  };
+  const stockAlerts = dashboard?.stockAlerts || [];
+  const recentOrders = dashboard?.recentOrders || [];
+  const statusDistribution = dashboard?.statusDistribution || {};
+  const lastUpdatedText = lastFetched
+    ? `Last updated ${new Date(lastFetched).toLocaleString()}${
+        refreshing ? " • Refreshing..." : ""
+      }`
+    : loading
+    ? "Loading dashboard..."
+    : "Data refreshes periodically.";
 
   const pieRef = useRef(null);
   const pieInst = useRef(null);
 
   useEffect(() => {
-    let cancelled = false;
+    if (hydratedFromStorage) {
+      dispatch(fetchSellerDashboard());
+    }
+  }, [dispatch, hydratedFromStorage]);
 
-    (async () => {
-      try {
-        setLoading(true);
-        const res = await fetch("/seller/api/dashboard", {
-          headers: { Accept: "application/json" },
-        });
-
-        if (res.status === 401) {
-          window.location.href = "/login";
-          return;
-        }
-
-        const j = await res.json();
-        if (!j.success)
-          throw new Error(j.message || "Failed to load dashboard");
-
-        if (cancelled) return;
-
-        setStats({
-          totalSales: j.totalSales || 0,
-          totalEarnings: j.totalEarnings || 0,
-          totalOrders: j.totalOrders || 0,
-        });
-
-        setStockAlerts(j.stockAlerts || []);
-        setRecentOrders(j.recentOrders || []);
-        setStatusDistribution(j.statusDistribution || {});
-      } catch (e) {
-        if (!cancelled) setError(e.message || "Failed to load dashboard");
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-
-    return () => (cancelled = true);
-  }, []);
+  useEffect(() => {
+    const shouldFetch =
+      status === "idle" ||
+      !lastFetched ||
+      Date.now() - (lastFetched || 0) > STALE_AFTER_MS;
+    if (shouldFetch) {
+      dispatch(fetchSellerDashboard());
+    }
+  }, [dispatch, status, lastFetched]);
 
   // Pie chart setup
   useEffect(() => {
     if (!pieRef.current) return;
-    if (pieInst.current) pieInst.current.destroy();
+    if (pieInst.current) {
+      pieInst.current.destroy();
+      pieInst.current = null;
+    }
 
-    const labels = Object.keys(statusDistribution || {});
-    const values = Object.values(statusDistribution || {});
+    const labels = Object.keys(statusDistribution);
+    const values = Object.values(statusDistribution);
+    if (!labels.length) return;
 
     try {
       pieInst.current = new Chart(pieRef.current.getContext("2d"), {
@@ -109,8 +95,17 @@ export default function SellerDashboard() {
       });
     } catch {}
 
-    return () => pieInst.current && pieInst.current.destroy();
+    return () => {
+      if (pieInst.current) {
+        pieInst.current.destroy();
+        pieInst.current = null;
+      }
+    };
   }, [statusDistribution]);
+
+  const handleRefresh = () => {
+    dispatch(fetchSellerDashboard());
+  };
 
   return (
     <div>
@@ -147,10 +142,48 @@ export default function SellerDashboard() {
       {/* HEADER */}
       <header>
         <h1>AutoCustomizer Seller Dashboard</h1>
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 12,
+            alignItems: "center",
+            marginTop: 8,
+          }}
+        >
+          <span style={{ color: "#6b7280", fontSize: 14 }}>
+            {lastUpdatedText}
+          </span>
+          <button
+            type="button"
+            onClick={handleRefresh}
+            disabled={status === "loading"}
+            style={{
+              padding: "6px 14px",
+              borderRadius: 6,
+              border: "1px solid #cbd5f5",
+              background: status === "loading" ? "#e5e7eb" : "#111827",
+              color: status === "loading" ? "#6b7280" : "#fff",
+              cursor: status === "loading" ? "not-allowed" : "pointer",
+              fontSize: 14,
+              fontWeight: 600,
+            }}
+          >
+            {status === "loading" ? "Refreshing" : "Refresh Data"}
+          </button>
+        </div>
       </header>
 
       {/* MAIN CONTENT */}
       <main className="seller-main">
+        {loading ? (
+          <p className="loading" style={{ textAlign: "center" }}>
+            Loading dashboard...
+          </p>
+        ) : null}
+        {error && hasData ? (
+          <p style={{ color: "red", textAlign: "center" }}>{error}</p>
+        ) : null}
         {/* Stat Cards */}
         <section className="stats">
           <div className="card">
@@ -218,7 +251,13 @@ export default function SellerDashboard() {
           <section className="pie-chart">
             <h2>Order Status Distribution</h2>
             <div style={{ position: "relative", height: 300 }}>
-              <canvas ref={pieRef} />
+              {Object.keys(statusDistribution).length ? (
+                <canvas ref={pieRef} />
+              ) : (
+                <p style={{ textAlign: "center" }}>
+                  No order distribution data yet.
+                </p>
+              )}
             </div>
           </section>
         </div>
@@ -229,7 +268,7 @@ export default function SellerDashboard() {
         <p>© 2025 AutoCustomizer | All Rights Reserved</p>
       </footer>
 
-      {error && (
+      {error && !hasData && (
         <p style={{ color: "red", textAlign: "center" }}>
           Failed to load dashboard: {error}
         </p>

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import CustomerNav from "../../components/CustomerNav";
 //History of orders and services
 function useLink(href) {
@@ -11,6 +12,125 @@ function useLink(href) {
   }, [href]);
 }
 
+const ORDER_STATUS_STYLES = {
+  pending: {
+    label: "Pending",
+    color: "#b45309",
+    background: "#fef3c7",
+  },
+  confirmed: {
+    label: "Confirmed",
+    color: "#1d4ed8",
+    background: "#dbeafe",
+  },
+  shipped: {
+    label: "Shipped",
+    color: "#6d28d9",
+    background: "#ede9fe",
+  },
+  delivered: {
+    label: "Delivered",
+    color: "#047857",
+    background: "#d1fae5",
+  },
+  cancelled: {
+    label: "Cancelled",
+    color: "#b91c1c",
+    background: "#fee2e2",
+  },
+  default: {
+    label: "Processing",
+    color: "#374151",
+    background: "#e5e7eb",
+  },
+};
+
+const SERVICE_STATUS_STYLES = {
+  waiting: {
+    label: "Waiting for Confirmation",
+    color: "#b45309",
+    background: "#fef3c7",
+  },
+  confirmed: {
+    label: "Confirmed",
+    color: "#1d4ed8",
+    background: "#dbeafe",
+  },
+  delivered: {
+    label: "Delivered",
+    color: "#047857",
+    background: "#d1fae5",
+  },
+  rejected: {
+    label: "Rejected",
+    color: "#b91c1c",
+    background: "#fee2e2",
+  },
+  default: {
+    label: "In Progress",
+    color: "#374151",
+    background: "#e5e7eb",
+  },
+};
+
+const HISTORY_SEEN_SIGNATURES_KEY = "customerHistorySeenSignatures:v1";
+
+function safeJsonParse(raw, fallback) {
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return fallback;
+  }
+}
+
+function signatureForOrder(o) {
+  const items = Array.isArray(o?.items) ? o.items : [];
+  return JSON.stringify({
+    placedAt: o?.placedAt || null,
+    orderStatus: o?.orderStatus || null,
+    totalAmount: o?.totalAmount ?? null,
+    items: items.map((i) => ({
+      productId: i?.productId || null,
+      name: i?.name || null,
+      price: i?.price ?? null,
+      quantity: i?.quantity ?? null,
+      itemStatus: i?.itemStatus || null,
+    })),
+  });
+}
+
+function signatureForBooking(b) {
+  return JSON.stringify({
+    createdAt: b?.createdAt || null,
+    status: b?.status || null,
+    totalCost: b?.totalCost ?? null,
+    selectedServices: Array.isArray(b?.selectedServices)
+      ? b.selectedServices
+      : [],
+    paintColor: b?.paintColor || null,
+  });
+}
+
+function renderStatusPill(style) {
+  return (
+    <span
+      className="status-pill"
+      style={{
+        background: style.background,
+        color: style.color,
+        borderColor: style.color,
+      }}
+    >
+      <span
+        className="status-dot"
+        style={{ background: style.color }}
+        aria-hidden="true"
+      />
+      {style.label}
+    </span>
+  );
+}
+
 export default function CustomerHistory() {
   useLink("/styles/styles.css");
   function handleLogout(e) {
@@ -20,6 +140,7 @@ export default function CustomerHistory() {
   }
 
   // Compute backend base URL for downloads. In dev (5173) point to 3000; in prod use same-origin.
+
   const backendBase = useMemo(() => {
     try {
       const hinted = window.__API_BASE__ || process.env.REACT_APP_API_BASE;
@@ -32,11 +153,12 @@ export default function CustomerHistory() {
     }
   }, []);
 
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [upcomingOrders, setUpcomingOrders] = useState([]);
-  const [pastOrders, setPastOrders] = useState([]);
-  const [bookings, setBookings] = useState([]);
+  const dispatch = useDispatch();
+  const { history, status, error, lastFetched } = useSelector(
+    (state) => state.customer,
+  );
+  const { upcomingOrders = [], pastOrders = [], bookings = [] } = history || {};
+  const loading = status === "loading" || status === "idle";
 
   // Rating modal state
   const [showRating, setShowRating] = useState(false);
@@ -45,34 +167,98 @@ export default function CustomerHistory() {
   const [ratingReview, setRatingReview] = useState("");
 //use effect used
   useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      try {
-        setLoading(true);
-        const res = await fetch("/customer/api/history", {
-          headers: { Accept: "application/json" },
-        });
-        if (res.status === 401) {
-          window.location.href = "/login";
-          return;
-        }
-        if (!res.ok) throw new Error("Failed to load history");
-        const j = await res.json();
-        if (cancelled) return;
-        setUpcomingOrders(j.upcomingOrders || []);
-        setPastOrders(j.pastOrders || []);
-        setBookings(j.bookings || []);
-      } catch (e) {
-        if (!cancelled) setError(e.message || "Failed to load history");
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+    const isStale =
+      !lastFetched ||
+      Date.now() - lastFetched > STALE_AFTER_MS ||
+      status === "idle";
+    if (isStale && status !== "loading") {
+      dispatch(fetchCustomerHistory());
     }
-    load();
-    return () => {
-      cancelled = true;
+  }, [dispatch, status, lastFetched]);
+
+  // Compute which cards are new/updated since last time user saw them.
+  useEffect(() => {
+    if (!history) return;
+
+    const allOrders = [...(upcomingOrders || []), ...(pastOrders || [])];
+    const allBookings = Array.isArray(bookings) ? bookings : [];
+
+    const current = {
+      orders: Object.fromEntries(
+        allOrders.map((o) => [String(o._id), signatureForOrder(o)]),
+      ),
+      bookings: Object.fromEntries(
+        allBookings.map((b) => [String(b._id), signatureForBooking(b)]),
+      ),
     };
-  }, []);
+
+    const raw =
+      typeof window !== "undefined"
+        ? window.localStorage.getItem(HISTORY_SEEN_SIGNATURES_KEY)
+        : null;
+    const stored = raw ? safeJsonParse(raw, null) : null;
+    const hasStored = stored && (stored.orders || stored.bookings);
+
+    // First visit: initialize without highlighting everything.
+    if (!hasStored) {
+      try {
+        if (typeof window !== "undefined")
+          window.localStorage.setItem(
+            HISTORY_SEEN_SIGNATURES_KEY,
+            JSON.stringify(current),
+          );
+      } catch {}
+      setHighlightedIds({ orders: {}, bookings: {} });
+      return;
+    }
+
+    const prevOrders = stored.orders || {};
+    const prevBookings = stored.bookings || {};
+
+    const nextHighlights = { orders: {}, bookings: {} };
+    for (const [id, sig] of Object.entries(current.orders)) {
+      if (prevOrders[id] !== sig) nextHighlights.orders[id] = true;
+    }
+    for (const [id, sig] of Object.entries(current.bookings)) {
+      if (prevBookings[id] !== sig) nextHighlights.bookings[id] = true;
+    }
+    setHighlightedIds(nextHighlights);
+  }, [history, upcomingOrders, pastOrders, bookings]);
+
+  function markSeen(kind, id, currentSignature) {
+    const k = kind === "orders" ? "orders" : "bookings";
+    const key = String(id);
+    setHighlightedIds((prev) => {
+      if (!prev?.[k]?.[key]) return prev;
+      const next = { ...prev, [k]: { ...prev[k] } };
+      delete next[k][key];
+      return next;
+    });
+    setFadingIds((prev) => ({
+      ...prev,
+      [k]: { ...(prev?.[k] || {}), [key]: true },
+    }));
+    window.setTimeout(() => {
+      setFadingIds((prev) => {
+        const next = { ...prev, [k]: { ...(prev?.[k] || {}) } };
+        delete next[k][key];
+        return next;
+      });
+    }, 2500);
+
+    try {
+      const raw = window.localStorage.getItem(HISTORY_SEEN_SIGNATURES_KEY);
+      const stored = raw
+        ? safeJsonParse(raw, { orders: {}, bookings: {} })
+        : { orders: {}, bookings: {} };
+      stored[k] = stored[k] || {};
+      stored[k][key] = currentSignature;
+      window.localStorage.setItem(
+        HISTORY_SEEN_SIGNATURES_KEY,
+        JSON.stringify(stored),
+      );
+    } catch {}
+  }
 
   function formatDate(d) {
     if (!d) return "";
@@ -80,31 +266,48 @@ export default function CustomerHistory() {
   }
 
   function statusSpan(status) {
-    if (["pending", "confirmed", "shipped"].includes(status)) {
-      return <span style={{ color: "orange" }}>{status}</span>;
-    }
-    return <span style={{ color: "green" }}>{status}</span>;
+    const key = String(status || "").toLowerCase();
+    const style = ORDER_STATUS_STYLES[key] || ORDER_STATUS_STYLES.default;
+    return renderStatusPill(style);
   }
 
   function serviceStatusSpan(status, id) {
-    if (status === "Open") {
-      return (
-        <>
-          <span style={{ color: "orange" }}>Waiting for Confirmation</span>
-          <br />
-          <button className="cancel-btn" onClick={() => cancelService(id)}>
-            Cancel Service
-          </button>
-        </>
-      );
-    }
-    return <span style={{ color: "green" }}>Confirmed</span>;
+    const normalized = String(status || "").toLowerCase();
+    const style =
+      normalized === "open"
+        ? SERVICE_STATUS_STYLES.waiting
+        : normalized === "confirmed"
+          ? SERVICE_STATUS_STYLES.confirmed
+          : normalized === "ready"
+            ? SERVICE_STATUS_STYLES.delivered
+            : normalized === "rejected"
+              ? SERVICE_STATUS_STYLES.rejected
+              : SERVICE_STATUS_STYLES.default;
+
+    return (
+      <>
+        {renderStatusPill(style)}
+        {normalized === "open" && (
+          <>
+            <br />
+            <button className="cancel-btn" onClick={() => cancelService(id)}>
+              Cancel Service
+            </button>
+          </>
+        )}
+      </>
+    );
   }
 
   function pastServiceStatusSpan(s) {
-    if (s.status === "Ready")
-      return <span style={{ color: "green" }}>Completed</span>;
-    return <span style={{ color: "red" }}>Rejected</span>;
+    const normalized = String(s.status || "").toLowerCase();
+    const style =
+      normalized === "ready"
+        ? SERVICE_STATUS_STYLES.delivered
+        : normalized === "rejected"
+          ? SERVICE_STATUS_STYLES.rejected
+          : SERVICE_STATUS_STYLES.default;
+    return renderStatusPill(style);
   }
 
   async function cancelOrder(id) {
@@ -161,8 +364,26 @@ export default function CustomerHistory() {
     setShowRating(false);
   }
 
+  function handleRateClick(service) {
+    const normalizedStatus = String(service?.status || "").toLowerCase();
+    if (normalizedStatus !== "ready") {
+      alert("You can only rate services that are marked Ready for delivery.");
+      return;
+    }
+    openRatingModal(service._id);
+  }
+
   async function submitRating(e) {
     e.preventDefault();
+    const numericRating = Number(ratingValue);
+    if (
+      !Number.isFinite(numericRating) ||
+      numericRating < 1 ||
+      numericRating > 5
+    ) {
+      alert("Please enter a rating between 1 and 5.");
+      return;
+    }
     try {
       const res = await fetch(`/customer/rate-service/${ratingBookingId}`, {
         method: "POST",
@@ -170,7 +391,7 @@ export default function CustomerHistory() {
           "Content-Type": "application/json",
           Accept: "application/json",
         },
-        body: JSON.stringify({ rating: ratingValue, review: ratingReview }),
+        body: JSON.stringify({ rating: numericRating, review: ratingReview }),
       });
       if (res.status === 401) {
         window.location.href = "/login";
@@ -188,248 +409,524 @@ export default function CustomerHistory() {
   }
 
   function refresh() {
-    // simple reload of data
-    setLoading(true);
-    fetch("/customer/api/history", { headers: { Accept: "application/json" } })
-      .then((r) => {
-        if (r.status === 401) {
-          window.location.href = "/login";
-          return Promise.reject();
-        }
-        if (!r.ok) throw new Error();
-        return r.json();
-      })
-      .then((j) => {
-        setUpcomingOrders(j.upcomingOrders || []);
-        setPastOrders(j.pastOrders || []);
-        setBookings(j.bookings || []);
-      })
-      .catch(() => setError("Failed to load history"))
-      .finally(() => setLoading(false));
+    dispatch(fetchCustomerHistory());
   }
 
   //upcoming services
   const upcomingServices = useMemo(
     () => bookings.filter((b) => ["Open", "Confirmed"].includes(b.status)),
-    [bookings]
+    [bookings],
   );
   const pastServices = useMemo(
     () => bookings.filter((b) => ["Ready", "Rejected"].includes(b.status)),
-    [bookings]
+    [bookings],
   );
+
+  const hasUpcomingOrderChanges = useMemo(
+    () =>
+      (upcomingOrders || []).some((o) => highlightedIds.orders[String(o?._id)]),
+    [upcomingOrders, highlightedIds],
+  );
+  const hasPastOrderChanges = useMemo(
+    () => (pastOrders || []).some((o) => highlightedIds.orders[String(o?._id)]),
+    [pastOrders, highlightedIds],
+  );
+  const hasUpcomingServiceChanges = useMemo(
+    () =>
+      (upcomingServices || []).some(
+        (s) => highlightedIds.bookings[String(s?._id)],
+      ),
+    [upcomingServices, highlightedIds],
+  );
+  const hasPastServiceChanges = useMemo(
+    () =>
+      (pastServices || []).some((s) => highlightedIds.bookings[String(s?._id)]),
+    [pastServices, highlightedIds],
+  );
+
+  function togglePanel(key) {
+    setOpenPanel((prev) => (prev === key ? "" : key));
+  }
 
   return (
     <>
       <CustomerNav />
 
       <main>
-        <h2>Upcoming Orders</h2>
-        <ul id="upcoming-orders" className="parts-list">
-          {loading ? (
-            <p className="loading">Loading...</p>
-          ) : error ? (
-            <p className="no-items">Failed to load. Refresh page.</p>
-          ) : upcomingOrders.length === 0 ? (
-            <p className="no-items">No upcoming orders found.</p>
-          ) : (
-            upcomingOrders.map((o) => (
-              <li key={o._id} className="history-item">
-                <div className="item-details">
-                  <h3>Order ID: {o._id}</h3>
-                  <p>
-                    <strong>Placed on:</strong> {formatDate(o.placedAt)}
-                  </p>
-                  <p>
-                    <strong>Status:</strong> {statusSpan(o.orderStatus)}
-                  </p>
-                  <p>
-                    <strong>Total Amount:</strong> ₹{o.totalAmount}
-                  </p>
-                  <p>
-                    <strong>Items:</strong>
-                  </p>
-                  <ul>
-                    {(o.items || []).map((i, idx) => (
-                      <li key={idx}>
-                        {i.name} x {i.quantity} (₹{i.price})
-                      </li>
-                    ))}
-                  </ul>
-                  {o.orderStatus === "pending" && (
-                    <button
-                      className="cancel-btn"
-                      onClick={() => cancelOrder(o._id)}
-                    >
-                      Cancel Order
-                    </button>
-                  )}
-                </div>
-              </li>
-            ))
-          )}
-        </ul>
+        <section
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            gap: 12,
+            flexWrap: "wrap",
+            marginBottom: 16,
+            alignItems: "center",
+          }}
+        >
+          <div style={{ color: "#4b5563", fontSize: 14 }}>
+            {lastFetched
+              ? `Last updated ${new Date(lastFetched).toLocaleString()}`
+              : "History loads automatically when you visit this page."}
+            {loading && " • Refreshing..."}
+          </div>
+          <button
+            type="button"
+            style={{
+              background: "#111827",
+              color: "white",
+              border: "none",
+              padding: "8px 16px",
+              borderRadius: 6,
+              cursor: loading ? "not-allowed" : "pointer",
+            }}
+            disabled={loading}
+            onClick={refresh}
+          >
+            {loading ? "Refreshing" : "Refresh"}
+          </button>
+        </section>
 
-        <h2>Past Orders</h2>
-        <ul id="past-orders" className="parts-list">
-          {loading ? (
-            <p className="loading">Loading...</p>
-          ) : error ? (
-            <p className="no-items">Failed to load. Refresh page.</p>
-          ) : pastOrders.length === 0 ? (
-            <p className="no-items">No past orders found.</p>
-          ) : (
-            pastOrders.map((o) => (
-              <li key={o._id} className="history-item">
-                <div className="item-details">
-                  <h3>Order ID: {o._id}</h3>
-                  <p>
-                    <strong>Placed on:</strong> {formatDate(o.placedAt)}
-                  </p>
-                  <p>
-                    <strong>Status:</strong> {o.orderStatus}
-                  </p>
-                  <p>
-                    <strong>Total Amount:</strong> ₹{o.totalAmount}
-                  </p>
-                  <p>
-                    <strong>Items:</strong>
-                  </p>
-                  <ul>
-                    {(o.items || []).map((i, idx) => (
-                      <li key={idx}>
-                        {i.name} x {i.quantity} (₹{i.price})
-                      </li>
-                    ))}
-                  </ul>
-                  {!String(o.orderStatus || "")
-                    .toLowerCase()
-                    .includes("cancel") && (
-                    <a
-                      href={`${backendBase}/customer/order-receipt/${o._id}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="download-btn"
+        <div className="history-accordion">
+          <section
+            className={`history-panel${openPanel === "upcomingOrders" ? " is-open" : ""}`}
+          >
+            <button
+              type="button"
+              className="history-panel-header"
+              onClick={() => togglePanel("upcomingOrders")}
+              aria-expanded={openPanel === "upcomingOrders"}
+            >
+              <span className="history-panel-title">Upcoming Orders</span>
+              {hasUpcomingOrderChanges ? (
+                <span
+                  className="history-panel-dot"
+                  aria-label="Updates available"
+                  title="Updates available"
+                />
+              ) : null}
+              <span className="history-panel-count">
+                {upcomingOrders.length}
+              </span>
+              <span className="history-panel-chevron" aria-hidden="true">
+                {openPanel === "upcomingOrders" ? "▴" : "▾"}
+              </span>
+            </button>
+            <div
+              className="history-panel-body"
+              hidden={openPanel !== "upcomingOrders"}
+            >
+              <ul id="upcoming-orders" className="parts-list">
+                {loading ? (
+                  <p className="loading">Loading...</p>
+                ) : error ? (
+                  <p className="no-items">Failed to load. Refresh page.</p>
+                ) : upcomingOrders.length === 0 ? (
+                  <p className="no-items">No upcoming orders found.</p>
+                ) : (
+                  upcomingOrders.map((o) => (
+                    <li
+                      key={o._id}
+                      className={`history-item${
+                        highlightedIds.orders[String(o._id)]
+                          ? " history-highlight"
+                          : ""
+                      }${
+                        fadingIds.orders[String(o._id)]
+                          ? " history-highlight-fade"
+                          : ""
+                      }`}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => {
+                        const id = String(o._id);
+                        if (highlightedIds.orders[id])
+                          markSeen("orders", id, signatureForOrder(o));
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key !== "Enter" && e.key !== " ") return;
+                        e.preventDefault();
+                        const id = String(o._id);
+                        if (highlightedIds.orders[id])
+                          markSeen("orders", id, signatureForOrder(o));
+                      }}
                     >
-                      Download Receipt
-                    </a>
-                  )}
-                </div>
-              </li>
-            ))
-          )}
-        </ul>
-
-        <h2>Upcoming Services</h2>
-        <ul id="upcoming-services" className="parts-list">
-          {loading ? (
-            <p className="loading">Loading...</p>
-          ) : error ? (
-            <p className="no-items">Failed to load. Refresh page.</p>
-          ) : upcomingServices.length === 0 ? (
-            <p className="no-items">No upcoming services found.</p>
-          ) : (
-            upcomingServices.map((s) => (
-              <li key={s._id} className="history-item">
-                <div className="item-details">
-                  <h3>{(s.selectedServices || []).join(", ")}</h3>
-                  <p>
-                    <strong>Service ID:</strong> {s._id}
-                  </p>
-                  <p>
-                    <strong>Service Provider:</strong>{" "}
-                    {s.providerId?.name || ""} | {s.providerId?.phone || ""}
-                  </p>
-                  <p>
-                    <strong>Booked on:</strong> {formatDate(s.createdAt)}
-                  </p>
-                  <p>
-                    <strong>Car Model:</strong> {s.carModel || ""}
-                  </p>
-                  <p>
-                    <strong>Description:</strong> {s.description || ""}
-                  </p>
-                  <p>
-                    <strong>Cost:</strong> ₹{s.totalCost || 0}
-                  </p>
-                  <p>
-                    <strong>Status:</strong>{" "}
-                    {serviceStatusSpan(s.status, s._id)}
-                  </p>
-                </div>
-              </li>
-            ))
-          )}
-        </ul>
-
-        <h2>Past Services</h2>
-        <ul id="past-services" className="parts-list">
-          {loading ? (
-            <p className="loading">Loading...</p>
-          ) : error ? (
-            <p className="no-items">Failed to load. Refresh page.</p>
-          ) : pastServices.length === 0 ? (
-            <p className="no-items">No past services found.</p>
-          ) : (
-            pastServices.map((s) => (
-              <li key={s._id} className="history-item">
-                <div className="item-details">
-                  <h3>{(s.selectedServices || []).join(", ")}</h3>
-                  <p>
-                    <strong>Service ID:</strong> {s._id}
-                  </p>
-                  <p>
-                    <strong>Service Provider:</strong>{" "}
-                    {s.providerId?.name || ""} | {s.providerId?.phone || ""}
-                  </p>
-                  <p>
-                    <strong>Booked on:</strong> {formatDate(s.createdAt)}
-                  </p>
-                  <p>
-                    <strong>Car Model:</strong> {s.carModel || ""}
-                  </p>
-                  <p>
-                    <strong>Description:</strong> {s.description || ""}
-                  </p>
-                  <p>
-                    <strong>Cost:</strong> ₹{s.totalCost || 0}
-                  </p>
-                  <p>
-                    <strong>Status:</strong> {pastServiceStatusSpan(s)}
-                  </p>
-                  {!s.rating ? (
-                    <button
-                      className="rate-btn"
-                      onClick={() => openRatingModal(s._id)}
-                    >
-                      Rate
-                    </button>
-                  ) : (
-                    <>
-                      <p>
-                        <strong>Your Rating:</strong> {s.rating}/5
-                      </p>
-                      {s.review ? (
+                      <div className="item-details">
+                        <h3>Order ID: {o._id}</h3>
                         <p>
-                          <strong>Comment:</strong> {s.review}
+                          <strong>Placed on:</strong> {formatDate(o.placedAt)}
                         </p>
-                      ) : null}
-                    </>
-                  )}
-                  {s.status === "Ready" && (
-                    <a
-                      href={`${backendBase}/customer/service-receipt/${s._id}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="download-btn"
+                        <p>
+                          <strong>Status:</strong> {statusSpan(o.orderStatus)}
+                        </p>
+                        <p>
+                          <strong>Total Amount:</strong> ₹{o.totalAmount}
+                        </p>
+                        <p>
+                          <strong>Items:</strong>
+                        </p>
+                        <ul>
+                          {(o.items || []).map((i, idx) => (
+                            <li key={idx}>
+                              {i.name} x {i.quantity} (₹{i.price})
+                            </li>
+                          ))}
+                        </ul>
+                        {o.orderStatus === "pending" && (
+                          <button
+                            className="cancel-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              cancelOrder(o._id);
+                            }}
+                          >
+                            Cancel Order
+                          </button>
+                        )}
+                      </div>
+                    </li>
+                  ))
+                )}
+              </ul>
+            </div>
+          </section>
+
+          <section
+            className={`history-panel${openPanel === "pastOrders" ? " is-open" : ""}`}
+          >
+            <button
+              type="button"
+              className="history-panel-header"
+              onClick={() => togglePanel("pastOrders")}
+              aria-expanded={openPanel === "pastOrders"}
+            >
+              <span className="history-panel-title">Past Orders</span>
+              {hasPastOrderChanges ? (
+                <span
+                  className="history-panel-dot"
+                  aria-label="Updates available"
+                  title="Updates available"
+                />
+              ) : null}
+              <span className="history-panel-count">{pastOrders.length}</span>
+              <span className="history-panel-chevron" aria-hidden="true">
+                {openPanel === "pastOrders" ? "▴" : "▾"}
+              </span>
+            </button>
+            <div
+              className="history-panel-body"
+              hidden={openPanel !== "pastOrders"}
+            >
+              <ul id="past-orders" className="parts-list">
+                {loading ? (
+                  <p className="loading">Loading...</p>
+                ) : error ? (
+                  <p className="no-items">Failed to load. Refresh page.</p>
+                ) : pastOrders.length === 0 ? (
+                  <p className="no-items">No past orders found.</p>
+                ) : (
+                  pastOrders.map((o) => (
+                    <li
+                      key={o._id}
+                      className={`history-item${
+                        highlightedIds.orders[String(o._id)]
+                          ? " history-highlight"
+                          : ""
+                      }${
+                        fadingIds.orders[String(o._id)]
+                          ? " history-highlight-fade"
+                          : ""
+                      }`}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => {
+                        const id = String(o._id);
+                        if (highlightedIds.orders[id])
+                          markSeen("orders", id, signatureForOrder(o));
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key !== "Enter" && e.key !== " ") return;
+                        e.preventDefault();
+                        const id = String(o._id);
+                        if (highlightedIds.orders[id])
+                          markSeen("orders", id, signatureForOrder(o));
+                      }}
                     >
-                      Download Receipt
-                    </a>
-                  )}
-                </div>
-              </li>
-            ))
-          )}
-        </ul>
+                      <div className="item-details">
+                        <h3>Order ID: {o._id}</h3>
+                        <p>
+                          <strong>Placed on:</strong> {formatDate(o.placedAt)}
+                        </p>
+                        <p>
+                          <strong>Status:</strong> {statusSpan(o.orderStatus)}
+                        </p>
+                        <p>
+                          <strong>Total Amount:</strong> ₹{o.totalAmount}
+                        </p>
+                        <p>
+                          <strong>Items:</strong>
+                        </p>
+                        <ul>
+                          {(o.items || []).map((i, idx) => (
+                            <li key={idx}>
+                              {i.name} x {i.quantity} (₹{i.price})
+                            </li>
+                          ))}
+                        </ul>
+                        {!String(o.orderStatus || "")
+                          .toLowerCase()
+                          .includes("cancel") && (
+                          <a
+                            href={`${backendBase}/customer/order-receipt/${o._id}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="download-btn"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            Download Receipt
+                          </a>
+                        )}
+                      </div>
+                    </li>
+                  ))
+                )}
+              </ul>
+            </div>
+          </section>
+
+          <section
+            className={`history-panel${openPanel === "upcomingServices" ? " is-open" : ""}`}
+          >
+            <button
+              type="button"
+              className="history-panel-header"
+              onClick={() => togglePanel("upcomingServices")}
+              aria-expanded={openPanel === "upcomingServices"}
+            >
+              <span className="history-panel-title">Upcoming Services</span>
+              {hasUpcomingServiceChanges ? (
+                <span
+                  className="history-panel-dot"
+                  aria-label="Updates available"
+                  title="Updates available"
+                />
+              ) : null}
+              <span className="history-panel-count">
+                {upcomingServices.length}
+              </span>
+              <span className="history-panel-chevron" aria-hidden="true">
+                {openPanel === "upcomingServices" ? "▴" : "▾"}
+              </span>
+            </button>
+            <div
+              className="history-panel-body"
+              hidden={openPanel !== "upcomingServices"}
+            >
+              <ul id="upcoming-services" className="parts-list">
+                {loading ? (
+                  <p className="loading">Loading...</p>
+                ) : error ? (
+                  <p className="no-items">Failed to load. Refresh page.</p>
+                ) : upcomingServices.length === 0 ? (
+                  <p className="no-items">No upcoming services found.</p>
+                ) : (
+                  upcomingServices.map((s) => (
+                    <li
+                      key={s._id}
+                      className={`history-item${
+                        highlightedIds.bookings[String(s._id)]
+                          ? " history-highlight"
+                          : ""
+                      }${
+                        fadingIds.bookings[String(s._id)]
+                          ? " history-highlight-fade"
+                          : ""
+                      }`}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => {
+                        const id = String(s._id);
+                        if (highlightedIds.bookings[id])
+                          markSeen("bookings", id, signatureForBooking(s));
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key !== "Enter" && e.key !== " ") return;
+                        e.preventDefault();
+                        const id = String(s._id);
+                        if (highlightedIds.bookings[id])
+                          markSeen("bookings", id, signatureForBooking(s));
+                      }}
+                    >
+                      <div className="item-details">
+                        <h3>{(s.selectedServices || []).join(", ")}</h3>
+                        <p>
+                          <strong>Service ID:</strong> {s._id}
+                        </p>
+                        <p>
+                          <strong>Service Provider:</strong>{" "}
+                          {s.providerId?.name || ""} |{" "}
+                          {s.providerId?.phone || ""}
+                        </p>
+                        <p>
+                          <strong>Booked on:</strong> {formatDate(s.createdAt)}
+                        </p>
+                        <p>
+                          <strong>Car Model:</strong> {s.carModel || ""}
+                        </p>
+                        <p>
+                          <strong>Description:</strong> {s.description || ""}
+                        </p>
+                        <p>
+                          <strong>Cost:</strong> ₹{s.totalCost || 0}
+                        </p>
+                        <p>
+                          <strong>Status:</strong>{" "}
+                          {serviceStatusSpan(s.status, s._id)}
+                        </p>
+                      </div>
+                    </li>
+                  ))
+                )}
+              </ul>
+            </div>
+          </section>
+
+          <section
+            className={`history-panel${openPanel === "pastServices" ? " is-open" : ""}`}
+          >
+            <button
+              type="button"
+              className="history-panel-header"
+              onClick={() => togglePanel("pastServices")}
+              aria-expanded={openPanel === "pastServices"}
+            >
+              <span className="history-panel-title">Past Services</span>
+              {hasPastServiceChanges ? (
+                <span
+                  className="history-panel-dot"
+                  aria-label="Updates available"
+                  title="Updates available"
+                />
+              ) : null}
+              <span className="history-panel-count">{pastServices.length}</span>
+              <span className="history-panel-chevron" aria-hidden="true">
+                {openPanel === "pastServices" ? "▴" : "▾"}
+              </span>
+            </button>
+            <div
+              className="history-panel-body"
+              hidden={openPanel !== "pastServices"}
+            >
+              <ul id="past-services" className="parts-list">
+                {loading ? (
+                  <p className="loading">Loading...</p>
+                ) : error ? (
+                  <p className="no-items">Failed to load. Refresh page.</p>
+                ) : pastServices.length === 0 ? (
+                  <p className="no-items">No past services found.</p>
+                ) : (
+                  pastServices.map((s) => {
+                    const normalizedStatus = String(
+                      s.status || "",
+                    ).toLowerCase();
+                    const showRateButton =
+                      !s.rating && normalizedStatus === "ready";
+                    const hasRating = Boolean(s.rating);
+                    return (
+                      <li
+                        key={s._id}
+                        className={`history-item${
+                          highlightedIds.bookings[String(s._id)]
+                            ? " history-highlight"
+                            : ""
+                        }${
+                          fadingIds.bookings[String(s._id)]
+                            ? " history-highlight-fade"
+                            : ""
+                        }`}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => {
+                          const id = String(s._id);
+                          if (highlightedIds.bookings[id])
+                            markSeen("bookings", id, signatureForBooking(s));
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key !== "Enter" && e.key !== " ") return;
+                          e.preventDefault();
+                          const id = String(s._id);
+                          if (highlightedIds.bookings[id])
+                            markSeen("bookings", id, signatureForBooking(s));
+                        }}
+                      >
+                        <div className="item-details">
+                          <h3>{(s.selectedServices || []).join(", ")}</h3>
+                          <p>
+                            <strong>Service ID:</strong> {s._id}
+                          </p>
+                          <p>
+                            <strong>Service Provider:</strong>{" "}
+                            {s.providerId?.name || ""} |{" "}
+                            {s.providerId?.phone || ""}
+                          </p>
+                          <p>
+                            <strong>Booked on:</strong>{" "}
+                            {formatDate(s.createdAt)}
+                          </p>
+                          <p>
+                            <strong>Car Model:</strong> {s.carModel || ""}
+                          </p>
+                          <p>
+                            <strong>Description:</strong> {s.description || ""}
+                          </p>
+                          <p>
+                            <strong>Cost:</strong> ₹{s.totalCost || 0}
+                          </p>
+                          <p>
+                            <strong>Status:</strong> {pastServiceStatusSpan(s)}
+                          </p>
+                          {showRateButton ? (
+                            <button
+                              className="rate-btn"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRateClick(s);
+                              }}
+                            >
+                              Rate
+                            </button>
+                          ) : null}
+                          {hasRating ? (
+                            <>
+                              <p>
+                                <strong>Your Rating:</strong> {s.rating}/5
+                              </p>
+                              {s.review ? (
+                                <p>
+                                  <strong>Comment:</strong> {s.review}
+                                </p>
+                              ) : null}
+                            </>
+                          ) : null}
+                          {s.status === "Ready" && (
+                            <a
+                              href={`${backendBase}/customer/service-receipt/${s._id}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="download-btn"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              Download Receipt
+                            </a>
+                          )}
+                        </div>
+                      </li>
+                    );
+                  })
+                )}
+              </ul>
+            </div>
+          </section>
+        </div>
       </main>
 
       <footer>
@@ -462,6 +959,17 @@ export default function CustomerHistory() {
 
       {/* Inline styles to match legacy */}
       <style>{`
+        .history-accordion { display:flex; flex-direction:column; gap:14px; }
+        .history-panel { width:100%; border:1px solid rgba(17, 24, 39, 0.12); border-radius:12px; overflow:hidden; background:#fff; box-shadow:0 8px 24px rgba(17, 24, 39, 0.06); }
+        .history-panel-header { position:relative; width:100%; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:16px 18px; background:linear-gradient(180deg, rgba(249,250,251,1) 0%, rgba(255,255,255,1) 100%); border:none; cursor:pointer; text-align:left; }
+        .history-panel-header:hover { background:linear-gradient(180deg, rgba(243,244,246,1) 0%, rgba(255,255,255,1) 100%); }
+        .history-panel-title { font-size:18px; font-weight:800; color: var(--text-dark); }
+        .history-panel-count { margin-left:auto; padding:4px 10px; border-radius:999px; font-weight:800; font-size:12px; color:#111827; background:rgba(17,24,39,0.08); }
+        .history-panel-chevron { font-size:18px; color:#111827; opacity:0.75; }
+        .history-panel-body { padding:14px 18px 18px; }
+        .history-panel.is-open { border-color: rgba(17, 24, 39, 0.22); box-shadow:0 10px 28px rgba(17, 24, 39, 0.10); }
+        .history-panel-dot { position:absolute; top:10px; right:12px; width:10px; height:10px; border-radius:50%; background:#ef4444; box-shadow:0 0 0 3px rgba(239, 68, 68, 0.18); }
+
         .history-item { display:flex; justify-content:space-between; align-items:flex-start; padding:20px; margin-bottom:15px; transition: var(--transition); }
         .item-details { flex:1; }
         .item-details h3 { font-size:18px; margin-bottom:8px; color: var(--text-dark); }
@@ -471,12 +979,35 @@ export default function CustomerHistory() {
         .download-btn { background: var(--warning-color); color:#fff; text-decoration:none; line-height:1.2; }
         .download-btn:hover { filter:brightness(0.95); text-decoration:none; }
         .cancel-btn { background:#c0392b; }
+        .status-pill { display:inline-flex; align-items:center; gap:8px; font-weight:600; padding:4px 12px; border-radius:999px; border:1px solid transparent; font-size:13px; letter-spacing:0.01em; text-transform:capitalize; }
+        .status-dot { width:8px; height:8px; border-radius:50%; display:inline-block; }
         .rate-btn:hover, .cancel-btn:hover, .download-btn:hover { opacity:0.9; }
         .no-items { text-align:center; color:#888; padding:20px; font-style:italic; }
         .modal { position:fixed; z-index:999; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.4); display:flex; align-items:center; justify-content:center; }
         .modal-content { background:#fff; padding:20px; border-radius:8px; width:400px; box-shadow:0 0 10px #000; }
         .close { float:right; font-size:24px; cursor:pointer; }
         @media screen and (max-width: 768px) { .history-item { flex-direction:column; text-align:center; } .item-details { margin-bottom:15px; } }
+
+        .history-highlight { position:relative; background:#fff7cc; border:1px solid #f4d57a; box-shadow:0 0 0 3px rgba(245, 158, 11, 0.10); }
+        .history-highlight::after {
+          content:"NEW / UPDATED";
+          position:absolute;
+          top:10px;
+          right:12px;
+          font-size:11px;
+          font-weight:800;
+          letter-spacing:0.03em;
+          color:#7c2d12;
+          background:#fffbeb;
+          border:1px solid #f59e0b;
+          padding:4px 8px;
+          border-radius:999px;
+        }
+        .history-highlight-fade { animation: historyFadeOut 2.5s ease forwards; }
+        @keyframes historyFadeOut {
+          0% { background:#fff7cc; }
+          100% { background:transparent; }
+        }
       `}</style>
 
       {/* Rating Modal */}

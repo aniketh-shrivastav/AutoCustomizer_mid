@@ -17,18 +17,73 @@ export default function ManagerUsers() {
   const [mgrPhone, setMgrPhone] = useState("");
   const [mgrPassword, setMgrPassword] = useState("");
   const [formMsg, setFormMsg] = useState("");
+  const [touched, setTouched] = useState({
+    name: false,
+    email: false,
+    phone: false,
+    password: false,
+  });
 
   const nameRegex = /^[A-Za-z\s.-]{2,}$/;
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-  const formValid = useMemo(() => {
-    const phone = (mgrPhone || "").replace(/\D/g, "");
-    const nameOk = nameRegex.test((mgrName || "").trim());
-    const emailOk = emailRegex.test((mgrEmail || "").trim());
-    const phoneOk = phone === "" || /^\d{10}$/.test(phone);
-    const passOk = (mgrPassword || "").length >= 6;
-    return nameOk && emailOk && phoneOk && passOk;
+  const validation = useMemo(() => {
+    const trimmedName = (mgrName || "").trim();
+    const trimmedEmail = (mgrEmail || "").trim();
+    const phoneDigits = (mgrPhone || "").replace(/\D/g, "").slice(0, 10);
+    const passwordValue = mgrPassword || "";
+
+    const nameOk = trimmedName.length > 0 && nameRegex.test(trimmedName);
+    const emailOk = trimmedEmail.length > 0 && emailRegex.test(trimmedEmail);
+    const phoneOk = phoneDigits === "" || /^\d{10}$/.test(phoneDigits);
+    const passOk = passwordValue.length >= 6;
+
+    const errors = {
+      name:
+        trimmedName.length === 0
+          ? "Name is required."
+          : nameOk
+          ? ""
+          : "Only letters, spaces, dot and hyphen are allowed.",
+      email:
+        trimmedEmail.length === 0
+          ? "Email is required."
+          : emailOk
+          ? ""
+          : "Enter a valid email address.",
+      phone:
+        phoneDigits === "" || phoneOk
+          ? ""
+          : "Phone number must be exactly 10 digits.",
+      password:
+        passwordValue.length === 0
+          ? "Password is required."
+          : passOk
+          ? ""
+          : "Password must be at least 6 characters.",
+    };
+
+    return {
+      nameOk,
+      emailOk,
+      phoneOk,
+      passOk,
+      errors,
+      sanitizedPhone: phoneDigits,
+    };
   }, [mgrName, mgrEmail, mgrPhone, mgrPassword]);
+
+  const formValid =
+    validation.nameOk &&
+    validation.emailOk &&
+    validation.phoneOk &&
+    validation.passOk;
+
+  const markTouched = (field) =>
+    setTouched((prev) => ({
+      ...prev,
+      [field]: true,
+    }));
 
   useEffect(() => {
     // Ensure manager pages render on a light background and not auth gradient
@@ -111,7 +166,10 @@ export default function ManagerUsers() {
 
   async function onCreateManager(e) {
     e.preventDefault();
-    if (!formValid) return;
+    if (!formValid) {
+      setTouched({ name: true, email: true, phone: true, password: true });
+      return;
+    }
     setFormMsg("Creating manager...");
     try {
       const resp = await fetch("/manager/users/create-manager", {
@@ -123,7 +181,7 @@ export default function ManagerUsers() {
         body: JSON.stringify({
           name: mgrName.trim(),
           email: mgrEmail.trim(),
-          phone: (mgrPhone || "").replace(/\D/g, "").slice(0, 10),
+          phone: validation.sanitizedPhone,
           password: mgrPassword,
         }),
       });
@@ -134,7 +192,11 @@ export default function ManagerUsers() {
       setActiveRole("manager");
       setTerm("");
       setFormMsg("Manager created successfully.");
+      setMgrName("");
+      setMgrEmail("");
+      setMgrPhone("");
       setMgrPassword("");
+      setTouched({ name: false, email: false, phone: false, password: false });
     } catch (e) {
       setFormMsg(e.message || "Error creating manager");
     }
@@ -205,33 +267,47 @@ export default function ManagerUsers() {
               style={{ marginTop: 12, maxWidth: 560 }}
             >
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                <input
-                  value={mgrName}
-                  onChange={(e) => setMgrName(e.target.value)}
-                  placeholder="Full name"
-                  required
-                  style={{
-                    flex: 1,
-                    minWidth: 200,
-                    padding: 8,
-                    border: "1px solid #ccc",
-                    borderRadius: 8,
-                  }}
-                />
-                <input
-                  value={mgrEmail}
-                  onChange={(e) => setMgrEmail(e.target.value)}
-                  type="email"
-                  placeholder="Email"
-                  required
-                  style={{
-                    flex: 1,
-                    minWidth: 220,
-                    padding: 8,
-                    border: "1px solid #ccc",
-                    borderRadius: 8,
-                  }}
-                />
+                <div style={{ flex: 1, minWidth: 200 }}>
+                  <input
+                    value={mgrName}
+                    onChange={(e) => setMgrName(e.target.value)}
+                    onBlur={() => markTouched("name")}
+                    placeholder="Full name"
+                    required
+                    style={{
+                      width: "100%",
+                      padding: 8,
+                      border: "1px solid #ccc",
+                      borderRadius: 8,
+                    }}
+                  />
+                  {touched.name && validation.errors.name && (
+                    <p style={{ color: "#b91c1c", fontSize: 13, marginTop: 4 }}>
+                      {validation.errors.name}
+                    </p>
+                  )}
+                </div>
+                <div style={{ flex: 1, minWidth: 220 }}>
+                  <input
+                    value={mgrEmail}
+                    onChange={(e) => setMgrEmail(e.target.value)}
+                    onBlur={() => markTouched("email")}
+                    type="email"
+                    placeholder="Email"
+                    required
+                    style={{
+                      width: "100%",
+                      padding: 8,
+                      border: "1px solid #ccc",
+                      borderRadius: 8,
+                    }}
+                  />
+                  {touched.email && validation.errors.email && (
+                    <p style={{ color: "#b91c1c", fontSize: 13, marginTop: 4 }}>
+                      {validation.errors.email}
+                    </p>
+                  )}
+                </div>
               </div>
               <div
                 style={{
@@ -241,35 +317,51 @@ export default function ManagerUsers() {
                   marginTop: 8,
                 }}
               >
-                <input
-                  value={mgrPhone}
-                  onChange={(e) =>
-                    setMgrPhone(e.target.value.replace(/\D/g, "").slice(0, 10))
-                  }
-                  placeholder="Phone (10 digits)"
-                  style={{
-                    flex: 1,
-                    minWidth: 200,
-                    padding: 8,
-                    border: "1px solid #ccc",
-                    borderRadius: 8,
-                  }}
-                />
-                <input
-                  value={mgrPassword}
-                  onChange={(e) => setMgrPassword(e.target.value)}
-                  type="password"
-                  placeholder="Password (min 6)"
-                  minLength={6}
-                  required
-                  style={{
-                    flex: 1,
-                    minWidth: 220,
-                    padding: 8,
-                    border: "1px solid #ccc",
-                    borderRadius: 8,
-                  }}
-                />
+                <div style={{ flex: 1, minWidth: 200 }}>
+                  <input
+                    value={mgrPhone}
+                    onChange={(e) =>
+                      setMgrPhone(
+                        e.target.value.replace(/\D/g, "").slice(0, 10)
+                      )
+                    }
+                    onBlur={() => markTouched("phone")}
+                    placeholder="Phone (10 digits)"
+                    style={{
+                      width: "100%",
+                      padding: 8,
+                      border: "1px solid #ccc",
+                      borderRadius: 8,
+                    }}
+                  />
+                  {touched.phone && validation.errors.phone && (
+                    <p style={{ color: "#b91c1c", fontSize: 13, marginTop: 4 }}>
+                      {validation.errors.phone}
+                    </p>
+                  )}
+                </div>
+                <div style={{ flex: 1, minWidth: 220 }}>
+                  <input
+                    value={mgrPassword}
+                    onChange={(e) => setMgrPassword(e.target.value)}
+                    onBlur={() => markTouched("password")}
+                    type="password"
+                    placeholder="Password (min 6)"
+                    minLength={6}
+                    required
+                    style={{
+                      width: "100%",
+                      padding: 8,
+                      border: "1px solid #ccc",
+                      borderRadius: 8,
+                    }}
+                  />
+                  {touched.password && validation.errors.password && (
+                    <p style={{ color: "#b91c1c", fontSize: 13, marginTop: 4 }}>
+                      {validation.errors.password}
+                    </p>
+                  )}
+                </div>
               </div>
               <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
                 <button

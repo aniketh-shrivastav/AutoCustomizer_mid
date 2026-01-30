@@ -1,21 +1,43 @@
 import React, { useEffect } from "react";
 import { createRoot } from "react-dom/client";
-import { BrowserRouter } from "react-router-dom";
+import { BrowserRouter, useLocation } from "react-router-dom";
 import App from "./App";
-import { Provider, useSelector } from "react-redux";
+import { Provider, useSelector, useDispatch } from "react-redux";
 import { store } from "./store";
+import { setActiveScope } from "./store/themeSlice";
 
 const container = document.getElementById("root");
 const root = createRoot(container);
 
+function resolveThemeScope(pathname = "") {
+  if (pathname.startsWith("/manager")) return "manager";
+  if (pathname.startsWith("/customer")) return "customer";
+  if (pathname.startsWith("/seller")) return "seller";
+  if (pathname.startsWith("/service")) return "service";
+  return "global";
+}
+
 function ThemeApplier() {
-  const mode = useSelector((s) => s.theme.mode);
+  const location = useLocation();
+  const dispatch = useDispatch();
+  const { modes } = useSelector((s) => s.theme);
+  const scope = resolveThemeScope(location.pathname);
+
+  useEffect(() => {
+    dispatch(setActiveScope(scope));
+  }, [dispatch, scope]);
+
+  const mode = modes[scope] || modes.global || "light";
+
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", mode);
     try {
-      localStorage.setItem("theme", mode);
+      localStorage.setItem(`theme:${scope}`, mode);
+      if (scope === "global") {
+        localStorage.setItem("theme", mode);
+      }
     } catch {}
-  }, [mode]);
+  }, [mode, scope]);
   return null;
 }
 

@@ -32,7 +32,13 @@ app.use(
 // Middleware Setup
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
-app.use(cors());
+// Enable CORS for dev + allow credentials for session-based APIs
+app.use(
+  cors({
+    origin: ["http://localhost:5173", "http://localhost:3000"],
+    credentials: true,
+  })
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -93,6 +99,7 @@ const profileSettingsRoutes = require("./routes/profileSettingsRoutes");
 const cartRoutes = require("./routes/cartRoutes");
 const bookingRoutes = require("./routes/bookingRoutes");
 const chatRoutes = require("./routes/chatRoutes");
+const { notFound, errorHandler } = require("./middleware/errorMiddleware");
 
 app.use("/", profileSettingsRoutes);
 app.use("/", authRoutes);
@@ -104,19 +111,17 @@ app.use("/seller", sellerRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/bookings", bookingRoutes);
 app.use("/", chatRoutes);
-app.use(express.json()); // Parse JSON request bodies
-app.use(express.urlencoded({ extended: true }));
-// app.use((err, req, res, next) => {
-//   console.error("GLOBAL ERROR HANDLER:", JSON.stringify(err, null, 2));
-//   res.status(500).send("Something went wrong!");
-// });
+
+// 404 + global error handler (must be after routes)
+app.use(notFound);
+app.use(errorHandler);
 
 // Socket.IO basic rooms per customer
 io.on("connection", (socket) => {
   socket.on("chat:join", ({ customerId }) => {
     if (customerId) socket.join(`customer_${customerId}`);
   });
-  
+
   // Service provider joins earnings room
   socket.on("earnings:join", ({ providerId }) => {
     if (providerId) {
@@ -124,7 +129,7 @@ io.on("connection", (socket) => {
       console.log(`Provider ${providerId} joined earnings room`);
     }
   });
-  
+
   socket.on("disconnect", () => {});
 });
 

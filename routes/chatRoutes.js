@@ -159,6 +159,30 @@ router.get(
         .sort({ createdAt: 1 })
         .limit(Math.min(Number(limit) || 100, 200))
         .lean();
+      // Mark messages from the opposite role as read for this viewer
+      try {
+        const viewerRole =
+          req.session.user.role === "manager" ? "manager" : "customer";
+        if (viewerRole === "manager") {
+          await Message.updateMany(
+            {
+              customerId,
+              senderRole: "customer",
+              readByManager: { $ne: true },
+            },
+            { $set: { readByManager: true } }
+          );
+        } else {
+          await Message.updateMany(
+            {
+              customerId,
+              senderRole: "manager",
+              readByCustomer: { $ne: true },
+            },
+            { $set: { readByCustomer: true } }
+          );
+        }
+      } catch {}
       res.json({ success: true, messages });
     } catch (e) {
       console.error("chat messages", e);
@@ -188,6 +212,9 @@ router.post(
         senderRole:
           req.session.user.role === "manager" ? "manager" : "customer",
         text: trimmed,
+        // For sender, mark their side as read; receiver side remains unread
+        readByCustomer: req.session.user.role === "customer" ? true : false,
+        readByManager: req.session.user.role === "manager" ? true : false,
       });
 
       // Socket broadcast (if io is set on app)
@@ -257,6 +284,8 @@ router.post(
           size: req.file.size,
           provider,
         },
+        readByCustomer: req.session.user.role === "customer" ? true : false,
+        readByManager: req.session.user.role === "manager" ? true : false,
       });
 
       try {
@@ -317,5 +346,31 @@ router.delete(
     }
   }
 );
+
+// Get unread count for current user (by role)
+router.get("/chat/unread-count", isAuthenticated, async (req, res) => {
+  try {
+    const user = req.session.user;
+    let count = 0;
+    if (user.role === "manager") {
+      count = await Message.countDocuments({
+        senderRole: "customer",
+        readByManager: { $ne: true },
+      });
+    } else if (user.role === "customer") {
+      count = await Message.countDocuments({
+        customerId: user.id,
+        senderRole: "manager",
+        readByCustomer: { $ne: true },
+      });
+    } else {
+      count = 0;
+    }
+    res.json({ success: true, count });
+  } catch (e) {
+    console.error("chat/unread-count", e);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
 
 module.exports = router;

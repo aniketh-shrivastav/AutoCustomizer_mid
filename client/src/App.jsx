@@ -17,6 +17,7 @@ import VerifyOtp from "./pages/VerifyOtp";
 import ManagerDashboard from "./pages/manager/Dashboard";
 import ManagerUsers from "./pages/manager/Users";
 import Profiles from "./pages/manager/Profiles";
+import ManagerProfileOverview from "./pages/manager/ProfileOverview";
 import ManagerOrders from "./pages/manager/Orders";
 import Payments from "./pages/manager/Payments";
 import Support from "./pages/manager/Support";

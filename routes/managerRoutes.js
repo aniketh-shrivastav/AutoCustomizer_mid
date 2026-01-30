@@ -11,6 +11,214 @@ const Product = require("../models/Product");
 const managerController = require("../controllers/managerController");
 const Order = require("../models/Orders");
 const ContactMessage = require("../models/ContactMessage");
+const PDFDocument = require("pdfkit");
+
+const MONTH_HISTORY = 6;
+
+function buildMonthBuckets(count = MONTH_HISTORY) {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth() - (count - 1), 1);
+  const buckets = [];
+  for (let i = 0; i < count; i += 1) {
+    const current = new Date(start.getFullYear(), start.getMonth() + i, 1);
+    buckets.push({
+      year: current.getFullYear(),
+      month: current.getMonth() + 1,
+      label: current.toLocaleString("default", { month: "short" }),
+    });
+  }
+  return { buckets, startDate: start };
+}
+
+function monthKey(year, month) {
+  return `${year}-${month}`;
+}
+
+async function collectDashboardStats() {
+  const roles = ["customer", "service-provider", "seller", "manager"];
+  const { buckets: monthBuckets, startDate } = buildMonthBuckets();
+
+  const [
+    totalUsers,
+    userCountsAgg,
+    pendingProducts,
+    approvedProducts,
+    rejectedProducts,
+    orderEarningsResult,
+    serviceEarningsResult,
+    orderRevenueAgg,
+    serviceRevenueAgg,
+    baseUserCountsAgg,
+    monthlyUserGrowthAgg,
+  ] = await Promise.all([
+    User.countDocuments({ suspended: { $ne: true } }),
+    User.aggregate([
+      { $match: { suspended: { $ne: true } } },
+      { $group: { _id: "$role", count: { $sum: 1 } } },
+    ]),
+    Product.find({ status: "pending" }).populate("seller", "name"),
+    Product.find({ status: "approved" }).populate("seller", "name"),
+    Product.find({ status: "rejected" }).populate("seller", "name"),
+    Order.aggregate([
+      { $match: { orderStatus: "pending" } },
+      { $group: { _id: null, total: { $sum: "$totalAmount" } } },
+    ]),
+    ServiceBooking.aggregate([
+      { $match: { status: "Ready" } },
+      { $group: { _id: null, total: { $sum: "$totalCost" } } },
+    ]),
+    Order.aggregate([
+      {
+        $match: {
+          orderStatus: "pending",
+          placedAt: { $gte: startDate },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            year: { $year: "$placedAt" },
+            month: { $month: "$placedAt" },
+          },
+          total: { $sum: "$totalAmount" },
+        },
+      },
+    ]),
+    ServiceBooking.aggregate([
+      {
+        $match: {
+          status: "Ready",
+          createdAt: { $gte: startDate },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            year: { $year: "$createdAt" },
+            month: { $month: "$createdAt" },
+          },
+          total: { $sum: "$totalCost" },
+        },
+      },
+    ]),
+    User.aggregate([
+      {
+        $match: {
+          createdAt: { $lt: startDate },
+          suspended: { $ne: true },
+        },
+      },
+      { $group: { _id: "$role", count: { $sum: 1 } } },
+    ]),
+    User.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: startDate },
+          suspended: { $ne: true },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            role: "$role",
+            year: { $year: "$createdAt" },
+            month: { $month: "$createdAt" },
+          },
+          count: { $sum: 1 },
+        },
+      },
+    ]),
+  ]);
+
+  const userDistribution = userCountsAgg.reduce(
+    (a, c) => ((a[c._id] = c.count), a),
+    {},
+  );
+  const userCounts = roles.map((r) => userDistribution[r] || 0);
+
+  const orderEarnings = orderEarningsResult[0]?.total || 0;
+  const serviceEarnings = serviceEarningsResult[0]?.total || 0;
+  const totalEarnings = orderEarnings + serviceEarnings;
+  const commission = totalEarnings * 0.2;
+
+  const revenueByMonth = {};
+  [...orderRevenueAgg, ...serviceRevenueAgg].forEach(({ _id, total }) => {
+    if (!_id) return;
+    const key = monthKey(_id.year, _id.month);
+    revenueByMonth[key] = (revenueByMonth[key] || 0) + total;
+  });
+
+  const monthlyRevenue = {
+    labels: monthBuckets.map((b) => b.label),
+    totalRevenue: [],
+    commission: [],
+  };
+
+  monthBuckets.forEach((bucket) => {
+    const key = monthKey(bucket.year, bucket.month);
+    const revenue = revenueByMonth[key] || 0;
+    monthlyRevenue.totalRevenue.push(revenue);
+    monthlyRevenue.commission.push(revenue * 0.2);
+  });
+
+  const baseUserCounts = roles.reduce((acc, role) => {
+    acc[role] = 0;
+    return acc;
+  }, {});
+  baseUserCountsAgg.forEach((entry) => {
+    baseUserCounts[entry._id] = entry.count;
+  });
+
+  const growthByMonth = {};
+  monthlyUserGrowthAgg.forEach(({ _id, count }) => {
+    if (!_id) return;
+    const key = monthKey(_id.year, _id.month);
+    if (!growthByMonth[key]) {
+      growthByMonth[key] = roles.reduce((acc, role) => {
+        acc[role] = 0;
+        return acc;
+      }, {});
+    }
+    growthByMonth[key][_id.role] = count;
+  });
+
+  const runningTotals = { ...baseUserCounts };
+  const userGrowth = {
+    labels: monthBuckets.map((b) => b.label),
+    totalUsers: [],
+    serviceProviders: [],
+    sellers: [],
+  };
+
+  monthBuckets.forEach((bucket) => {
+    const key = monthKey(bucket.year, bucket.month);
+    const additions = growthByMonth[key] || {};
+    roles.forEach((role) => {
+      runningTotals[role] = (runningTotals[role] || 0) + (additions[role] || 0);
+    });
+    const totalForMonth = roles.reduce(
+      (sum, role) => sum + (runningTotals[role] || 0),
+      0,
+    );
+    userGrowth.totalUsers.push(totalForMonth);
+    userGrowth.serviceProviders.push(runningTotals["service-provider"] || 0);
+    userGrowth.sellers.push(runningTotals["seller"] || 0);
+  });
+
+  return {
+    totalUsers,
+    userCounts,
+    pendingProducts,
+    approvedProducts,
+    rejectedProducts,
+    totalEarnings,
+    commission,
+    charts: {
+      monthlyRevenue,
+      userGrowth,
+    },
+  };
+}
 // Middleware
 const isAuthenticated = (req, res, next) => {
   if (req.session.user) return next();
@@ -25,7 +233,7 @@ const isManager = (req, res, next) => {
 // Static dashboard HTML (will be added separately). Keep EJS route untouched.
 router.get("/dashboard.html", isAuthenticated, isManager, (req, res) => {
   res.sendFile(
-    path.join(__dirname, "..", "public", "manager", "dashboard.html")
+    path.join(__dirname, "..", "public", "manager", "dashboard.html"),
   );
 });
 
@@ -37,14 +245,14 @@ router.get("/users.html", isAuthenticated, isManager, (req, res) => {
 // Static services HTML
 router.get("/services.html", isAuthenticated, isManager, (req, res) => {
   res.sendFile(
-    path.join(__dirname, "..", "public", "manager", "services.html")
+    path.join(__dirname, "..", "public", "manager", "services.html"),
   );
 });
 
 // Static payments HTML
 router.get("/payments.html", isAuthenticated, isManager, (req, res) => {
   res.sendFile(
-    path.join(__dirname, "..", "public", "manager", "payments.html")
+    path.join(__dirname, "..", "public", "manager", "payments.html"),
   );
 });
 
@@ -72,23 +280,66 @@ router.get("/api/users", isAuthenticated, isManager, async (req, res) => {
 // Services API (profiles) for static services page
 router.get("/api/services", isAuthenticated, isManager, async (req, res) => {
   try {
-    const serviceProviders = await User.find(
+    const serviceProvidersRaw = await User.find(
       { role: "service-provider", suspended: { $ne: true } },
-      "name email phone servicesOffered district"
+      "name email phone servicesOffered district",
     );
+
+    const providerIds = serviceProvidersRaw.map((p) => p._id).filter(Boolean);
+    const ratingAgg = providerIds.length
+      ? await ServiceBooking.aggregate([
+          {
+            $match: {
+              providerId: { $in: providerIds },
+              rating: { $gte: 1 },
+            },
+          },
+          { $sort: { createdAt: -1 } },
+          {
+            $group: {
+              _id: "$providerId",
+              ratingAvg: { $avg: "$rating" },
+              ratingCount: { $sum: 1 },
+              latestRating: { $first: "$rating" },
+              latestReview: { $first: "$review" },
+              latestRatedAt: { $first: "$createdAt" },
+            },
+          },
+        ])
+      : [];
+
+    const statsByProviderId = new Map(
+      (ratingAgg || []).map((r) => [String(r._id), r]),
+    );
+
+    const serviceProviders = serviceProvidersRaw.map((sp) => {
+      const stats = statsByProviderId.get(String(sp._id));
+      return {
+        ...sp.toObject(),
+        ratingAvg:
+          typeof stats?.ratingAvg === "number" ? Number(stats.ratingAvg) : null,
+        ratingCount:
+          typeof stats?.ratingCount === "number" ? stats.ratingCount : 0,
+        latestRating:
+          typeof stats?.latestRating === "number" ? stats.latestRating : null,
+        latestReview:
+          typeof stats?.latestReview === "string" ? stats.latestReview : "",
+        latestRatedAt: stats?.latestRatedAt || null,
+      };
+    });
     const sellersAll = await SellerProfile.find().populate(
       "sellerId",
-      "name email phone suspended"
+      "name email phone suspended",
     );
     const sellers = sellersAll.filter(
-      (s) => s.sellerId && !s.sellerId.suspended
+      (s) => s.sellerId && !s.sellerId.suspended,
     );
     const customersAll = await CustomerProfile.find().populate(
       "userId",
-      "name email phone suspended"
+      "name email phone suspended",
     );
     const customers = customersAll.filter(
-      (c) => c.userId && !c.userId.suspended
+      (c) => c.userId && !c.userId.suspended,
     );
 
     res.json({ serviceProviders, sellers, customers });
@@ -111,7 +362,7 @@ router.get("/api/orders", isAuthenticated, isManager, async (req, res) => {
         b.customerId &&
         !b.customerId.suspended &&
         b.providerId &&
-        !b.providerId.suspended
+        !b.providerId.suspended,
     );
 
     const ordersRaw = await Order.find()
@@ -123,12 +374,12 @@ router.get("/api/orders", isAuthenticated, isManager, async (req, res) => {
         (o) =>
           o.userId &&
           !o.userId.suspended &&
-          o.items.every((it) => it.seller && !it.seller.suspended)
+          o.items.every((it) => it.seller && !it.seller.suspended),
       )
       .map((o) => {
         // Derive a manager-visible status from per-item statuses
         const itemStatuses = (o.items || []).map(
-          (it) => it.itemStatus || o.orderStatus || "pending"
+          (it) => it.itemStatus || o.orderStatus || "pending",
         );
         const allCancelled =
           itemStatuses.length > 0 &&
@@ -170,7 +421,7 @@ router.get("/api/payments", isAuthenticated, isManager, async (req, res) => {
         s.customerId &&
         !s.customerId.suspended &&
         s.providerId &&
-        !s.providerId.suspended
+        !s.providerId.suspended,
     );
 
     // Product orders (all) filtered for active users/sellers
@@ -182,7 +433,7 @@ router.get("/api/payments", isAuthenticated, isManager, async (req, res) => {
       (o) =>
         o.userId &&
         !o.userId.suspended &&
-        o.items.every((it) => it.seller && !it.seller.suspended)
+        o.items.every((it) => it.seller && !it.seller.suspended),
     );
 
     res.json({ orders, serviceOrders });
@@ -206,49 +457,120 @@ router.get("/api/support", isAuthenticated, isManager, async (req, res) => {
 // API endpoint for dashboard data (used by static HTML)
 router.get("/api/dashboard", isAuthenticated, isManager, async (req, res) => {
   try {
-    const totalUsers = await User.countDocuments({ suspended: { $ne: true } });
-    const userCountsAgg = await User.aggregate([
-      { $match: { suspended: { $ne: true } } },
-      { $group: { _id: "$role", count: { $sum: 1 } } },
-    ]);
-    const userDistribution = userCountsAgg.reduce(
-      (a, c) => ((a[c._id] = c.count), a),
-      {}
-    );
-    const roles = ["customer", "service-provider", "seller", "manager"];
-    const userCounts = roles.map((r) => userDistribution[r] || 0);
-    const [pendingProducts, approvedProducts, rejectedProducts] =
-      await Promise.all([
-        Product.find({ status: "pending" }).populate("seller", "name"),
-        Product.find({ status: "approved" }).populate("seller", "name"),
-        Product.find({ status: "rejected" }).populate("seller", "name"),
-      ]);
-    const orderEarningsResult = await Order.aggregate([
-      { $match: { orderStatus: "pending" } },
-      { $group: { _id: null, total: { $sum: "$totalAmount" } } },
-    ]);
-    const orderEarnings = orderEarningsResult[0]?.total || 0;
-    const serviceEarningsResult = await ServiceBooking.aggregate([
-      { $match: { status: "Ready" } },
-      { $group: { _id: null, total: { $sum: "$totalCost" } } },
-    ]);
-    const serviceEarnings = serviceEarningsResult[0]?.total || 0;
-    const totalEarnings = orderEarnings + serviceEarnings;
-    const commission = totalEarnings * 0.2;
-    res.json({
-      totalUsers,
-      userCounts,
-      pendingProducts,
-      approvedProducts,
-      rejectedProducts,
-      totalEarnings,
-      commission,
-    });
+    const stats = await collectDashboardStats();
+    res.json(stats);
   } catch (err) {
     console.error("Dashboard API error", err);
     res.status(500).json({ error: "Failed to load dashboard data" });
   }
 });
+
+router.get(
+  "/api/dashboard/report",
+  isAuthenticated,
+  isManager,
+  async (req, res) => {
+    try {
+      const stats = await collectDashboardStats();
+      const doc = new PDFDocument({ margin: 40, size: "A4" });
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename=manager-dashboard-${Date.now()}.pdf`,
+      );
+      doc.pipe(res);
+
+      const currency = (val) => `₹${Number(val || 0).toLocaleString("en-IN")}`;
+
+      doc
+        .fontSize(22)
+        .font("Helvetica-Bold")
+        .text("Manager Dashboard Report", { align: "center" });
+      doc
+        .moveDown(0.3)
+        .fontSize(12)
+        .font("Helvetica")
+        .text(`Generated on ${new Date().toLocaleString()}`, {
+          align: "center",
+        });
+      doc.moveDown(1);
+
+      doc.fontSize(16).font("Helvetica-Bold").text("Summary");
+      doc.moveDown(0.3);
+      doc.fontSize(12).font("Helvetica");
+      doc.text(`Total Users: ${stats.totalUsers}`);
+      doc.text(`Total Earnings: ${currency(stats.totalEarnings)}`);
+      doc.text(`Commission (20%): ${currency(stats.commission)}`);
+      doc.text(`Pending Products: ${stats.pendingProducts.length}`);
+      doc.text(`Approved Products: ${stats.approvedProducts.length}`);
+      doc.text(`Rejected Products: ${stats.rejectedProducts.length}`);
+      doc.moveDown(1);
+
+      doc.fontSize(16).font("Helvetica-Bold").text("User Distribution");
+      doc.moveDown(0.3);
+      const roleLabels = [
+        { label: "Customers", idx: 0 },
+        { label: "Service Providers", idx: 1 },
+        { label: "Sellers", idx: 2 },
+        { label: "Managers", idx: 3 },
+      ];
+      doc.fontSize(12).font("Helvetica");
+      roleLabels.forEach((role) => {
+        doc.text(`${role.label}: ${stats.userCounts[role.idx] || 0}`);
+      });
+      doc.moveDown(1);
+
+      const revenueChart = stats?.charts?.monthlyRevenue;
+      if (revenueChart) {
+        doc
+          .fontSize(16)
+          .font("Helvetica-Bold")
+          .text("Monthly Revenue & Commission");
+        doc.moveDown(0.3);
+        doc.fontSize(12).font("Helvetica");
+        revenueChart.labels.forEach((label, idx) => {
+          doc.text(`${label}`, { continued: true });
+          doc.text(`Revenue: ${currency(revenueChart.totalRevenue[idx] || 0)}`);
+          doc.text(
+            `Commission: ${currency(revenueChart.commission[idx] || 0)}`,
+          );
+          doc.moveDown(0.5);
+        });
+        doc.moveDown(1);
+      }
+
+      const userGrowthChart = stats?.charts?.userGrowth;
+      if (userGrowthChart) {
+        doc.fontSize(16).font("Helvetica-Bold").text("User Growth");
+        doc.moveDown(0.3);
+        doc.fontSize(12).font("Helvetica");
+        userGrowthChart.labels.forEach((label, idx) => {
+          const total = userGrowthChart.totalUsers[idx] || 0;
+          const providers = userGrowthChart.serviceProviders[idx] || 0;
+          const sellers = userGrowthChart.sellers[idx] || 0;
+          doc.text(`${label}`);
+          doc.text(`Total Users: ${total}`);
+          doc.text(`Service Providers: ${providers}`);
+          doc.text(`Sellers: ${sellers}`);
+          doc.moveDown(0.5);
+        });
+        doc.moveDown(1);
+      }
+
+      doc
+        .fontSize(10)
+        .fillColor("#6b7280")
+        .text("AutoCustomizer © 2025", 40, doc.page.height - 50, {
+          align: "center",
+        });
+
+      doc.end();
+    } catch (err) {
+      console.error("Dashboard report error", err);
+      res.status(500).json({ error: "Failed to generate report" });
+    }
+  },
+);
 
 // Routes
 router.get("/dashboard", isAuthenticated, isManager, async (req, res) => {
@@ -321,7 +643,7 @@ router.get("/orders", isAuthenticated, isManager, async (req, res) => {
         b.customerId &&
         !b.customerId.suspended &&
         b.providerId &&
-        !b.providerId.suspended
+        !b.providerId.suspended,
     );
 
     const orders = (
@@ -333,7 +655,7 @@ router.get("/orders", isAuthenticated, isManager, async (req, res) => {
       (o) =>
         o.userId &&
         !o.userId.suspended &&
-        o.items.every((item) => item.seller && !item.seller.suspended)
+        o.items.every((item) => item.seller && !item.seller.suspended),
     );
 
     res.render("manager/orders", { bookings, orders });
@@ -347,7 +669,7 @@ router.get(
   "/payments",
   isAuthenticated,
   isManager,
-  managerController.getPayments
+  managerController.getPayments,
 );
 
 router.get("/services", isAuthenticated, isManager, async (req, res) => {
@@ -361,20 +683,20 @@ router.get("/services", isAuthenticated, isManager, async (req, res) => {
     // Active sellers (with valid associated User)
     const sellers = await SellerProfile.find().populate(
       "sellerId",
-      "name email phone suspended"
+      "name email phone suspended",
     );
     const activeSellers = sellers.filter(
-      (seller) => seller.sellerId && !seller.sellerId.suspended
+      (seller) => seller.sellerId && !seller.sellerId.suspended,
     );
 
     // Fetch customers and populate user info
     const customers = await CustomerProfile.find().populate(
       "userId",
-      "name email phone suspended"
+      "name email phone suspended",
     );
 
     const activeCustomers = customers.filter(
-      (c) => c.userId && !c.userId.suspended
+      (c) => c.userId && !c.userId.suspended,
     );
 
     // Render view
@@ -390,6 +712,14 @@ router.get("/services", isAuthenticated, isManager, async (req, res) => {
 });
 
 router.get("/profile-data/:id", managerController.getProfileData);
+
+// Rich profile overview API (used by React manager profile page)
+router.get(
+  "/api/profile-overview/:id",
+  isAuthenticated,
+  isManager,
+  managerController.getProfileOverview,
+);
 
 router.get("/users", isAuthenticated, isManager, async (req, res) => {
   try {
@@ -435,7 +765,7 @@ router.post(
       console.error("Error suspending user:", error);
       res.status(500).json({ success: false, message: "Server error" });
     }
-  }
+  },
 );
 
 router.post(
@@ -462,7 +792,7 @@ router.post(
       console.error("Error restoring user:", error);
       res.status(500).json({ success: false, message: "Server error" });
     }
-  }
+  },
 );
 
 // Create a new Manager user (manager-only)
@@ -531,7 +861,7 @@ router.post(
         .status(500)
         .json({ success: false, message: "Server error creating manager" });
     }
-  }
+  },
 );
 
 router.post(
@@ -566,7 +896,7 @@ router.post(
           .json({ success: false, message: "Error cancelling booking" });
       res.status(500).send("Error cancelling booking");
     }
-  }
+  },
 );
 
 router.post(
@@ -601,7 +931,7 @@ router.post(
           .json({ success: false, message: "Error restoring booking" });
       res.status(500).send("Error restoring booking");
     }
-  }
+  },
 );
 
 router.post(
@@ -610,15 +940,45 @@ router.post(
   isManager,
   async (req, res) => {
     try {
-      await Product.findByIdAndUpdate(req.params.id, { status: "approved" });
+      const wantsJson =
+        (req.headers.accept || "").includes("application/json") ||
+        req.xhr === true;
+
+      const product = await Product.findByIdAndUpdate(
+        req.params.id,
+        { status: "approved" },
+        { new: true },
+      );
+
+      if (!product) {
+        if (wantsJson) {
+          return res
+            .status(404)
+            .json({ success: false, message: "Product not found" });
+        }
+        return res.status(404).send("Product not found");
+      }
+
+      if (wantsJson) {
+        return res.json({ success: true, product });
+      }
+
       if (req.query.from === "static")
         return res.redirect("/manager/dashboard.html");
       res.redirect("/manager/dashboard");
     } catch (err) {
       console.error(err);
+      const wantsJson =
+        (req.headers.accept || "").includes("application/json") ||
+        req.xhr === true;
+      if (wantsJson) {
+        return res
+          .status(500)
+          .json({ success: false, message: "Error approving product" });
+      }
       res.status(500).send("Error approving product");
     }
-  }
+  },
 );
 
 router.post(
@@ -627,15 +987,45 @@ router.post(
   isManager,
   async (req, res) => {
     try {
-      await Product.findByIdAndUpdate(req.params.id, { status: "rejected" });
+      const wantsJson =
+        (req.headers.accept || "").includes("application/json") ||
+        req.xhr === true;
+
+      const product = await Product.findByIdAndUpdate(
+        req.params.id,
+        { status: "rejected" },
+        { new: true },
+      );
+
+      if (!product) {
+        if (wantsJson) {
+          return res
+            .status(404)
+            .json({ success: false, message: "Product not found" });
+        }
+        return res.status(404).send("Product not found");
+      }
+
+      if (wantsJson) {
+        return res.json({ success: true, product });
+      }
+
       if (req.query.from === "static")
         return res.redirect("/manager/dashboard.html");
       res.redirect("/manager/dashboard");
     } catch (err) {
       console.error(err);
+      const wantsJson =
+        (req.headers.accept || "").includes("application/json") ||
+        req.xhr === true;
+      if (wantsJson) {
+        return res
+          .status(500)
+          .json({ success: false, message: "Error rejecting product" });
+      }
       res.status(500).send("Error rejecting product");
     }
-  }
+  },
 );
 
 router.post(
@@ -668,7 +1058,7 @@ router.post(
           .json({ success: false, message: "Error cancelling order" });
       res.status(500).send("Error cancelling order");
     }
-  }
+  },
 );
 
 router.post(
@@ -708,7 +1098,7 @@ router.post(
           .json({ success: false, message: "Error restoring order" });
       res.status(500).send("Error restoring order");
     }
-  }
+  },
 );
 
 module.exports = router;

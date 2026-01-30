@@ -2,8 +2,16 @@
 const mongoose = require("mongoose");
 
 const ServiceBookingSchema = new mongoose.Schema({
-  customerId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-  providerId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  customerId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+  },
+  providerId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+  },
   selectedServices: [{ type: String, required: true }], // names of selected services
   date: { type: Date, required: true },
   phone: { type: String, required: true },
@@ -11,6 +19,9 @@ const ServiceBookingSchema = new mongoose.Schema({
   address: { type: String, required: true },
   description: { type: String, required: true },
   district: { type: String, required: true },
+  carYear: { type: Number, min: 1900, max: new Date().getFullYear() },
+  // For Car Painting bookings: chosen paint color (hex string like #ff0000)
+  paintColor: { type: String },
   totalCost: {
     type: Number,
     required: false, // make optional for backward compatibility
@@ -18,18 +29,18 @@ const ServiceBookingSchema = new mongoose.Schema({
   status: {
     type: String,
     enum: ["Open", "Confirmed", "Ready", "Rejected"],
-    default: "Open"
+    default: "Open",
   },
   previousStatus: { type: String },
   rating: {
     type: Number,
     min: 1,
-    max: 5
+    max: 5,
   },
   review: {
-    type: String
+    type: String,
   },
-  createdAt: { type: Date, default: Date.now }
+  createdAt: { type: Date, default: Date.now },
 });
 
 module.exports = mongoose.model("ServiceBooking", ServiceBookingSchema);
