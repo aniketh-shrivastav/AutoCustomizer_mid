@@ -1,10 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import CustomerNav from "../../components/CustomerNav";
-import { fetchCustomerHistory } from "../../store/customerSlice";
-
-const STALE_AFTER_MS = 1000 * 60 * 5; // 5 minutes
-
+//History of orders and services
 function useLink(href) {
   useEffect(() => {
     const link = document.createElement("link");
@@ -168,20 +165,7 @@ export default function CustomerHistory() {
   const [ratingBookingId, setRatingBookingId] = useState("");
   const [ratingValue, setRatingValue] = useState("");
   const [ratingReview, setRatingReview] = useState("");
-
-  // Highlighting state for newly added/updated orders/services
-  const [highlightedIds, setHighlightedIds] = useState(() => ({
-    orders: {},
-    bookings: {},
-  }));
-  const [fadingIds, setFadingIds] = useState(() => ({
-    orders: {},
-    bookings: {},
-  }));
-
-  // Accordion state for the four history sections.
-  const [openPanel, setOpenPanel] = useState("upcomingOrders");
-
+//use effect used
   useEffect(() => {
     const isStale =
       !lastFetched ||
@@ -347,7 +331,8 @@ export default function CustomerHistory() {
       alert("Error cancelling order");
     }
   }
-
+//cancel service
+  
   async function cancelService(id) {
     if (!window.confirm("Cancel this service request?")) return;
     try {
@@ -427,6 +412,7 @@ export default function CustomerHistory() {
     dispatch(fetchCustomerHistory());
   }
 
+  //upcoming services
   const upcomingServices = useMemo(
     () => bookings.filter((b) => ["Open", "Confirmed"].includes(b.status)),
     [bookings],

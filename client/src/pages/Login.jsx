@@ -1,3 +1,4 @@
+//This is the Login Page component for the AutoCustomizer application.
 import React, { useState } from "react";
 import "../Css/auth.css";
 import { useNavigate } from "react-router-dom";
@@ -131,3 +132,4 @@ export default function Login() {
     </div>
   );
 }
+//This is the end of the Login Page component.

@@ -1,5 +1,5 @@
 /* Auth pages dedicated styling: login, signup, forgot/reset, verify-otp */
-
+/*This is the CSS file for styling the authentication pages of the AutoCustomizer application.*/
 :root {
   /* Brand (left) stays dark; panel (right) is light, like screenshots */
   --auth-surface: #0e1420;
@@ -315,4 +315,4 @@ body {
   .auth-panel {
     border-radius: 22px;
   }
-}
+}/*this is the end of the file.*/

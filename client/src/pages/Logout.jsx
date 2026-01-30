@@ -1,3 +1,4 @@
+//This is the Logout Page component for the AutoCustomizer application.
 import React, { useEffect } from "react";
 
 export default function Logout() {

@@ -219,18 +219,18 @@ export default function CustomerProfile() {
   return (
     <>
       <CustomerNav />
-      <div
+ <div
         className="profile-wrapper"
         style={{
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
           minHeight: "100vh",
-          background: "linear-gradient(135deg, #e2eafc, #cfd9df)",
+          background: "var(--page-bg)",
           margin: 0,
           paddingTop: 90,
+          paddingBottom: 40,
         }}
-      >
         <div
           className="profile-container"
           style={{
@@ -244,7 +244,7 @@ export default function CustomerProfile() {
             fontFamily: "Inter, sans-serif",
           }}
         >
-          <a
+                    <a
             className="back-link"
             href="/customer/index"
             style={{
@@ -253,10 +253,12 @@ export default function CustomerProfile() {
               textDecoration: "none",
               color: "#3498db",
               fontWeight: 600,
+              fontSize: 14,
             }}
           >
             ← Back to Dashboard
           </a>
+
           <div
             className="header"
             style={{ textAlign: "center", marginBottom: 25 }}
