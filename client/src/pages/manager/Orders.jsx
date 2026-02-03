@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import ManagerNav from "../../components/ManagerNav";
+import "../../Css/manager.css";
 
 function StatusBadge({ type, status }) {
   // type: 'order' | 'booking'
@@ -11,11 +12,11 @@ function StatusBadge({ type, status }) {
       ? isDanger
         ? "Cancelled"
         : isWarn
-        ? "Partial"
-        : "Active"
+          ? "Partial"
+          : "Active"
       : isDanger
-      ? "Rejected"
-      : "Active";
+        ? "Rejected"
+        : "Active";
   return (
     <span
       className={`badge ${
@@ -137,7 +138,7 @@ export default function Orders() {
                 </button>
               )}
             </td>
-          </tr>
+          </tr>,
         );
       });
     });

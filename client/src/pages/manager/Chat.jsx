@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { io } from "socket.io-client";
 import ManagerNav from "../../components/ManagerNav";
+import "../../Css/manager.css";
 
 async function fetchSession() {
   try {
@@ -29,7 +30,7 @@ export default function ManagerChat() {
   const bottomRef = useRef(null);
   const socketRef = useRef(null);
   const [themeMode, setThemeMode] = useState(
-    () => document.documentElement.getAttribute("data-theme") || "light"
+    () => document.documentElement.getAttribute("data-theme") || "light",
   );
 
   useEffect(() => {
@@ -111,13 +112,13 @@ export default function ManagerChat() {
         // Update preview in customer list
         setCustomers((list) => {
           const existing = list.find(
-            (c) => String(c.customerId) === String(msg.customerId)
+            (c) => String(c.customerId) === String(msg.customerId),
           );
           if (existing) {
             existing.lastMessage = msg.text;
             existing.lastAt = msg.createdAt;
             return [...list].sort(
-              (a, b) => new Date(b.lastAt) - new Date(a.lastAt)
+              (a, b) => new Date(b.lastAt) - new Date(a.lastAt),
             );
           }
           // New thread appears
@@ -164,7 +165,7 @@ export default function ManagerChat() {
         setSearching(true);
         const res = await fetch(
           `/chat/customers/search?q=${encodeURIComponent(term)}`,
-          { signal: controller.signal }
+          { signal: controller.signal },
         );
         const j = await res.json();
         if (!controller.signal.aborted) {

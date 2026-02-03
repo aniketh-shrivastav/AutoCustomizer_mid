@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import CustomerNav from "../../components/CustomerNav";
+import "../../Css/profile.css";
 
 function useLink(href) {
   useEffect(() => {
@@ -21,7 +22,12 @@ export default function CustomerProfile() {
     district: "",
     carModel: "",
     payments: "",
+    profilePicture: "",
   });
+  const [profileImage, setProfileImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState("");
+  const [fileName, setFileName] = useState("");
+  const fileInputRef = useRef(null);
   const [status, setStatus] = useState("");
   const [statusColor, setStatusColor] = useState("#333");
   const [userId, setUserId] = useState("");
@@ -47,7 +53,11 @@ export default function CustomerProfile() {
           district: profile.district || "",
           carModel: profile.carModel || "",
           payments: profile.payments || "",
+          profilePicture: profile.profilePicture || "",
         });
+        if (profile.profilePicture) {
+          setImagePreview(profile.profilePicture);
+        }
       } catch (e) {
         setStatus(e.message);
         setStatusColor("red");
@@ -60,6 +70,47 @@ export default function CustomerProfile() {
     setErrors((e) => ({ ...e, [name]: undefined }));
   }
 
+  function handleImageChange(e) {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      const validTypes = [
+        "image/jpeg",
+        "image/jpg",
+        "image/png",
+        "image/gif",
+        "image/webp",
+      ];
+      if (!validTypes.includes(file.type)) {
+        setStatus("Please select a valid image file (JPEG, PNG, GIF, or WebP)");
+        setStatusColor("red");
+        return;
+      }
+
+      // Validate file size (10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        setStatus("Image size should be less than 10MB");
+        setStatusColor("red");
+        return;
+      }
+
+      setProfileImage(file);
+      setFileName(file.name);
+
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+      setStatus("");
+    }
+  }
+
+  function triggerFileInput() {
+    fileInputRef.current?.click();
+  }
+
   function showError(name, message) {
     setErrors((e) => ({ ...e, [name]: message }));
   }
@@ -70,7 +121,7 @@ export default function CustomerProfile() {
     if (!re.test(v)) {
       showError(
         "name",
-        "Name should contain only letters and spaces (min 3 chars)."
+        "Name should contain only letters and spaces (min 3 chars).",
       );
       return false;
     }
@@ -87,7 +138,7 @@ export default function CustomerProfile() {
     }
     showError(
       "phone",
-      "Enter a valid 10-digit phone number. You may include +91 or spaces."
+      "Enter a valid 10-digit phone number. You may include +91 or spaces.",
     );
     return false;
   }
@@ -105,7 +156,7 @@ export default function CustomerProfile() {
     if (!re.test(v)) {
       showError(
         "district",
-        "District should contain only letters and spaces (no special characters)."
+        "District should contain only letters and spaces (no special characters).",
       );
       return false;
     }
@@ -163,13 +214,24 @@ export default function CustomerProfile() {
     }
     setStatus("Saving...");
     try {
+      const formData = new FormData();
+      formData.append("name", form.name);
+      formData.append("phone", form.phone);
+      formData.append("address", form.address);
+      formData.append("district", form.district);
+      formData.append("carModel", form.carModel);
+      formData.append("payments", form.payments);
+
+      if (profileImage) {
+        formData.append("profilePicture", profileImage);
+      }
+
       const res = await fetch("/customer/profile", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
           Accept: "application/json",
         },
-        body: JSON.stringify({ ...form }),
+        body: formData,
       });
       if (res.status === 401) {
         setStatus("Session expired. Redirecting to login...");
@@ -181,8 +243,15 @@ export default function CustomerProfile() {
         const maybe = await res.json().catch(() => ({}));
         throw new Error(maybe.message || "Save failed");
       }
+      const data = await res.json();
+      if (data.profilePicture) {
+        setForm((f) => ({ ...f, profilePicture: data.profilePicture }));
+        setImagePreview(data.profilePicture);
+      }
       setStatus("Profile saved successfully!");
       setStatusColor("green");
+      setProfileImage(null);
+      setFileName("");
     } catch (err) {
       setStatus(err.message || "Unexpected error");
       setStatusColor("red");
@@ -192,7 +261,7 @@ export default function CustomerProfile() {
   async function onDelete() {
     if (
       !window.confirm(
-        "Are you sure you want to permanently delete your account?"
+        "Are you sure you want to permanently delete your account?",
       )
     )
       return;
@@ -219,59 +288,48 @@ export default function CustomerProfile() {
   return (
     <>
       <CustomerNav />
-      <div
-        className="profile-wrapper"
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          minHeight: "100vh",
-          background: "linear-gradient(135deg, #e2eafc, #cfd9df)",
-          margin: 0,
-          paddingTop: 90,
-        }}
-      >
-        <div
-          className="profile-container"
-          style={{
-            background: "#fff",
-            padding: "35px 30px",
-            borderRadius: 20,
-            boxShadow: "0 8px 25px rgba(0,0,0,0.15)",
-            width: "100%",
-            maxWidth: 420,
-            animation: "fadeIn 0.6s ease",
-            fontFamily: "Inter, sans-serif",
-          }}
-        >
-          <a
-            className="back-link"
-            href="/customer/index"
-            style={{
-              display: "inline-block",
-              marginBottom: 15,
-              textDecoration: "none",
-              color: "#3498db",
-              fontWeight: 600,
-            }}
-          >
+      <div className="profile-wrapper">
+        <div className="profile-container">
+          <a className="back-link" href="/customer/index">
             ← Back to Dashboard
           </a>
-          <div
-            className="header"
-            style={{ textAlign: "center", marginBottom: 25 }}
-          >
-            <h2
-              style={{
-                margin: 0,
-                fontSize: 26,
-                fontWeight: 600,
-                color: "#333",
-              }}
-            >
-              My Profile
-            </h2>
+
+          <div className="profile-header">
+            <h2>My Profile</h2>
+            <p>Manage your account information</p>
           </div>
+
+          {/* Profile Picture Section */}
+          <div className="profile-picture-section">
+            <div className="profile-picture-wrapper">
+              <img
+                src={
+                  imagePreview ||
+                  "https://via.placeholder.com/140?text=No+Image"
+                }
+                alt="Profile"
+                className="profile-picture-preview"
+              />
+              <div className="camera-icon-overlay" onClick={triggerFileInput}>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                  <path d="M12 15.2A3.2 3.2 0 1 0 12 8.8a3.2 3.2 0 0 0 0 6.4zm0-5a1.8 1.8 0 1 1 0 3.6 1.8 1.8 0 0 1 0-3.6z" />
+                  <path d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm11 15H4V6h4.05l1.83-2h4.24l1.83 2H20v11z" />
+                </svg>
+              </div>
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+              onChange={handleImageChange}
+              className="file-input-hidden"
+            />
+            <label className="upload-label" onClick={triggerFileInput}>
+              Choose Profile Picture
+            </label>
+            {fileName && <div className="file-name-display">{fileName}</div>}
+          </div>
+
           <form onSubmit={onSubmit} id="profileForm">
             {[
               {
@@ -305,22 +363,8 @@ export default function CustomerProfile() {
                 placeholder: "Enter payment details",
               },
             ].map((f) => (
-              <div
-                className="form-group"
-                key={f.name}
-                style={{ width: "100%", marginBottom: 18 }}
-              >
-                <label
-                  htmlFor={f.name}
-                  style={{
-                    display: "block",
-                    fontWeight: 600,
-                    marginBottom: 6,
-                    color: "#2d3436",
-                  }}
-                >
-                  {f.label}
-                </label>
+              <div className="form-group" key={f.name}>
+                <label htmlFor={f.name}>{f.label}</label>
                 <input
                   id={f.name}
                   name={f.name}
@@ -340,51 +384,19 @@ export default function CustomerProfile() {
                     map[f.name]?.();
                   }}
                   className={errors[f.name] ? "invalid" : undefined}
-                  style={{
-                    width: "100%",
-                    padding: "10px 12px",
-                    borderRadius: 8,
-                    border: "1px solid #ccc",
-                    fontSize: 15,
-                  }}
                 />
                 {errors[f.name] ? (
-                  <div
-                    className="error error-text"
-                    style={{
-                      color: "#e63946",
-                      fontWeight: 500,
-                      fontSize: "0.9rem",
-                      marginTop: 4,
-                    }}
-                  >
-                    {errors[f.name]}
-                  </div>
+                  <div className="error error-text">{errors[f.name]}</div>
                 ) : null}
               </div>
             ))}
-            <div
-              className="buttons"
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: 10,
-                marginTop: 25,
-              }}
-            >
+            <div className="buttons">
+              <button type="submit" className="btn btn-save">
+                Save Changes
+              </button>
               <button
                 type="button"
-                className="btn-logout"
-                style={{
-                  background: "#e74c3c",
-                  color: "#fff",
-                  padding: 12,
-                  border: "none",
-                  borderRadius: 8,
-                  fontWeight: 600,
-                  fontSize: 15,
-                  cursor: "pointer",
-                }}
+                className="btn btn-logout"
                 onClick={(e) => {
                   e.preventDefault();
                   const next = encodeURIComponent(`${window.location.origin}/`);
@@ -398,57 +410,23 @@ export default function CustomerProfile() {
                 Logout
               </button>
               <button
-                type="submit"
-                className="btn-save"
-                style={{
-                  background: "#2ecc71",
-                  color: "#fff",
-                  padding: 12,
-                  border: "none",
-                  borderRadius: 8,
-                  fontWeight: 600,
-                  fontSize: 15,
-                  cursor: "pointer",
-                }}
-              >
-                Save Changes
-              </button>
-              <button
                 type="button"
-                className="btn-delete"
-                style={{
-                  background: "#bd2130",
-                  color: "#fff",
-                  padding: 12,
-                  border: "none",
-                  borderRadius: 8,
-                  fontWeight: 600,
-                  fontSize: 15,
-                  cursor: "pointer",
-                }}
+                className="btn btn-delete"
                 onClick={onDelete}
               >
                 Delete Profile
               </button>
             </div>
             <div
-              className="status"
+              className={`status ${statusColor === "green" ? "success" : statusColor === "red" ? "error" : ""}`}
               id="statusMsg"
-              style={{
-                textAlign: "center",
-                fontSize: 14,
-                marginTop: 10,
-                color: statusColor,
-              }}
+              style={{ color: statusColor }}
             >
               {status}
             </div>
           </form>
         </div>
       </div>
-
-      {/* page styles matching legacy profile */}
-      <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } } input.invalid { border: 2px solid #e63946; box-shadow: 0 0 4px rgba(230,57,70,0.3); }`}</style>
     </>
   );
 }

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ManagerNav from "../../components/ManagerNav";
+import "../../Css/manager.css";
 
 const ROLE_TABS = [
   { key: "all", label: "All Profiles" },

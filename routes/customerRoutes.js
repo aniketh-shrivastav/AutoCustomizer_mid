@@ -1,6 +1,9 @@
 const express = require("express");
 const router = express.Router();
 const path = require("path");
+const multer = require("multer");
+const cloudinary = require("../config/cloudinaryConfig");
+const fs = require("fs");
 
 const User = require("../models/User");
 const Cart = require("../models/Cart");
@@ -12,6 +15,34 @@ const mongoose = require("mongoose");
 const ServiceBooking = require("../models/serviceBooking");
 const Order = require("../models/Orders");
 const pdfController = require("../controllers/pdfRoutes");
+
+// Setup multer for file uploads
+const UPLOAD_DIR = path.join(__dirname, "..", "tmp", "uploads");
+if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+
+const diskStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, UPLOAD_DIR),
+  filename: (req, file, cb) => {
+    const cleanName = file.originalname.replace(/\s+/g, "-");
+    cb(null, `${Date.now()}-${cleanName}`);
+  },
+});
+
+const upload = multer({
+  storage: diskStorage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB limit
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|gif|webp/;
+    const extname = allowedTypes.test(
+      path.extname(file.originalname).toLowerCase(),
+    );
+    const mimetype = allowedTypes.test(file.mimetype);
+    if (mimetype && extname) {
+      return cb(null, true);
+    }
+    cb(new Error("Only image files are allowed (jpeg, jpg, png, gif, webp)"));
+  },
+});
 
 // Middleware
 // Enhanced auth: if the client explicitly requests JSON (API/fetch) respond with 401 JSON
@@ -98,7 +129,7 @@ router.get("/booking", customerOnly, async (req, res) => {
           },
         },
       },
-      "name servicesOffered district paintColors"
+      "name servicesOffered district paintColors",
     );
 
     const uniqueServicesSet = new Set();
@@ -133,10 +164,10 @@ router.get("/booking", customerOnly, async (req, res) => {
 
     // ✅ Convert Sets to sorted Arrays
     const uniqueServices = Array.from(uniqueServicesSet).sort((a, b) =>
-      a.localeCompare(b)
+      a.localeCompare(b),
     );
     const uniqueDistricts = Array.from(uniqueDistrictsSet).sort((a, b) =>
-      a.localeCompare(b)
+      a.localeCompare(b),
     ); // Sorted districts!
 
     res.render("customer/booking", {
@@ -157,7 +188,7 @@ router.get("/booking", customerOnly, async (req, res) => {
 // Static booking HTML (converted from EJS)
 router.get("/booking.html", customerOnly, (req, res) => {
   res.sendFile(
-    path.join(__dirname, "..", "public", "customer", "booking.html")
+    path.join(__dirname, "..", "public", "customer", "booking.html"),
   );
 });
 
@@ -180,7 +211,7 @@ router.get("/api/booking", customerOnly, async (req, res) => {
           },
         },
       },
-      "name servicesOffered district paintColors"
+      "name servicesOffered district paintColors",
     );
 
     const uniqueServicesSet = new Set();
@@ -214,10 +245,10 @@ router.get("/api/booking", customerOnly, async (req, res) => {
     });
 
     const uniqueServices = Array.from(uniqueServicesSet).sort((a, b) =>
-      a.localeCompare(b)
+      a.localeCompare(b),
     );
     const uniqueDistricts = Array.from(uniqueDistrictsSet).sort((a, b) =>
-      a.localeCompare(b)
+      a.localeCompare(b),
     );
 
     // Aggregate ratings and review counts per provider
@@ -243,7 +274,7 @@ router.get("/api/booking", customerOnly, async (req, res) => {
               avgRating: Number(r.avgRating?.toFixed?.(1) || 0),
               totalReviews: r.totalReviews || 0,
             },
-          ])
+          ]),
         );
       } catch (e) {
         ratingsMap = {};
@@ -341,7 +372,7 @@ router.post("/cart/add", customerOnly, async (req, res) => {
     }
 
     const existingItem = cart.items.find(
-      (item) => item.productId === id.toString()
+      (item) => item.productId === id.toString(),
     );
 
     if (existingItem) {
@@ -403,10 +434,10 @@ router.get("/history", customerOnly, async (req, res) => {
 
     // Split orders
     const upcomingOrders = orders.filter((o) =>
-      ["pending", "confirmed", "shipped"].includes(o.orderStatus)
+      ["pending", "confirmed", "shipped"].includes(o.orderStatus),
     );
     const pastOrders = orders.filter((o) =>
-      ["delivered", "cancelled"].includes(o.orderStatus)
+      ["delivered", "cancelled"].includes(o.orderStatus),
     );
 
     // 3️⃣ Render everything to EJS
@@ -423,7 +454,7 @@ router.get("/history", customerOnly, async (req, res) => {
 
 router.get("/history.html", customerOnly, (req, res) => {
   res.sendFile(
-    path.join(__dirname, "..", "public", "customer", "history.html")
+    path.join(__dirname, "..", "public", "customer", "history.html"),
   );
 });
 
@@ -446,7 +477,7 @@ router.get("/api/history", customerOnly, async (req, res) => {
       if (!totalCost || totalCost === 0) {
         totalCost = (b.selectedServices || []).reduce(
           (sum, svc) => sum + (costMap[svc] || 0),
-          0
+          0,
         );
       }
       return { ...b.toObject(), totalCost };
@@ -456,10 +487,10 @@ router.get("/api/history", customerOnly, async (req, res) => {
       placedAt: -1,
     });
     const upcomingOrders = orders.filter((o) =>
-      ["pending", "confirmed", "shipped"].includes(o.orderStatus)
+      ["pending", "confirmed", "shipped"].includes(o.orderStatus),
     );
     const pastOrders = orders.filter((o) =>
-      ["delivered", "cancelled"].includes(o.orderStatus)
+      ["delivered", "cancelled"].includes(o.orderStatus),
     );
 
     res.json({ bookings: enrichedBookings, upcomingOrders, pastOrders });
@@ -473,7 +504,7 @@ router.get("/order-receipt/:id", customerOnly, pdfController.getOrderReceipt);
 router.get(
   "/service-receipt/:id",
   customerOnly,
-  pdfController.getServiceReceipt
+  pdfController.getServiceReceipt,
 );
 
 router.post("/cancel-order/:id", customerOnly, async (req, res) => {
@@ -578,7 +609,7 @@ router.get("/profile", customerOnly, async (req, res) => {
 // Static profile page (HTML version)
 router.get("/profile.html", customerOnly, (req, res) => {
   res.sendFile(
-    path.join(__dirname, "..", "public", "customer", "profile.html")
+    path.join(__dirname, "..", "public", "customer", "profile.html"),
   );
 });
 
@@ -606,33 +637,74 @@ router.get("/api/profile", customerOnly, async (req, res) => {
   }
 });
 
-router.post("/profile", customerOnly, async (req, res) => {
-  try {
-    const userId = req.session.user.id; // ✅ define userId first
+router.post(
+  "/profile",
+  customerOnly,
+  upload.single("profilePicture"),
+  async (req, res) => {
+    try {
+      const userId = req.session.user.id;
+      const { name, phone, address, district, carModel, payments } = req.body;
 
-    const { name, phone, address, district, carModel, payments } = req.body;
-    await User.findByIdAndUpdate(userId, { name, phone }, { new: true });
-    // ✅ Upsert (insert if not found, update if exists)
-    await CustomerProfile.findOneAndUpdate(
-      { userId },
-      { address, district, carModel, payments },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
-    );
+      await User.findByIdAndUpdate(userId, { name, phone }, { new: true });
 
-    if (req.headers.accept && req.headers.accept.includes("application/json")) {
-      return res.json({ success: true });
+      const updateData = { address, district, carModel, payments };
+
+      // Handle profile picture upload to Cloudinary
+      if (req.file) {
+        try {
+          const uploadRes = await cloudinary.uploader.upload(req.file.path, {
+            folder: "customer_profiles",
+            resource_type: "image",
+            timeout: 120000,
+          });
+          updateData.profilePicture = uploadRes.secure_url;
+
+          // Clean up local file
+          fs.unlinkSync(req.file.path);
+        } catch (uploadErr) {
+          console.error("Cloudinary upload error:", uploadErr);
+          // Clean up local file even if upload fails
+          if (req.file.path && fs.existsSync(req.file.path)) {
+            fs.unlinkSync(req.file.path);
+          }
+          throw new Error("Failed to upload profile picture");
+        }
+      }
+
+      await CustomerProfile.findOneAndUpdate({ userId }, updateData, {
+        upsert: true,
+        new: true,
+        setDefaultsOnInsert: true,
+      });
+
+      if (
+        req.headers.accept &&
+        req.headers.accept.includes("application/json")
+      ) {
+        return res.json({
+          success: true,
+          profilePicture: updateData.profilePicture,
+        });
+      }
+      res.redirect("/customer/profile");
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      if (
+        req.headers.accept &&
+        req.headers.accept.includes("application/json")
+      ) {
+        return res
+          .status(500)
+          .json({
+            success: false,
+            message: error.message || "Error updating profile",
+          });
+      }
+      res.status(500).send("Error updating profile");
     }
-    res.redirect("/customer/profile");
-  } catch (error) {
-    console.error("Error updating profile:", error);
-    if (req.headers.accept && req.headers.accept.includes("application/json")) {
-      return res
-        .status(500)
-        .json({ success: false, message: "Error updating profile" });
-    }
-    res.status(500).send("Error updating profile");
-  }
-});
+  },
+);
 
 router.delete("/delete-profile", customerOnly, async (req, res) => {
   try {
@@ -651,7 +723,7 @@ router.get("/product/:id", customerOnly, async (req, res) => {
   try {
     const product = await Product.findById(req.params.id).populate(
       "seller",
-      "name"
+      "name",
     );
     if (!product || product.status !== "approved") {
       if (

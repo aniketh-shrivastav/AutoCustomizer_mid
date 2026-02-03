@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import ManagerNav from "../../components/ManagerNav";
+import "../../Css/manager.css";
 
 const ROLES = ["customer", "seller", "service-provider", "manager"]; // order matters
 
@@ -43,14 +44,14 @@ export default function ManagerUsers() {
         trimmedName.length === 0
           ? "Name is required."
           : nameOk
-          ? ""
-          : "Only letters, spaces, dot and hyphen are allowed.",
+            ? ""
+            : "Only letters, spaces, dot and hyphen are allowed.",
       email:
         trimmedEmail.length === 0
           ? "Email is required."
           : emailOk
-          ? ""
-          : "Enter a valid email address.",
+            ? ""
+            : "Enter a valid email address.",
       phone:
         phoneDigits === "" || phoneOk
           ? ""
@@ -59,8 +60,8 @@ export default function ManagerUsers() {
         passwordValue.length === 0
           ? "Password is required."
           : passOk
-          ? ""
-          : "Password must be at least 6 characters.",
+            ? ""
+            : "Password must be at least 6 characters.",
     };
 
     return {
@@ -156,8 +157,8 @@ export default function ManagerUsers() {
         throw new Error(data.message || "Action failed");
       setAllUsers((prev) =>
         prev.map((u) =>
-          u._id === userId ? { ...u, suspended: action === "suspend" } : u
-        )
+          u._id === userId ? { ...u, suspended: action === "suspend" } : u,
+        ),
       );
     } catch (e) {
       setError(e.message || "Action failed");
@@ -322,7 +323,7 @@ export default function ManagerUsers() {
                     value={mgrPhone}
                     onChange={(e) =>
                       setMgrPhone(
-                        e.target.value.replace(/\D/g, "").slice(0, 10)
+                        e.target.value.replace(/\D/g, "").slice(0, 10),
                       )
                     }
                     onBlur={() => markTouched("phone")}
@@ -409,7 +410,7 @@ export default function ManagerUsers() {
               users={filteredUsersByRole(roleKey)}
               onAction={onAction}
             />
-          )
+          ),
         )}
         {activeRole === "all" &&
           ROLES.slice(1).map((rk) => (

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import ManagerNav from "../../components/ManagerNav";
+import "../../Css/manager.css";
 
 function formatDateTime(d) {
   if (!d) return "";

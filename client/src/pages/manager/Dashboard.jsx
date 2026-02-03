@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import ManagerNav from "../../components/ManagerNav";
+import "../../Css/manager.css";
 import Chart from "chart.js/auto";
 import {
   fetchManagerDashboard,
@@ -198,7 +199,7 @@ export default function ManagerDashboard() {
       const payload = ct.includes("application/json") ? await res.json() : null;
       if (!res.ok) {
         throw new Error(
-          payload?.message || `Failed to ${action} product. Try again.`
+          payload?.message || `Failed to ${action} product. Try again.`,
         );
       }
 

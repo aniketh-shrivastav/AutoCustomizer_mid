@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import ManagerNav from "../../components/ManagerNav";
+import "../../Css/manager.css";
 
 function formatDate(d) {
   try {
@@ -39,7 +40,7 @@ export default function Payments() {
         if (!cancelled) {
           setOrders(Array.isArray(j.orders) ? j.orders : []);
           setServiceOrders(
-            Array.isArray(j.serviceOrders) ? j.serviceOrders : []
+            Array.isArray(j.serviceOrders) ? j.serviceOrders : [],
           );
         }
       } catch (e) {

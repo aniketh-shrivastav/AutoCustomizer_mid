@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import ManagerNav from "../../components/ManagerNav";
+import "../../Css/manager.css";
 
 function TicketCard({ t, onRespond }) {
   const verified = t.verifiedUser ? (
@@ -76,7 +77,7 @@ export default function Support() {
       (t) =>
         (t.name || "").toLowerCase().includes(q) ||
         (t.email || "").toLowerCase().includes(q) ||
-        (t.subject || "").toLowerCase().includes(q)
+        (t.subject || "").toLowerCase().includes(q),
     );
   }, [tickets, term]);
 
