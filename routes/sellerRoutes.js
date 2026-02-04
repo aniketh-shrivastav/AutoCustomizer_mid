@@ -45,6 +45,19 @@ const upload = multer({
   limits: { fileSize: 50 * 1024 * 1024 }, // 50 MB limit
 });
 
+// Memory storage for single image uploads (faster than disk roundtrip)
+const memoryUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50 MB limit
+});
+
+function requestWantsJSON(req) {
+  return (
+    (req.headers.accept && req.headers.accept.includes("application/json")) ||
+    req.xhr
+  );
+}
+
 // --- Middleware to ensure seller access only ---
 const isAuthenticated = (req, res, next) => {
   if (req.session.user) return next();
@@ -139,7 +152,7 @@ router.get("/api/dashboard", isAuthenticated, isSeller, async (req, res) => {
     });
 
     console.log(
-      `[Dashboard] Seller ${sellerIdStr}: Total Earnings = ${totalEarnings} from ${deliveredItemsCount} delivered items`
+      `[Dashboard] Seller ${sellerIdStr}: Total Earnings = ${totalEarnings} from ${deliveredItemsCount} delivered items`,
     );
 
     // Get Stock Alerts: Products with quantity <= 5
@@ -161,7 +174,7 @@ router.get("/api/dashboard", isAuthenticated, isSeller, async (req, res) => {
     const recentOrders = allOrders.slice(0, 5).map((order) => {
       // Get the first item from this seller in the order
       const sellerItem = order.items.find(
-        (item) => String(item.seller) === String(sellerId)
+        (item) => String(item.seller) === String(sellerId),
       );
       // Prefer item-specific status, fall back to order status
       const itemStatus = sellerItem
@@ -215,7 +228,7 @@ router.get("/dashboard", isAuthenticated, isSeller, (req, res) => {
 router.get("/profileSettings", isAuthenticated, isSeller, async (req, res) => {
   const filePath = path.join(
     __dirname,
-    "../public/seller/profileSettings.html"
+    "../public/seller/profileSettings.html",
   );
   return res.sendFile(filePath);
 });
@@ -237,7 +250,7 @@ router.post("/profileSettings", isAuthenticated, isSeller, async (req, res) => {
         address,
         sellerId: req.session.user.id,
       },
-      { new: true, upsert: true }
+      { new: true, upsert: true },
     );
 
     console.log("Updated Profile Data:", {
@@ -291,7 +304,7 @@ router.get(
       console.error("Profile settings GET API error", err);
       res.status(500).json({ success: false, message: "Server error" });
     }
-  }
+  },
 );
 
 // JSON API: Update seller profile settings
@@ -324,7 +337,7 @@ router.post(
       await SellerProfile.findOneAndUpdate(
         { sellerId: req.session.user.id },
         { ownerName, address, sellerId: req.session.user.id },
-        { new: true, upsert: true }
+        { new: true, upsert: true },
       );
 
       res.json({ success: true, message: "Profile updated" });
@@ -332,7 +345,7 @@ router.post(
       console.error("Profile settings POST API error", err);
       res.status(500).json({ success: false, message: "Server error" });
     }
-  }
+  },
 );
 
 // --- Orders (unchanged) ---
@@ -428,13 +441,13 @@ router.get("/reviews/filter", isAuthenticated, isSeller, (req, res) => {
 
   if (product) {
     filteredReviews = filteredReviews.filter(
-      (review) => review.product === product
+      (review) => review.product === product,
     );
   }
 
   if (rating && rating !== "all") {
     filteredReviews = filteredReviews.filter(
-      (review) => String(review.rating) === rating
+      (review) => String(review.rating) === rating,
     );
   }
 
@@ -459,7 +472,7 @@ router.post(
   "/add-product",
   isAuthenticated,
   isSeller,
-  upload.single("image"),
+  memoryUpload.single("image"),
   async (req, res) => {
     try {
       const {
@@ -477,21 +490,23 @@ router.post(
         return res.status(400).send("Product image required.");
       }
 
-      // Upload local file to Cloudinary (increase timeout to avoid 499 timeouts)
-      const uploadRes = await cloudinary.uploader.upload(req.file.path, {
-        folder: "autocustomizer/products",
-        fetch_format: "auto",
-        quality: "auto",
-        resource_type: "image",
-        timeout: 120000,
+      // Upload directly from memory buffer to Cloudinary (avoids slow disk I/O)
+      const uploadRes = await new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          {
+            folder: "autocustomizer/products",
+            fetch_format: "auto",
+            quality: "auto",
+            resource_type: "image",
+            timeout: 120000,
+          },
+          (err, result) => {
+            if (err) return reject(err);
+            return resolve(result);
+          },
+        );
+        stream.end(req.file.buffer);
       });
-
-      // remove local file
-      try {
-        fs.unlinkSync(req.file.path);
-      } catch (e) {
-        /* ignore */
-      }
 
       const newProduct = new Product({
         name,
@@ -508,7 +523,13 @@ router.post(
       });
 
       await newProduct.save();
-      res.redirect("/Seller/productmanagement");
+
+      // Return JSON response instead of redirect for fetch API compatibility
+      return res.status(200).json({
+        success: true,
+        message: "Product added successfully",
+        product: newProduct,
+      });
     } catch (error) {
       // Cloudinary and other libraries sometimes nest details under error.error
       const msg =
@@ -521,7 +542,7 @@ router.post(
       if (error.name === "ValidationError") {
         for (let field in error.errors) {
           console.error(
-            `Validation error on field "${field}": ${error.errors[field].message}`
+            `Validation error on field "${field}": ${error.errors[field].message}`,
           );
         }
         return res
@@ -531,8 +552,8 @@ router.post(
               Object.entries(error.errors).map(([field, errObj]) => [
                 field,
                 errObj.message,
-              ])
-            )
+              ]),
+            ),
           );
       }
 
@@ -541,14 +562,14 @@ router.post(
         return res
           .status(500)
           .send(
-            "Cloudinary configuration error: Please configure CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in your .env file."
+            "Cloudinary configuration error: Please configure CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in your .env file.",
           );
       }
 
       // Bubble up clearer message for troubleshooting (but still return 500)
       res.status(500).send(msg || "Internal Server Error: " + error.message);
     }
-  }
+  },
 );
 
 // --- Show only products added by seller (unchanged) ---
@@ -560,10 +581,10 @@ router.get(
   async (req, res) => {
     const filePath = path.join(
       __dirname,
-      "../public/seller/productManagement.html"
+      "../public/seller/productManagement.html",
     );
     return res.sendFile(filePath);
-  }
+  },
 );
 
 // JSON API to get seller products (for static HTML hydration)
@@ -588,7 +609,24 @@ router.post(
   async (req, res) => {
     try {
       const productId = req.params.id;
-      const product = await Product.findById(productId);
+
+      if (!mongoose.Types.ObjectId.isValid(productId)) {
+        return res
+          .status(400)
+          .json({ success: false, message: "Invalid product id" });
+      }
+
+      // Ensure seller can only delete their own products
+      const sellerId = req.session.user.id;
+      const product = await Product.findOne({
+        _id: productId,
+        seller: sellerId,
+      });
+      if (!product) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Product not found" });
+      }
 
       if (product?.imagePublicId) {
         try {
@@ -598,18 +636,28 @@ router.post(
         }
       }
 
-      await Product.findByIdAndDelete(productId);
+      await Product.deleteOne({ _id: productId });
       await Cart.updateMany(
         { "items.productId": productId },
-        { $pull: { items: { productId: productId } } }
+        { $pull: { items: { productId: productId } } },
       );
 
-      res.redirect("/Seller/productmanagement");
+      if (requestWantsJSON(req)) {
+        return res.json({ success: true });
+      }
+
+      // Keep browser navigation behavior working (but use correct lowercase route)
+      return res.redirect("/seller/productmanagement");
     } catch (err) {
       console.error("Error deleting product:", err);
-      res.status(500).send("Failed to delete product");
+      if (requestWantsJSON(req)) {
+        return res
+          .status(500)
+          .json({ success: false, message: "Failed to delete product" });
+      }
+      return res.status(500).send("Failed to delete product");
     }
-  }
+  },
 );
 
 // --- Orders status update - now supports per-item status ---
@@ -664,7 +712,7 @@ router.post(
 
         const derivedStatus = deriveOrderStatus(
           order.items,
-          order.orderStatus || "pending"
+          order.orderStatus || "pending",
         );
         if (derivedStatus !== order.orderStatus) {
           order.previousStatus = order.orderStatus;
@@ -702,7 +750,7 @@ router.post(
       console.error(err);
       res.status(500).json({ success: false, message: "Server error" });
     }
-  }
+  },
 );
 
 /* ------------------------------
@@ -718,7 +766,7 @@ function parseCsvFile(filePath) {
     const rows = [];
     fs.createReadStream(filePath)
       .pipe(
-        csvParser({ mapHeaders: ({ header }) => header.trim().toLowerCase() })
+        csvParser({ mapHeaders: ({ header }) => header.trim().toLowerCase() }),
       )
       .on("data", (row) => rows.push(row))
       .on("end", () => resolve(rows))
@@ -775,7 +823,7 @@ Car Spoiler,8000,Rear spoiler,BodyKit,Mugen,15,SPOILR,Accord,spoiler.jpg
   res.setHeader("Content-Type", "text/csv");
   res.setHeader(
     "Content-Disposition",
-    "attachment; filename=product_upload_sample.csv"
+    "attachment; filename=product_upload_sample.csv",
   );
   res.send(sample);
 });
@@ -817,7 +865,7 @@ router.post(
         const xlsxFile = files.find(
           (f) =>
             f.toLowerCase().endsWith(".xlsx") ||
-            f.toLowerCase().endsWith(".xls")
+            f.toLowerCase().endsWith(".xls"),
         );
 
         if (csvFile) {
@@ -1034,7 +1082,7 @@ router.post(
         }
       } else {
         throw new Error(
-          "Unsupported file type. Upload .zip (csv + images) or .csv or .xlsx"
+          "Unsupported file type. Upload .zip (csv + images) or .csv or .xlsx",
         );
       }
 
@@ -1055,14 +1103,14 @@ router.post(
       } catch (e) {}
       res.status(500).send("Bulk upload failed: " + err.message);
     }
-  }
+  },
 );
 
 // Static result page and JSON API to retrieve last summary
 router.get("/bulk-upload/result", isAuthenticated, isSeller, (req, res) => {
   const filePath = path.join(
     __dirname,
-    "../public/seller/bulkUploadResult.html"
+    "../public/seller/bulkUploadResult.html",
   );
   return res.sendFile(filePath);
 });

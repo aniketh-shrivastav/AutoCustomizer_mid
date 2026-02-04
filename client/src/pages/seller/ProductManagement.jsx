@@ -51,7 +51,7 @@ export default function ProductManagement() {
         String(parseInt(v, 10)) === String(v) ? "" : "Quantity must be integer",
       image: (v) => (v ? "" : "Product image required"),
     }),
-    []
+    [],
   );
 
   const setField = (key, value) => {
@@ -81,6 +81,7 @@ export default function ProductManagement() {
     try {
       const res = await fetch("/seller/api/products", {
         headers: { Accept: "application/json" },
+        credentials: "include",
       });
       if (res.status === 401) {
         window.location.href = "/login";
@@ -119,12 +120,21 @@ export default function ProductManagement() {
         else formData.append(k, v ?? "");
       });
 
-      const res = await fetch("/Seller/add-product", {
+      const res = await fetch("/seller/add-product", {
         method: "POST",
         body: formData,
+        credentials: "include",
+        headers: { Accept: "application/json" },
       });
 
-      if (!res.ok) throw new Error("Failed to add product");
+      if (!res.ok) {
+        const ct = res.headers.get("content-type") || "";
+        if (ct.includes("application/json")) {
+          const data = await res.json();
+          throw new Error(data.message || "Failed to add product");
+        }
+        throw new Error("Failed to add product");
+      }
       setStatus("Product added successfully!");
       setForm({
         name: "",
@@ -149,8 +159,10 @@ export default function ProductManagement() {
   async function handleDelete(id) {
     if (!window.confirm("Delete this product?")) return;
     try {
-      const res = await fetch(`/Seller/delete-product/${id}`, {
+      const res = await fetch(`/seller/delete-product/${id}`, {
         method: "POST",
+        credentials: "include",
+        headers: { Accept: "application/json" },
       });
       // Server currently redirects after delete; handle both JSON and redirect/HTML responses
       const ct = res.headers.get("content-type") || "";
@@ -163,7 +175,7 @@ export default function ProductManagement() {
       await loadProducts();
     } catch (err) {
       console.error(err);
-      alert("Failed to delete product.");
+      alert(err?.message || "Failed to delete product.");
     }
   }
 
@@ -171,7 +183,11 @@ export default function ProductManagement() {
     <div className="seller-page">
       <nav className="navbar">
         <div className="brand">
-          <img src="/images3/logo2.jpg" alt="AutoCustomizer" style={{ height: '40px', objectFit: 'contain' }} />
+          <img
+            src="/images3/logo2.jpg"
+            alt="AutoCustomizer"
+            style={{ height: "40px", objectFit: "contain" }}
+          />
         </div>
         <ul>
           <li>
