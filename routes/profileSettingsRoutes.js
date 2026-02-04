@@ -2,19 +2,12 @@ const express = require("express");
 const User = require("../models/User");
 const router = express.Router();
 
-// Middleware
-const isAuthenticated = (req, res, next) => {
-  if (req.session.user) return next();
-  res.redirect("/login");
-};
-
-const isService = (req, res, next) => {
-  if (req.session.user?.role === "service-provider") return next();
-  res.status(403).send("Access Denied: Service Providers Only");
-};
-
-// Combined middleware
-const serviceOnly = [isAuthenticated, isService];
+// Import centralized middleware
+const {
+  isAuthenticated,
+  isServiceProvider,
+  serviceOnly,
+} = require("../middleware");
 
 router.post("/profile/update", serviceOnly, async (req, res) => {
   try {
@@ -59,10 +52,10 @@ router.post("/profile/update", serviceOnly, async (req, res) => {
           .map((c) =>
             String(c || "")
               .trim()
-              .toLowerCase()
+              .toLowerCase(),
           )
-          .filter((c) => hexColorRe.test(c))
-      )
+          .filter((c) => hexColorRe.test(c)),
+      ),
     ).slice(0, 24);
 
     const hasCarPainting = servicesArray.some((s) => {

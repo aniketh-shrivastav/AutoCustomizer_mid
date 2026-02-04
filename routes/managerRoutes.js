@@ -13,6 +13,9 @@ const Order = require("../models/Orders");
 const ContactMessage = require("../models/ContactMessage");
 const PDFDocument = require("pdfkit");
 
+// Import centralized middleware
+const { isAuthenticated, isManager, managerOnly } = require("../middleware");
+
 const MONTH_HISTORY = 6;
 
 function buildMonthBuckets(count = MONTH_HISTORY) {
@@ -219,16 +222,6 @@ async function collectDashboardStats() {
     },
   };
 }
-// Middleware
-const isAuthenticated = (req, res, next) => {
-  if (req.session.user) return next();
-  res.redirect("/login");
-};
-
-const isManager = (req, res, next) => {
-  if (req.session.user?.role === "manager") return next();
-  res.status(403).send("Access Denied: Managers Only");
-};
 
 // Static dashboard HTML (will be added separately). Keep EJS route untouched.
 router.get("/dashboard.html", isAuthenticated, isManager, (req, res) => {

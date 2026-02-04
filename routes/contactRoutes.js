@@ -3,18 +3,11 @@ const router = express.Router();
 const ContactMessage = require("../models/ContactMessage");
 const User = require("../models/User");
 
-// Middleware
-const isAuthenticated = (req, res, next) => {
-  if (req.session.user) return next();
-  res.redirect("/login");
-};
+// Import centralized middleware
+const { isAuthenticated, isManager, managerOnly } = require("../middleware");
 
-const isManager = (req, res, next) => {
-  if (req.session.user?.role === "manager") return next();
-  res.status(403).send("Access Denied: Managers Only");
-};
-
-const ManagersOnly = [isAuthenticated, isManager];
+// Alias for backward compatibility
+const ManagersOnly = managerOnly;
 
 // Contact Us Submission
 router.post("/contactus", async (req, res) => {
@@ -23,7 +16,8 @@ router.post("/contactus", async (req, res) => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
   if (!nameRegex.test(name)) return res.status(400).send("Invalid name");
-  if (!emailRegex.test(email) || /[A-Z]/.test(email)) return res.status(400).send("Invalid email format");
+  if (!emailRegex.test(email) || /[A-Z]/.test(email))
+    return res.status(400).send("Invalid email format");
 
   try {
     const user = await User.findOne({ email });
@@ -33,12 +27,14 @@ router.post("/contactus", async (req, res) => {
       email,
       subject,
       message,
-      verifiedUser: !!user
+      verifiedUser: !!user,
     });
 
     await newMessage.save();
 
-    console.log(`Message received from ${name} (${email}) - Verified: ${!!user}`);
+    console.log(
+      `Message received from ${name} (${email}) - Verified: ${!!user}`,
+    );
 
     res.redirect("/contactus?submitted=true");
   } catch (err) {
@@ -75,4 +71,4 @@ router.delete("/support/respond/:id", ManagersOnly, async (req, res) => {
   }
 });
 
-module.exports = {router};
+module.exports = { router };

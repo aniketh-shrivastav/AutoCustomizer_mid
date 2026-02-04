@@ -11,11 +11,28 @@ const ExcelJS = require("exceljs");
 
 const User = require("../models/User");
 const SellerProfile = require("../models/sellerProfile");
-const multer = require("multer");
 const cloudinary = require("../config/cloudinaryConfig"); // plain cloudinary
 const Product = require("../models/Product");
 const Order = require("../models/Orders");
 const Cart = require("../models/Cart");
+
+// Import centralized middleware
+const {
+  isAuthenticated,
+  isSeller,
+  wantsJSON,
+  uploadImageToMemory,
+  uploadDocumentToDisk,
+  UPLOAD_DIR,
+} = require("../middleware");
+
+// Aliases for backward compatibility
+const memoryUpload = uploadImageToMemory;
+const upload = uploadDocumentToDisk;
+
+function requestWantsJSON(req) {
+  return wantsJSON(req);
+}
 
 function deriveOrderStatus(items, fallback = "pending") {
   if (!Array.isArray(items) || items.length === 0) return fallback;
@@ -27,72 +44,6 @@ function deriveOrderStatus(items, fallback = "pending") {
   if (statuses.some((s) => s === "confirmed")) return "confirmed";
   return "pending";
 }
-
-// Ensure tmp upload dir exists
-const UPLOAD_DIR = path.join(__dirname, "..", "tmp", "uploads");
-if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-
-// Use diskStorage so req.file.path exists (we'll upload that to Cloudinary)
-const diskStorage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, UPLOAD_DIR),
-  filename: (req, file, cb) => {
-    const cleanName = file.originalname.replace(/\s+/g, "-");
-    cb(null, `${Date.now()}-${cleanName}`);
-  },
-});
-const upload = multer({
-  storage: diskStorage,
-  limits: { fileSize: 50 * 1024 * 1024 }, // 50 MB limit
-});
-
-// Memory storage for single image uploads (faster than disk roundtrip)
-const memoryUpload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 50 * 1024 * 1024 }, // 50 MB limit
-});
-
-function requestWantsJSON(req) {
-  return (
-    (req.headers.accept && req.headers.accept.includes("application/json")) ||
-    req.xhr
-  );
-}
-
-// --- Middleware to ensure seller access only ---
-const isAuthenticated = (req, res, next) => {
-  if (req.session.user) return next();
-
-  // Enhanced auth: if the client explicitly requests JSON (API/fetch) respond with 401 JSON
-  // Otherwise fall back to browser redirect so normal navigation still works.
-  const wantsJSON =
-    (req.headers.accept && req.headers.accept.includes("application/json")) ||
-    req.xhr ||
-    req.path.startsWith("/api/");
-
-  if (wantsJSON) {
-    return res
-      .status(401)
-      .json({ success: false, message: "Not authenticated" });
-  }
-  return res.redirect("/login");
-};
-
-const isSeller = (req, res, next) => {
-  if (req.session.user?.role === "seller") return next();
-
-  // Check if request wants JSON
-  const wantsJSON =
-    (req.headers.accept && req.headers.accept.includes("application/json")) ||
-    req.xhr ||
-    req.path.startsWith("/api/");
-
-  if (wantsJSON) {
-    return res
-      .status(403)
-      .json({ success: false, message: "Access Denied: Sellers Only" });
-  }
-  res.status(403).send("Access Denied: Sellers Only");
-};
 
 // --- Dashboard JSON API (for static HTML hydration) ---
 router.get("/api/dashboard", isAuthenticated, isSeller, async (req, res) => {

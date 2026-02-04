@@ -1,3 +1,15 @@
+/**
+ * Error Handling Middleware (Error-handling Middleware)
+ *
+ * These middleware functions handle errors in the application.
+ * Error-handling middleware MUST have exactly 4 parameters: (err, req, res, next)
+ *
+ * Type: Error-handling Middleware
+ */
+
+/**
+ * Helper to detect JSON requests
+ */
 function wantsJson(req) {
   const accept = String(req.headers?.accept || "");
   return (
@@ -8,6 +20,11 @@ function wantsJson(req) {
   );
 }
 
+/**
+ * 404 Not Found Handler
+ * Creates a 404 error for unmatched routes
+ * Note: This is technically regular middleware, not error-handling
+ */
 function notFound(req, res, next) {
   const err = new Error(`Not Found - ${req.originalUrl}`);
   err.statusCode = 404;

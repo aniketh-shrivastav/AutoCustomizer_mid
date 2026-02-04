@@ -2,7 +2,6 @@ const express = require("express");
 const router = express.Router();
 const Message = require("../models/Message");
 const User = require("../models/User");
-const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 let cloudinary;
@@ -10,9 +9,16 @@ try {
   cloudinary = require("../config/cloudinaryConfig");
 } catch {}
 
-const uploadDir = path.join(__dirname, "..", "tmp", "uploads");
-fs.mkdirSync(uploadDir, { recursive: true });
-const upload = multer({ dest: uploadDir });
+// Import centralized middleware
+const {
+  isAuthenticated,
+  isManager,
+  uploadGeneric,
+  UPLOAD_DIR,
+} = require("../middleware");
+
+// Use centralized upload middleware
+const upload = uploadGeneric;
 
 function cleanupLocalAttachment(attachment) {
   if (!attachment?.url || attachment.provider !== "local") return;
@@ -20,17 +26,6 @@ function cleanupLocalAttachment(attachment) {
   const fullPath = path.join(__dirname, "..", relative);
   fs.unlink(fullPath, () => {});
 }
-
-// Auth helpers similar to other routes
-const isAuthenticated = (req, res, next) => {
-  if (req.session?.user) return next();
-  return res.status(401).json({ success: false, message: "Unauthorized" });
-};
-
-const isManager = (req, res, next) => {
-  if (req.session?.user?.role === "manager") return next();
-  return res.status(403).json({ success: false, message: "Managers only" });
-};
 
 // A customer can only see their own thread; a manager can see any
 function canAccessCustomer(req, res, next) {
@@ -62,7 +57,7 @@ router.get("/chat/customers", isAuthenticated, isManager, async (req, res) => {
     const ids = latest.map((x) => x._id);
     const users = await User.find(
       { _id: { $in: ids } },
-      "name email role"
+      "name email role",
     ).lean();
     const byId = Object.fromEntries(users.map((u) => [String(u._id), u]));
     const results = latest.map((x) => ({
@@ -101,7 +96,7 @@ router.get(
           role: "customer",
           $or: [{ name: regex }, { email: regex }],
         },
-        "name email role"
+        "name email role",
       )
         .sort({ createdAt: -1 })
         .limit(limit)
@@ -127,7 +122,7 @@ router.get(
         latest.map((x) => [
           String(x._id),
           { lastMessage: x.lastMessage, lastAt: x.lastAt },
-        ])
+        ]),
       );
 
       const results = users.map((u) => ({
@@ -143,7 +138,7 @@ router.get(
       console.error("chat/customers/search", e);
       res.status(500).json({ success: false, message: "Server error" });
     }
-  }
+  },
 );
 
 // Get messages for a customer thread
@@ -170,7 +165,7 @@ router.get(
               senderRole: "customer",
               readByManager: { $ne: true },
             },
-            { $set: { readByManager: true } }
+            { $set: { readByManager: true } },
           );
         } else {
           await Message.updateMany(
@@ -179,7 +174,7 @@ router.get(
               senderRole: "manager",
               readByCustomer: { $ne: true },
             },
-            { $set: { readByCustomer: true } }
+            { $set: { readByCustomer: true } },
           );
         }
       } catch {}
@@ -188,7 +183,7 @@ router.get(
       console.error("chat messages", e);
       res.status(500).json({ success: false, message: "Server error" });
     }
-  }
+  },
 );
 
 // Post a message to a customer thread
@@ -229,7 +224,7 @@ router.post(
       console.error("chat post", e);
       res.status(500).json({ success: false, message: "Server error" });
     }
-  }
+  },
 );
 
 // Upload an attachment to a customer thread
@@ -299,7 +294,7 @@ router.post(
       console.error("chat attachment", e);
       res.status(500).json({ success: false, message: "Server error" });
     }
-  }
+  },
 );
 
 // Delete a message from customer thread
@@ -344,7 +339,7 @@ router.delete(
       console.error("chat delete", e);
       res.status(500).json({ success: false, message: "Server error" });
     }
-  }
+  },
 );
 
 // Get unread count for current user (by role)

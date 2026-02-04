@@ -1,7 +1,6 @@
 const express = require("express");
 const router = express.Router();
 const path = require("path");
-const multer = require("multer");
 const cloudinary = require("../config/cloudinaryConfig");
 const fs = require("fs");
 
@@ -16,60 +15,17 @@ const ServiceBooking = require("../models/serviceBooking");
 const Order = require("../models/Orders");
 const pdfController = require("../controllers/pdfRoutes");
 
-// Setup multer for file uploads
-const UPLOAD_DIR = path.join(__dirname, "..", "tmp", "uploads");
-if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+// Import centralized middleware
+const {
+  isAuthenticated,
+  isCustomer,
+  customerOnly,
+  uploadImageToDisk,
+  UPLOAD_DIR,
+} = require("../middleware");
 
-const diskStorage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, UPLOAD_DIR),
-  filename: (req, file, cb) => {
-    const cleanName = file.originalname.replace(/\s+/g, "-");
-    cb(null, `${Date.now()}-${cleanName}`);
-  },
-});
-
-const upload = multer({
-  storage: diskStorage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB limit
-  fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|gif|webp/;
-    const extname = allowedTypes.test(
-      path.extname(file.originalname).toLowerCase(),
-    );
-    const mimetype = allowedTypes.test(file.mimetype);
-    if (mimetype && extname) {
-      return cb(null, true);
-    }
-    cb(new Error("Only image files are allowed (jpeg, jpg, png, gif, webp)"));
-  },
-});
-
-// Middleware
-// Enhanced auth: if the client explicitly requests JSON (API/fetch) respond with 401 JSON
-// Otherwise fall back to browser redirect so normal navigation still works.
-const isAuthenticated = (req, res, next) => {
-  if (req.session.user) return next();
-
-  const wantsJSON =
-    (req.headers.accept && req.headers.accept.includes("application/json")) ||
-    req.xhr ||
-    req.path.startsWith("/api/");
-
-  if (wantsJSON) {
-    return res
-      .status(401)
-      .json({ success: false, message: "Not authenticated" });
-  }
-  return res.redirect("/login");
-};
-
-const isCustomer = (req, res, next) => {
-  if (req.session.user?.role === "customer") return next();
-  res.status(403).send("Access Denied: Customers Only");
-};
-
-// Combined middleware for simplicity
-const customerOnly = [isAuthenticated, isCustomer];
+// Use centralized upload middleware (alias for backward compatibility)
+const upload = uploadImageToDisk;
 
 // Routes
 
@@ -694,12 +650,10 @@ router.post(
         req.headers.accept &&
         req.headers.accept.includes("application/json")
       ) {
-        return res
-          .status(500)
-          .json({
-            success: false,
-            message: error.message || "Error updating profile",
-          });
+        return res.status(500).json({
+          success: false,
+          message: error.message || "Error updating profile",
+        });
       }
       res.status(500).send("Error updating profile");
     }

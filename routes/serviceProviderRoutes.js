@@ -5,19 +5,12 @@ const ServiceBooking = require("../models/serviceBooking");
 const mongoose = require("mongoose");
 const path = require("path");
 
-// Middleware
-const isAuthenticated = (req, res, next) => {
-  if (req.session.user) return next();
-  res.redirect("/login");
-};
-
-const isService = (req, res, next) => {
-  if (req.session.user?.role === "service-provider") return next();
-  res.status(403).send("Access Denied: Service Providers Only");
-};
-
-// Combined middleware
-const serviceOnly = [isAuthenticated, isService];
+// Import centralized middleware
+const {
+  isAuthenticated,
+  isServiceProvider,
+  serviceOnly,
+} = require("../middleware");
 
 // Routes
 
@@ -25,7 +18,7 @@ const serviceOnly = [isAuthenticated, isService];
 router.get("/dashboardService", serviceOnly, async (req, res) => {
   const filePath = path.join(
     __dirname,
-    "../public/service/dashboardService.html"
+    "../public/service/dashboardService.html",
   );
   return res.sendFile(filePath);
 });
@@ -95,7 +88,7 @@ router.get("/api/dashboard", serviceOnly, async (req, res) => {
 router.get("/profileSettings", serviceOnly, async (req, res) => {
   const filePath = require("path").join(
     __dirname,
-    "../public/service/profileSettings.html"
+    "../public/service/profileSettings.html",
   );
   return res.sendFile(filePath);
 });
@@ -105,7 +98,7 @@ router.get("/profileSettings", serviceOnly, async (req, res) => {
 router.get("/bookingManagement", serviceOnly, async (req, res) => {
   const filePath = require("path").join(
     __dirname,
-    "../public/service/bookingManagement.html"
+    "../public/service/bookingManagement.html",
   );
   return res.sendFile(filePath);
 });
@@ -146,7 +139,7 @@ router.post("/updateBookingStatus", serviceOnly, async (req, res) => {
             providerId: booking.providerId,
             newEarning: booking.totalCost,
             timestamp: new Date(),
-          }
+          },
         );
       }
     }
@@ -159,7 +152,7 @@ router.post("/updateBookingStatus", serviceOnly, async (req, res) => {
         {
           providerId: booking.providerId,
           timestamp: new Date(),
-        }
+        },
       );
     }
 
@@ -176,7 +169,7 @@ router.post("/updateMultipleBookingStatus", serviceOnly, async (req, res) => {
   try {
     await ServiceBooking.updateMany(
       { _id: { $in: orderIds } },
-      { $set: { status: newStatus } }
+      { $set: { status: newStatus } },
     );
     res.json({ success: true });
   } catch (err) {
@@ -199,7 +192,7 @@ router.get("/earnings", serviceOnly, async (req, res) => {
 
     const totalEarnings = completedBookings.reduce(
       (sum, booking) => sum + booking.totalCost,
-      0
+      0,
     );
 
     // Assuming all Ready bookings are considered for payout
@@ -244,7 +237,7 @@ router.get("/api/earnings-data", serviceOnly, async (req, res) => {
       const daysInMonth = new Date(
         currentDate.getFullYear(),
         currentDate.getMonth() + 1,
-        0
+        0,
       ).getDate();
       const monthName = getMonthName(currentDate.getMonth());
 
@@ -256,12 +249,12 @@ router.get("/api/earnings-data", serviceOnly, async (req, res) => {
         const weekStartDate = new Date(
           currentDate.getFullYear(),
           currentDate.getMonth(),
-          weekStart
+          weekStart,
         );
         const weekEndDate = new Date(
           currentDate.getFullYear(),
           currentDate.getMonth(),
-          weekEnd + 1
+          weekEnd + 1,
         );
 
         const weeklyEarnings = await ServiceBooking.aggregate([
@@ -299,7 +292,7 @@ router.get("/api/earnings-data", serviceOnly, async (req, res) => {
         const monthEndDate = new Date(
           date.getFullYear(),
           date.getMonth() + 1,
-          1
+          1,
         );
 
         const monthlyEarnings = await ServiceBooking.aggregate([
@@ -470,7 +463,7 @@ router.post("/submit-rating/:id", async (req, res) => {
         review: review || "",
         status: "Completed", // Ensure status is marked as completed
       },
-      { new: true }
+      { new: true },
     ).populate("customerId", "name");
 
     if (!updatedBooking) {
