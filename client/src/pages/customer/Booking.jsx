@@ -29,6 +29,9 @@ export default function CustomerBooking() {
   const [providers, setProviders] = useState([]);
   const [serviceCostMap, setServiceCostMap] = useState({});
   const [ratingsMap, setRatingsMap] = useState({});
+  const [providerReviews, setProviderReviews] = useState([]);
+  const [providerReviewsLoading, setProviderReviewsLoading] = useState(false);
+  const [providerReviewsError, setProviderReviewsError] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -100,6 +103,41 @@ export default function CustomerBooking() {
     () => providers.find((p) => String(p._id) === String(providerId)),
     [providers, providerId],
   );
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadProviderReviews() {
+      if (!providerId) {
+        setProviderReviews([]);
+        setProviderReviewsError("");
+        return;
+      }
+      try {
+        setProviderReviewsLoading(true);
+        setProviderReviewsError("");
+        const res = await fetch(
+          `/customer/api/provider/${providerId}/reviews`,
+          {
+            headers: { Accept: "application/json" },
+            credentials: "include",
+          },
+        );
+        if (!res.ok) throw new Error("Failed to load provider reviews");
+        const j = await res.json();
+        if (!j.success) throw new Error(j.message || "Failed to load reviews");
+        if (!cancelled) setProviderReviews(j.reviews || []);
+      } catch (e) {
+        if (!cancelled)
+          setProviderReviewsError(e.message || "Failed to load reviews");
+      } finally {
+        if (!cancelled) setProviderReviewsLoading(false);
+      }
+    }
+    loadProviderReviews();
+    return () => {
+      cancelled = true;
+    };
+  }, [providerId]);
 
   const offeredServices = useMemo(() => {
     return provider?.servicesOffered?.map((s) => s.name) || [];
@@ -543,6 +581,67 @@ export default function CustomerBooking() {
               );
             })}
         </div>
+
+        {providerId && (
+          <div
+            style={{
+              background: "#fff",
+              border: "1px solid #e5e7eb",
+              borderRadius: 12,
+              padding: 16,
+              marginBottom: 24,
+            }}
+          >
+            <h3 style={{ marginBottom: 12 }}>
+              Reviews for {provider?.name || "Service Provider"}
+            </h3>
+            {providerReviewsLoading && <p>Loading reviews...</p>}
+            {providerReviewsError && (
+              <p style={{ color: "crimson" }}>{providerReviewsError}</p>
+            )}
+            {!providerReviewsLoading &&
+              !providerReviewsError &&
+              providerReviews.length === 0 && <p>No reviews yet.</p>}
+            {!providerReviewsLoading &&
+              !providerReviewsError &&
+              providerReviews.length > 0 && (
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+                    gap: 16,
+                  }}
+                >
+                  {providerReviews.map((r) => (
+                    <div
+                      key={r._id}
+                      style={{
+                        border: "1px solid #e5e7eb",
+                        borderRadius: 12,
+                        padding: 12,
+                        background: "#f9fafb",
+                      }}
+                    >
+                      <div style={{ fontWeight: 600 }}>{r.customerName}</div>
+                      <div style={{ fontSize: 13 }}>⭐ {r.rating} / 5</div>
+                      {r.review ? (
+                        <p style={{ marginTop: 6 }}>{r.review}</p>
+                      ) : (
+                        <p style={{ marginTop: 6, color: "#6b7280" }}>
+                          No review text.
+                        </p>
+                      )}
+                      <div style={{ fontSize: 12, color: "#9ca3af" }}>
+                        {r.createdAt
+                          ? new Date(r.createdAt).toLocaleDateString()
+                          : ""}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+          </div>
+        )}
 
         <h2>Fill Your Booking Details</h2>
 

@@ -254,6 +254,41 @@ router.get("/api/booking", customerOnly, async (req, res) => {
   }
 });
 
+// Reviews for a specific service provider (for customer booking page)
+router.get("/api/provider/:id/reviews", customerOnly, async (req, res) => {
+  try {
+    const providerId = req.params.id;
+    if (!providerId || !mongoose.Types.ObjectId.isValid(providerId)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid provider id" });
+    }
+
+    const reviews = await ServiceBooking.find({
+      providerId: providerId,
+      rating: { $exists: true },
+    })
+      .populate("customerId", "name")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const shaped = reviews.map((r) => ({
+      _id: r._id,
+      customerName: r.customerId?.name || "Customer",
+      rating: r.rating,
+      review: r.review || "",
+      createdAt: r.createdAt,
+    }));
+
+    return res.json({ success: true, reviews: shaped });
+  } catch (err) {
+    console.error("Provider reviews API error:", err);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to load reviews" });
+  }
+});
+
 router.get("/cart", customerOnly, async (req, res) => {
   try {
     const cart = await Cart.findOne({ userId: req.session.user.id });
