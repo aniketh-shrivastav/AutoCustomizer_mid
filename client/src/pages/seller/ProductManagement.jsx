@@ -205,6 +205,9 @@ export default function ProductManagement() {
             <a href="/seller/orders">Orders</a>
           </li>
           <li>
+            <a href="/seller/reviews">Reviews</a>
+          </li>
+          <li>
             <a href="/logout">Logout</a>
           </li>
         </ul>

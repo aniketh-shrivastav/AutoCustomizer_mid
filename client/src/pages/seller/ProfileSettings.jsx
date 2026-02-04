@@ -32,14 +32,14 @@ export default function SellerProfileSettings() {
         !v
           ? "Store Name required"
           : v.length > MAX_LEN
-          ? `Store Name must be ${MAX_LEN} or fewer characters`
-          : "",
+            ? `Store Name must be ${MAX_LEN} or fewer characters`
+            : "",
       ownerName: (v) =>
         !v
           ? "Owner Name required"
           : v.length > MAX_LEN
-          ? `Owner Name must be ${MAX_LEN} or fewer characters`
-          : "",
+            ? `Owner Name must be ${MAX_LEN} or fewer characters`
+            : "",
       contactEmail: (v) => {
         if (!v) return "Email required";
         if (!v.includes("@")) return "Email must contain @";
@@ -50,7 +50,7 @@ export default function SellerProfileSettings() {
       phone: (v) => (/^\d{10}$/.test(v) ? "" : "Phone must be 10 digits"),
       address: (v) => (!v ? "Address required" : ""),
     }),
-    []
+    [],
   );
 
   function setField(k, v) {
@@ -118,8 +118,8 @@ export default function SellerProfileSettings() {
         },
         body: JSON.stringify(
           Object.fromEntries(
-            Object.entries(form).map(([k, v]) => [k, String(v).trim()])
-          )
+            Object.entries(form).map(([k, v]) => [k, String(v).trim()]),
+          ),
         ),
       });
       const out = await res.json().catch(() => ({}));
@@ -141,7 +141,11 @@ export default function SellerProfileSettings() {
     <div className="seller-page">
       <nav className="navbar">
         <div className="brand">
-          <img src="/images3/logo2.jpg" alt="AutoCustomizer" style={{ height: '40px', objectFit: 'contain' }} />
+          <img
+            src="/images3/logo2.jpg"
+            alt="AutoCustomizer"
+            style={{ height: "40px", objectFit: "contain" }}
+          />
         </div>
         <ul>
           <li>
@@ -157,6 +161,9 @@ export default function SellerProfileSettings() {
           </li>
           <li>
             <a href="/seller/orders">Orders</a>
+          </li>
+          <li>
+            <a href="/seller/reviews">Reviews</a>
           </li>
           <li>
             <a href="/logout">Logout</a>

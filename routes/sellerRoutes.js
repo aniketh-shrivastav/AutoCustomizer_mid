@@ -15,6 +15,7 @@ const cloudinary = require("../config/cloudinaryConfig"); // plain cloudinary
 const Product = require("../models/Product");
 const Order = require("../models/Orders");
 const Cart = require("../models/Cart");
+const ProductReview = require("../models/ProductReview");
 
 // Import centralized middleware
 const {
@@ -374,49 +375,50 @@ router.post("/request-payout", isAuthenticated, isSeller, (req, res) => {
   res.redirect("/seller/earnings-payouts");
 });
 
-// --- Reviews (unchanged) ---
-const reviews = JSON.parse(fs.readFileSync("./data/reviews.json", "utf8"));
-const products = JSON.parse(fs.readFileSync("./data/products.json", "utf8"));
+// --- Reviews (seller) ---
+router.get("/api/reviews", isAuthenticated, isSeller, async (req, res) => {
+  try {
+    const sellerId = req.session.user.id;
+    const reviews = await ProductReview.find({ seller: sellerId })
+      .populate("productId", "name image")
+      .populate("userId", "name")
+      .sort({ createdAt: -1 })
+      .lean();
 
-router.get("/reviews", isAuthenticated, isSeller, (req, res) => {
-  res.render("Seller/reviewsRatings", {
-    products,
-    filteredReviews: [],
-    averageRating: 0,
-  });
-});
+    const summaryMap = new Map();
+    reviews.forEach((r) => {
+      const pid = String(r.productId?._id || r.productId);
+      const existing = summaryMap.get(pid) || {
+        productId: pid,
+        productName: r.productId?.name || "Unknown",
+        productImage: r.productId?.image || "",
+        totalReviews: 0,
+        totalRating: 0,
+      };
+      existing.totalReviews += 1;
+      existing.totalRating += Number(r.rating || 0);
+      summaryMap.set(pid, existing);
+    });
 
-router.get("/reviews/filter", isAuthenticated, isSeller, (req, res) => {
-  const { product, rating } = req.query;
-  let filteredReviews = reviews;
+    const summaries = Array.from(summaryMap.values()).map((s) => ({
+      productId: s.productId,
+      productName: s.productName,
+      productImage: s.productImage,
+      totalReviews: s.totalReviews,
+      avgRating:
+        s.totalReviews > 0
+          ? Number((s.totalRating / s.totalReviews).toFixed(1))
+          : 0,
+    }));
 
-  if (product) {
-    filteredReviews = filteredReviews.filter(
-      (review) => review.product === product,
-    );
+    return res.json({ success: true, reviews, summaries });
+  } catch (err) {
+    console.error("Seller reviews API error:", err);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to load reviews" });
   }
-
-  if (rating && rating !== "all") {
-    filteredReviews = filteredReviews.filter(
-      (review) => String(review.rating) === rating,
-    );
-  }
-
-  const averageRating = calculateAverageRating(filteredReviews);
-
-  res.render("Seller/reviewsRatings", {
-    reviews,
-    products,
-    filteredReviews,
-    averageRating,
-  });
 });
-
-function calculateAverageRating(reviews) {
-  if (!reviews.length) return 0;
-  const total = reviews.reduce((sum, review) => sum + review.rating, 0);
-  return (total / reviews.length).toFixed(1);
-}
 
 // --- Product Management (SINGLE product upload adjusted to manual Cloudinary upload) ---
 router.post(

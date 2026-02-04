@@ -7,6 +7,7 @@ const fs = require("fs");
 const User = require("../models/User");
 const Cart = require("../models/Cart");
 const Product = require("../models/Product");
+const ProductReview = require("../models/ProductReview");
 const orderController = require("../controllers/orderController");
 
 const CustomerProfile = require("../models/CustomerProfile");
@@ -691,13 +692,78 @@ router.get("/product/:id", customerOnly, async (req, res) => {
       return res.status(404).send("Product not found");
     }
 
+    const productId = product._id;
+    const userId = req.session.user?.id;
+
+    const ratingAgg = await ProductReview.aggregate([
+      { $match: { productId: productId } },
+      {
+        $group: {
+          _id: "$productId",
+          avgRating: { $avg: "$rating" },
+          totalReviews: { $sum: 1 },
+        },
+      },
+    ]);
+    const ratingSummary = {
+      avgRating: Number(ratingAgg[0]?.avgRating?.toFixed?.(1) || 0),
+      totalReviews: ratingAgg[0]?.totalReviews || 0,
+    };
+
+    const reviews = await ProductReview.find({ productId: productId })
+      .populate("userId", "name")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const existingReview = userId
+      ? await ProductReview.findOne({ productId: productId, userId }).lean()
+      : null;
+
+    const hasPurchased = userId
+      ? await Order.exists({
+          userId,
+          $or: [
+            {
+              items: {
+                $elemMatch: {
+                  productId: productId,
+                  $or: [
+                    { itemStatus: "delivered" },
+                    { itemStatus: { $exists: false } },
+                  ],
+                },
+              },
+            },
+            {
+              orderStatus: "delivered",
+              "items.productId": productId,
+            },
+          ],
+        })
+      : false;
+
     // If the client explicitly wants JSON (SPA/fetch), return JSON
     if (req.headers.accept && req.headers.accept.includes("application/json")) {
-      return res.json({ success: true, product, user: req.session.user });
+      return res.json({
+        success: true,
+        product,
+        user: req.session.user,
+        ratingSummary,
+        reviews,
+        canReview: Boolean(hasPurchased),
+        userReview: existingReview || null,
+      });
     }
 
     // Otherwise render the original EJS view
-    res.render("customer/productDetails", { product, user: req.session.user });
+    res.render("customer/productDetails", {
+      product,
+      user: req.session.user,
+      ratingSummary,
+      reviews,
+      canReview: Boolean(hasPurchased),
+      userReview: existingReview || null,
+    });
   } catch (error) {
     console.error("Product detail fetch error:", error);
     if (req.headers.accept && req.headers.accept.includes("application/json")) {
@@ -706,6 +772,85 @@ router.get("/product/:id", customerOnly, async (req, res) => {
         .json({ success: false, message: "Error fetching product details" });
     }
     res.status(500).send("Error fetching product details");
+  }
+});
+
+router.post("/product/:id/review", customerOnly, async (req, res) => {
+  const { rating, review } = req.body;
+  const productId = req.params.id;
+  const userId = req.session.user?.id;
+
+  try {
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    const product = await Product.findById(productId);
+    if (!product || product.status !== "approved") {
+      return res
+        .status(404)
+        .json({ success: false, message: "Product not found" });
+    }
+
+    const parsedRating = Number(rating);
+    if (!parsedRating || parsedRating < 1 || parsedRating > 5) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Rating must be 1-5" });
+    }
+
+    const hasPurchased = await Order.exists({
+      userId,
+      $or: [
+        {
+          items: {
+            $elemMatch: {
+              productId: productId,
+              $or: [
+                { itemStatus: "delivered" },
+                { itemStatus: { $exists: false } },
+              ],
+            },
+          },
+        },
+        { orderStatus: "delivered", "items.productId": productId },
+      ],
+    });
+
+    if (!hasPurchased) {
+      return res.status(403).json({
+        success: false,
+        message: "You can only review products you have purchased",
+      });
+    }
+
+    const updated = await ProductReview.findOneAndUpdate(
+      { productId, userId },
+      {
+        productId,
+        userId,
+        seller: product.seller,
+        rating: parsedRating,
+        review: review || "",
+      },
+      { new: true, upsert: true, setDefaultsOnInsert: true },
+    );
+
+    return res.json({
+      success: true,
+      message: "Review saved",
+      review: updated,
+    });
+  } catch (err) {
+    console.error("Review submit error:", err);
+    if (err.code === 11000) {
+      return res
+        .status(409)
+        .json({ success: false, message: "You already reviewed this product" });
+    }
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to submit review" });
   }
 });
 

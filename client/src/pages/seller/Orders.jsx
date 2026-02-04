@@ -16,14 +16,14 @@ function StatusBadge({ status }) {
     s === "pending"
       ? "#FFC107"
       : s === "confirmed"
-      ? "#7e57c2"
-      : s === "shipped"
-      ? "#2196F3"
-      : s === "delivered"
-      ? "#4CAF50"
-      : s === "cancelled"
-      ? "#e53935"
-      : "#546e7a";
+        ? "#7e57c2"
+        : s === "shipped"
+          ? "#2196F3"
+          : s === "delivered"
+            ? "#4CAF50"
+            : s === "cancelled"
+              ? "#e53935"
+              : "#546e7a";
   const label = s.charAt(0).toUpperCase() + s.slice(1);
   return (
     <span
@@ -103,7 +103,7 @@ export default function SellerOrders() {
     const newStatus = pendingStatuses[uniqueId] || order?.status;
     const hasOriginal = Object.prototype.hasOwnProperty.call(
       originalStatuses,
-      uniqueId
+      uniqueId,
     );
     const originalStatus =
       (hasOriginal ? originalStatuses[uniqueId] : order?.originalStatus) ||
@@ -144,7 +144,7 @@ export default function SellerOrders() {
             return oUniqueId === uniqueId
               ? { ...o, status: originalStatus }
               : o;
-          })
+          }),
         );
         return;
       }
@@ -169,7 +169,7 @@ export default function SellerOrders() {
           return oUniqueId === uniqueId
             ? { ...o, status: newStatus, originalStatus: newStatus }
             : o;
-        })
+        }),
       );
 
       alert("Order status updated successfully!");
@@ -190,7 +190,7 @@ export default function SellerOrders() {
         prev.map((o) => {
           const oUniqueId = o.uniqueId || `${o.orderId}-${o.productId || ""}`;
           return oUniqueId === uniqueId ? { ...o, status: originalStatus } : o;
-        })
+        }),
       );
     }
   }
@@ -207,7 +207,7 @@ export default function SellerOrders() {
       prev.map((o) => {
         const oUniqueId = o.uniqueId || `${o.orderId}-${o.productId || ""}`;
         return oUniqueId === uniqueId ? { ...o, status: newStatus } : o;
-      })
+      }),
     );
   }
 
@@ -243,6 +243,9 @@ export default function SellerOrders() {
             <a href="/seller/orders" className="active">
               Orders
             </a>
+          </li>
+          <li>
+            <a href="/seller/reviews">Reviews</a>
           </li>
           <li>
             <a href="/logout">Logout</a>
@@ -330,7 +333,7 @@ export default function SellerOrders() {
                       o.uniqueId || `${o.orderId}-${o.productId || ""}`;
                     const hasOriginal = Object.prototype.hasOwnProperty.call(
                       originalStatuses,
-                      uniqueId
+                      uniqueId,
                     );
                     const baseOriginal =
                       (hasOriginal
@@ -342,7 +345,7 @@ export default function SellerOrders() {
                     // Disable if original status is final (prevent changing FROM final state)
                     // Allow changing TO delivered/cancelled from other states
                     const disabled = ["delivered", "cancelled"].includes(
-                      String(originalStatus).toLowerCase()
+                      String(originalStatus).toLowerCase(),
                     );
 
                     return (
@@ -423,7 +426,7 @@ export default function SellerOrders() {
                                   uniqueId,
                                   o.orderId,
                                   o.productId,
-                                  o.itemIndex
+                                  o.itemIndex,
                                 );
                               }}
                             >

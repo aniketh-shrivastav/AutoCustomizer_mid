@@ -37,6 +37,7 @@ import SellerDashboard from "./pages/seller/Dashboard";
 import SellerProfileSettings from "./pages/seller/ProfileSettings";
 import SellerProductManagement from "./pages/seller/ProductManagement";
 import SellerOrders from "./pages/seller/Orders";
+import SellerReviews from "./pages/seller/Reviews";
 
 import Logout from "./pages/Logout";
 
@@ -223,6 +224,16 @@ export default function App() {
         element={
           <RequireRole role="manager">
             <Support />
+          </RequireRole>
+        }
+      />
+
+      {/* Seller */}
+      <Route
+        path="/seller/reviews"
+        element={
+          <RequireRole role="seller">
+            <SellerReviews />
           </RequireRole>
         }
       />

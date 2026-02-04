@@ -35,8 +35,8 @@ export default function SellerDashboard() {
         refreshing ? " • Refreshing..." : ""
       }`
     : loading
-    ? "Loading dashboard..."
-    : "Data refreshes periodically.";
+      ? "Loading dashboard..."
+      : "Data refreshes periodically.";
 
   const pieRef = useRef(null);
   const pieInst = useRef(null);
@@ -132,6 +132,9 @@ export default function SellerDashboard() {
           </li>
           <li>
             <a href="/seller/orders">Orders</a>
+          </li>
+          <li>
+            <a href="/seller/reviews">Reviews</a>
           </li>
           <li>
             <a href="/logout">Logout</a>
