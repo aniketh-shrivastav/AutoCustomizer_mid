@@ -22,6 +22,9 @@ export default function SellerProfileSettings() {
     phone: "",
     address: "",
   });
+  const [profilePicture, setProfilePicture] = useState("");
+  const [profileFile, setProfileFile] = useState(null);
+  const [profilePreview, setProfilePreview] = useState("");
   const [errors, setErrors] = useState({});
   const [status, setStatus] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -91,6 +94,7 @@ export default function SellerProfileSettings() {
             phone: p.phone || "",
             address: p.address || "",
           });
+          setProfilePicture(p.profilePicture || "");
           setStatus("");
         }
       } catch (e) {
@@ -102,6 +106,16 @@ export default function SellerProfileSettings() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!profileFile) {
+      setProfilePreview("");
+      return undefined;
+    }
+    const nextUrl = URL.createObjectURL(profileFile);
+    setProfilePreview(nextUrl);
+    return () => URL.revokeObjectURL(nextUrl);
+  }, [profileFile]);
+
   async function onSubmit(e) {
     e.preventDefault();
     if (!validateAll()) {
@@ -112,21 +126,23 @@ export default function SellerProfileSettings() {
     try {
       const res = await fetch("/seller/api/profileSettings", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify(
-          Object.fromEntries(
-            Object.entries(form).map(([k, v]) => [k, String(v).trim()]),
-          ),
-        ),
+        headers: { Accept: "application/json" },
+        body: (() => {
+          const payload = new FormData();
+          Object.entries(form).forEach(([k, v]) => {
+            payload.append(k, String(v).trim());
+          });
+          if (profileFile) payload.append("profilePicture", profileFile);
+          return payload;
+        })(),
       });
       const out = await res.json().catch(() => ({}));
       if (!out.success) {
         setStatus(out.message || "Update failed");
         return;
       }
+      if (profileFile) setProfileFile(null);
+      if (out.profilePicture) setProfilePicture(out.profilePicture);
       setStatus("Profile updated successfully");
     } catch (e) {
       setStatus("Update failed");
@@ -175,6 +191,26 @@ export default function SellerProfileSettings() {
       </header>
       <main className="seller-main">
         <section className="profile-section">
+          <div className="profile-pic-container" style={{ marginBottom: 16 }}>
+            <label className="profile-pic-label">
+              <img
+                src={
+                  profilePreview ||
+                  profilePicture ||
+                  "/images3/image5.jpg"
+                }
+                alt="Profile"
+                className="profile-pic"
+                style={{ width: 96, height: 96, borderRadius: "50%" }}
+              />
+              <span className="profile-pic-overlay">Change photo</span>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setProfileFile(e.target.files?.[0] || null)}
+              />
+            </label>
+          </div>
           <form className="profile-form" onSubmit={onSubmit} noValidate>
             <div className="form-group">
               <label htmlFor="storeName">Store Name:</label>
@@ -300,6 +336,23 @@ export default function SellerProfileSettings() {
         .seller-page .profile-form button:hover { background: linear-gradient(135deg, #5c0fb3, #2169e8); transform: translateY(-2px); box-shadow:0 6px 8px rgba(0,0,0,0.15); }
         .seller-page .seller-footer { background: linear-gradient(135deg, #6a11cb, #2575fc); color:#fff; text-align:center; padding:15px; box-shadow:0 -4px 6px rgba(0,0,0,0.1); }
         .seller-page .input-error { color:crimson; }
+        .seller-page .profile-pic-label{ position:relative; display:inline-block; cursor:pointer; }
+        .seller-page .profile-pic-label input{ display:none; }
+        .seller-page .profile-pic-overlay{
+          position:absolute;
+          inset:0;
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          background:rgba(0,0,0,0.45);
+          color:#fff;
+          font-size:0.75rem;
+          font-weight:600;
+          opacity:0;
+          transition:opacity 0.2s ease;
+          border-radius:50%;
+        }
+        .seller-page .profile-pic-label:hover .profile-pic-overlay{ opacity:1; }
         @media (max-width: 768px) { .seller-page .profile-section { margin:20px 15px; } .seller-page header h1 { font-size:2em; } }
       `}</style>
     </div>

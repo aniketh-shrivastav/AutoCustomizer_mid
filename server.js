@@ -5,6 +5,7 @@ const { Server } = require("socket.io");
 const session = require("express-session");
 const path = require("path");
 const cors = require("cors");
+const morgan = require("morgan");
 const connectDB = require("./db");
 const User = require("./models/User");
 
@@ -41,6 +42,9 @@ connectDB();
 // ------------------------------------------------------------
 // 1. THIRD-PARTY MIDDLEWARE
 // ------------------------------------------------------------
+// morgan: HTTP request logging
+app.use(morgan("dev"));
+
 // express-session: Session management
 app.use(
   session({

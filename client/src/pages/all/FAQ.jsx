@@ -18,7 +18,7 @@ export default function FAQ() {
   useExternalCss("/styles/faq-theme.css"); // theme-specific styling only
 
   const [authed, setAuthed] = useState(false);
-  const [theme, setTheme] = useState("light");
+  const [theme, setTheme] = useState("dark");
 
   useEffect(() => {
     let cancelled = false;
@@ -41,14 +41,7 @@ export default function FAQ() {
 
   return (
     <div className={`faq-page ${theme}`}>
-      <AllNav
-        authed={authed}
-        active="faq"
-        onToggleTheme={() =>
-          setTheme((prev) => (prev === "light" ? "dark" : "light"))
-        }
-        themeLabel={theme === "light" ? "Dark Mode" : "Light Mode"}
-      />
+      <AllNav authed={authed} active="faq" />
 
       <header>
         <h1>Frequently Asked Questions</h1>

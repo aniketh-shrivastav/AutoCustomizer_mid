@@ -21,6 +21,9 @@ export default function ServiceProfileSettings() {
   const [statusColor, setStatusColor] = useState("#333");
 
   const [userId, setUserId] = useState("");
+  const [profilePicture, setProfilePicture] = useState("");
+  const [profileFile, setProfileFile] = useState(null);
+  const [profilePreview, setProfilePreview] = useState("");
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -120,6 +123,7 @@ export default function ServiceProfileSettings() {
           throw new Error(data.message || "Profile load failed");
         const u = data.user || {};
         setUserId(u.id);
+        setProfilePicture(u.profilePicture || "");
         setForm({
           name: u.name || "",
           email: u.email || "",
@@ -144,6 +148,16 @@ export default function ServiceProfileSettings() {
       }
     })();
   }, []);
+
+  useEffect(() => {
+    if (!profileFile) {
+      setProfilePreview("");
+      return undefined;
+    }
+    const nextUrl = URL.createObjectURL(profileFile);
+    setProfilePreview(nextUrl);
+    return () => URL.revokeObjectURL(nextUrl);
+  }, [profileFile]);
 
   // If provider removes Car Painting from services, clear colors locally (server also clears)
   useEffect(() => {
@@ -217,22 +231,27 @@ export default function ServiceProfileSettings() {
     try {
       const res = await fetch(`/profile/update`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify({
-          name: form.name.trim(),
-          phone: form.phone.trim(),
-          district: form.district.trim(),
-          servicesOffered: services,
-          paintColors: (paintColors || [])
-            .map(normalizeHexColor)
-            .filter(Boolean),
-        }),
+        headers: { Accept: "application/json" },
+        body: (() => {
+          const payload = new FormData();
+          payload.append("name", form.name.trim());
+          payload.append("phone", form.phone.trim());
+          payload.append("district", form.district.trim());
+          payload.append("servicesOffered", JSON.stringify(services));
+          payload.append(
+            "paintColors",
+            JSON.stringify(
+              (paintColors || []).map(normalizeHexColor).filter(Boolean),
+            ),
+          );
+          if (profileFile) payload.append("profilePicture", profileFile);
+          return payload;
+        })(),
       });
       const out = await res.json().catch(() => ({}));
       if (!out.success) throw new Error(out.message || "Update failed");
+      if (profileFile) setProfileFile(null);
+      if (out.profilePicture) setProfilePicture(out.profilePicture);
       setStatus("Profile updated successfully!");
       setStatusColor("green");
       setEditing(false);
@@ -260,6 +279,8 @@ export default function ServiceProfileSettings() {
           phone: u.phone || "",
           district: u.district || "",
         });
+        setProfilePicture(u.profilePicture || "");
+        setProfileFile(null);
         setServices(
           (u.servicesOffered || []).map((s) => ({
             name: s.name || "",
@@ -356,11 +377,29 @@ export default function ServiceProfileSettings() {
 
       <div className="profile-container">
         <div className="profile-pic-container">
-          <img
-            src="/images3/image5.jpg"
-            alt="Profile"
-            className="profile-pic"
-          />
+          <label
+            className={`profile-pic-label${editing ? " is-editing" : ""}`}
+          >
+            <img
+              src={
+                profilePreview ||
+                profilePicture ||
+                "/images3/image5.jpg"
+              }
+              alt="Profile"
+              className="profile-pic"
+            />
+            {editing ? (
+              <>
+                <span className="profile-pic-overlay">Change photo</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setProfileFile(e.target.files?.[0] || null)}
+                />
+              </>
+            ) : null}
+          </label>
         </div>
         <h1>Profile Settings</h1>
 
@@ -704,6 +743,24 @@ export default function ServiceProfileSettings() {
         .service-item .delete-btn{ display:inline-block !important; }
         .delete-account-section .delete-btn{ display:inline-block !important; }
         .delete-account-section{ margin-top:30px; border-top:1px solid #ccc; padding-top:15px; }
+        .profile-pic-label{ position:relative; display:inline-block; cursor:default; }
+        .profile-pic-label input{ display:none; }
+        .profile-pic-label.is-editing{ cursor:pointer; }
+        .profile-pic-overlay{
+          position:absolute;
+          inset:0;
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          background:rgba(0,0,0,0.45);
+          color:#fff;
+          font-size:0.85rem;
+          font-weight:600;
+          opacity:0;
+          transition:opacity 0.2s ease;
+          border-radius:50%;
+        }
+        .profile-pic-label.is-editing:hover .profile-pic-overlay{ opacity:1; }
       `}</style>
     </>
   );

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import CustomerNav from "../../components/CustomerNav";
+import { useNavigate } from "react-router-dom";
 import { fetchCustomerHistory } from "../../store/customerSlice";
 
 const STALE_AFTER_MS = 1000 * 60 * 5; // 5 minutes
@@ -136,6 +137,7 @@ function renderStatusPill(style) {
 
 export default function CustomerHistory() {
   useLink("/styles/styles.css");
+  const navigate = useNavigate();
   function handleLogout(e) {
     e.preventDefault();
     const next = encodeURIComponent(`${window.location.origin}/`);
@@ -555,6 +557,7 @@ export default function CustomerHistory() {
                         const id = String(o._id);
                         if (highlightedIds.orders[id])
                           markSeen("orders", id, signatureForOrder(o));
+                        navigate(`/customer/order/${o._id}`);
                       }}
                       onKeyDown={(e) => {
                         if (e.key !== "Enter" && e.key !== " ") return;
@@ -562,6 +565,7 @@ export default function CustomerHistory() {
                         const id = String(o._id);
                         if (highlightedIds.orders[id])
                           markSeen("orders", id, signatureForOrder(o));
+                        navigate(`/customer/order/${o._id}`);
                       }}
                     >
                       <div className="item-details">
@@ -585,6 +589,16 @@ export default function CustomerHistory() {
                             </li>
                           ))}
                         </ul>
+                        <button
+                          type="button"
+                          className="download-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/customer/order/${o._id}`);
+                          }}
+                        >
+                          View Details
+                        </button>
                         {o.orderStatus === "pending" && (
                           <button
                             className="cancel-btn"
@@ -656,6 +670,7 @@ export default function CustomerHistory() {
                         const id = String(o._id);
                         if (highlightedIds.orders[id])
                           markSeen("orders", id, signatureForOrder(o));
+                        navigate(`/customer/order/${o._id}`);
                       }}
                       onKeyDown={(e) => {
                         if (e.key !== "Enter" && e.key !== " ") return;
@@ -663,6 +678,7 @@ export default function CustomerHistory() {
                         const id = String(o._id);
                         if (highlightedIds.orders[id])
                           markSeen("orders", id, signatureForOrder(o));
+                        navigate(`/customer/order/${o._id}`);
                       }}
                     >
                       <div className="item-details">
@@ -686,6 +702,16 @@ export default function CustomerHistory() {
                             </li>
                           ))}
                         </ul>
+                        <button
+                          type="button"
+                          className="download-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/customer/order/${o._id}`);
+                          }}
+                        >
+                          View Details
+                        </button>
                         {!String(o.orderStatus || "")
                           .toLowerCase()
                           .includes("cancel") && (
@@ -761,6 +787,7 @@ export default function CustomerHistory() {
                         const id = String(s._id);
                         if (highlightedIds.bookings[id])
                           markSeen("bookings", id, signatureForBooking(s));
+                        navigate(`/customer/service/${s._id}`);
                       }}
                       onKeyDown={(e) => {
                         if (e.key !== "Enter" && e.key !== " ") return;
@@ -768,6 +795,7 @@ export default function CustomerHistory() {
                         const id = String(s._id);
                         if (highlightedIds.bookings[id])
                           markSeen("bookings", id, signatureForBooking(s));
+                        navigate(`/customer/service/${s._id}`);
                       }}
                     >
                       <div className="item-details">
@@ -796,6 +824,16 @@ export default function CustomerHistory() {
                           <strong>Status:</strong>{" "}
                           {serviceStatusSpan(s.status, s._id)}
                         </p>
+                        <button
+                          type="button"
+                          className="download-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/customer/service/${s._id}`);
+                          }}
+                        >
+                          View Details
+                        </button>
                       </div>
                     </li>
                   ))
@@ -863,6 +901,7 @@ export default function CustomerHistory() {
                           const id = String(s._id);
                           if (highlightedIds.bookings[id])
                             markSeen("bookings", id, signatureForBooking(s));
+                          navigate(`/customer/service/${s._id}`);
                         }}
                         onKeyDown={(e) => {
                           if (e.key !== "Enter" && e.key !== " ") return;
@@ -870,6 +909,7 @@ export default function CustomerHistory() {
                           const id = String(s._id);
                           if (highlightedIds.bookings[id])
                             markSeen("bookings", id, signatureForBooking(s));
+                          navigate(`/customer/service/${s._id}`);
                         }}
                       >
                         <div className="item-details">
@@ -898,6 +938,16 @@ export default function CustomerHistory() {
                           <p>
                             <strong>Status:</strong> {pastServiceStatusSpan(s)}
                           </p>
+                          <button
+                            type="button"
+                            className="download-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/customer/service/${s._id}`);
+                            }}
+                          >
+                            View Details
+                          </button>
                           {showRateButton ? (
                             <button
                               className="rate-btn"

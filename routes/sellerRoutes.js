@@ -23,8 +23,10 @@ const {
   isSeller,
   wantsJSON,
   uploadImageToMemory,
+  uploadImageToDisk,
   uploadDocumentToDisk,
   UPLOAD_DIR,
+  handleUploadError,
 } = require("../middleware");
 
 // Aliases for backward compatibility
@@ -176,6 +178,22 @@ router.get("/dashboard", isAuthenticated, isSeller, (req, res) => {
   return res.sendFile(filePath);
 });
 
+async function uploadProfilePictureIfPresent(file, folderName) {
+  if (!file) return null;
+  try {
+    const uploadRes = await cloudinary.uploader.upload(file.path, {
+      folder: folderName,
+      resource_type: "image",
+      timeout: 120000,
+    });
+    return uploadRes.secure_url;
+  } finally {
+    if (file.path && fs.existsSync(file.path)) {
+      fs.unlinkSync(file.path);
+    }
+  }
+}
+
 // --- Profile Settings (unchanged) ---
 router.get("/profileSettings", isAuthenticated, isSeller, async (req, res) => {
   const filePath = path.join(
@@ -185,39 +203,55 @@ router.get("/profileSettings", isAuthenticated, isSeller, async (req, res) => {
   return res.sendFile(filePath);
 });
 
-router.post("/profileSettings", isAuthenticated, isSeller, async (req, res) => {
-  try {
-    const { storeName, contactEmail, phone, ownerName, address } = req.body;
+router.post(
+  "/profileSettings",
+  isAuthenticated,
+  isSeller,
+  uploadImageToDisk.single("profilePicture"),
+  handleUploadError,
+  async (req, res) => {
+    try {
+      const { storeName, contactEmail, phone, ownerName, address } = req.body;
 
-    await User.findByIdAndUpdate(req.session.user.id, {
-      name: storeName,
-      email: contactEmail,
-      phone: phone,
-    });
+      const profilePicture = await uploadProfilePictureIfPresent(
+        req.file,
+        "seller_profiles",
+      );
 
-    await SellerProfile.findOneAndUpdate(
-      { sellerId: req.session.user.id },
-      {
+      const userUpdate = {
+        name: storeName,
+        email: contactEmail,
+        phone: phone,
+      };
+      if (profilePicture) userUpdate.profilePicture = profilePicture;
+
+      await User.findByIdAndUpdate(req.session.user.id, userUpdate);
+
+      await SellerProfile.findOneAndUpdate(
+        { sellerId: req.session.user.id },
+        {
+          ownerName,
+          address,
+          sellerId: req.session.user.id,
+        },
+        { new: true, upsert: true },
+      );
+
+      console.log("Updated Profile Data:", {
+        storeName,
+        contactEmail,
+        phone,
         ownerName,
         address,
-        sellerId: req.session.user.id,
-      },
-      { new: true, upsert: true },
-    );
-
-    console.log("Updated Profile Data:", {
-      storeName,
-      contactEmail,
-      phone,
-      ownerName,
-      address,
-    });
-    res.redirect("/seller/profileSettings");
-  } catch (error) {
-    console.error("Error updating seller profile:", error);
-    res.status(500).send("Error updating profile settings.");
-  }
-});
+        profilePicture,
+      });
+      res.redirect("/seller/profileSettings");
+    } catch (error) {
+      console.error("Error updating seller profile:", error);
+      res.status(500).send("Error updating profile settings.");
+    }
+  },
+);
 
 // JSON API: Get seller profile settings
 router.get(
@@ -228,17 +262,22 @@ router.get(
     try {
       const sellerProfile = await SellerProfile.findOne({
         sellerId: req.session.user.id,
-      }).populate("sellerId", "name email phone");
+      }).populate("sellerId", "name email phone profilePicture");
 
       if (!sellerProfile) {
+        // Fetch fresh user data from database instead of stale session
+        const user = await User.findById(req.session.user.id).select(
+          "name email phone profilePicture",
+        );
         return res.json({
           success: true,
           profile: {
-            storeName: req.session.user.name,
+            storeName: user?.name || req.session.user.name,
             ownerName: "",
-            contactEmail: req.session.user.email,
-            phone: req.session.user.phone || "",
+            contactEmail: user?.email || req.session.user.email,
+            phone: user?.phone || req.session.user.phone || "",
             address: "",
+            profilePicture: user?.profilePicture || "",
           },
         });
       }
@@ -250,6 +289,7 @@ router.get(
           contactEmail: sellerProfile.sellerId.email,
           phone: sellerProfile.sellerId.phone || "",
           address: sellerProfile.address || "",
+          profilePicture: sellerProfile.sellerId.profilePicture || "",
         },
       });
     } catch (err) {
@@ -264,6 +304,8 @@ router.post(
   "/api/profileSettings",
   isAuthenticated,
   isSeller,
+  uploadImageToDisk.single("profilePicture"),
+  handleUploadError,
   async (req, res) => {
     try {
       const { storeName, contactEmail, phone, ownerName, address } = req.body;
@@ -280,11 +322,18 @@ router.post(
           .json({ success: false, message: "Phone must be 10 digits" });
       }
 
-      await User.findByIdAndUpdate(req.session.user.id, {
+      const profilePicture = await uploadProfilePictureIfPresent(
+        req.file,
+        "seller_profiles",
+      );
+      const userUpdate = {
         name: storeName,
         email: contactEmail,
         phone: phone,
-      });
+      };
+      if (profilePicture) userUpdate.profilePicture = profilePicture;
+
+      await User.findByIdAndUpdate(req.session.user.id, userUpdate);
 
       await SellerProfile.findOneAndUpdate(
         { sellerId: req.session.user.id },
@@ -292,7 +341,16 @@ router.post(
         { new: true, upsert: true },
       );
 
-      res.json({ success: true, message: "Profile updated" });
+      // Update session with new profile picture so it persists on reload
+      if (profilePicture) {
+        req.session.user.profilePicture = profilePicture;
+      }
+
+      res.json({
+        success: true,
+        message: "Profile updated",
+        profilePicture,
+      });
     } catch (err) {
       console.error("Profile settings POST API error", err);
       res.status(500).json({ success: false, message: "Server error" });
@@ -661,15 +719,32 @@ router.post(
         }
 
         // Update the specific item's status
+        const prevItemStatus = order.items[itemIndex].itemStatus || null;
         order.items[itemIndex].itemStatus = newStatus;
+        order.items[itemIndex].itemStatusHistory =
+          order.items[itemIndex].itemStatusHistory || [];
+        order.items[itemIndex].itemStatusHistory.push({
+          from: prevItemStatus,
+          to: newStatus,
+          changedAt: new Date(),
+          changedBy: { id: req.session.user?.id, role: "seller" },
+        });
 
         const derivedStatus = deriveOrderStatus(
           order.items,
           order.orderStatus || "pending",
         );
         if (derivedStatus !== order.orderStatus) {
+          const prevOrderStatus = order.orderStatus;
           order.previousStatus = order.orderStatus;
           order.orderStatus = derivedStatus;
+          order.orderStatusHistory = order.orderStatusHistory || [];
+          order.orderStatusHistory.push({
+            from: prevOrderStatus || null,
+            to: derivedStatus,
+            changedAt: new Date(),
+            changedBy: { id: req.session.user?.id, role: "seller" },
+          });
         }
 
         await order.save();
@@ -691,10 +766,27 @@ router.post(
         });
       }
 
+      const prevOrderStatus = order.orderStatus;
       order.previousStatus = order.orderStatus;
       order.orderStatus = newStatus;
+      order.orderStatusHistory = order.orderStatusHistory || [];
+      order.orderStatusHistory.push({
+        from: prevOrderStatus || null,
+        to: newStatus,
+        changedAt: new Date(),
+        changedBy: { id: req.session.user?.id, role: "seller" },
+      });
       order.items.forEach((item, idx) => {
+        const prevItemStatus = order.items[idx].itemStatus || null;
         order.items[idx].itemStatus = newStatus;
+        order.items[idx].itemStatusHistory =
+          order.items[idx].itemStatusHistory || [];
+        order.items[idx].itemStatusHistory.push({
+          from: prevItemStatus,
+          to: newStatus,
+          changedAt: new Date(),
+          changedBy: { id: req.session.user?.id, role: "seller" },
+        });
       });
       await order.save();
 

@@ -444,6 +444,56 @@ router.get("/history", customerOnly, async (req, res) => {
   }
 });
 
+// Order details with status history
+router.get("/api/order/:id", customerOnly, async (req, res) => {
+  try {
+    const order = await Order.findOne({
+      _id: req.params.id,
+      userId: req.session.user.id,
+    })
+      .populate("items.seller", "name email")
+      .lean();
+
+    if (!order) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Order not found" });
+    }
+
+    return res.json({ success: true, order });
+  } catch (err) {
+    console.error("Order details error:", err);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to load order details" });
+  }
+});
+
+// Service booking details with status/cost history
+router.get("/api/service/:id", customerOnly, async (req, res) => {
+  try {
+    const booking = await ServiceBooking.findOne({
+      _id: req.params.id,
+      customerId: req.session.user.id,
+    })
+      .populate("providerId", "name email phone")
+      .lean();
+
+    if (!booking) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Service booking not found" });
+    }
+
+    return res.json({ success: true, booking });
+  } catch (err) {
+    console.error("Service details error:", err);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to load service details" });
+  }
+});
+
 router.get("/history.html", customerOnly, (req, res) => {
   res.sendFile(
     path.join(__dirname, "..", "public", "customer", "history.html"),

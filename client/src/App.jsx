@@ -27,6 +27,8 @@ import CustomerCart from "./pages/customer/Cart";
 import CustomerProfile from "./pages/customer/Profile";
 import CustomerChat from "./pages/customer/Chat";
 import ProductDetails from "./pages/customer/ProductDetails";
+import OrderDetails from "./pages/customer/OrderDetails";
+import ServiceDetails from "./pages/customer/ServiceDetails";
 
 import ServiceDashboard from "./pages/service/DashboardService";
 import ServiceProfileSettings from "./pages/service/ProfileSettings";
@@ -103,6 +105,8 @@ export default function App() {
       <Route path="/customer/profile" element={<CustomerProfile />} />
       <Route path="/customer/chat" element={<CustomerChat />} />
       <Route path="/customer/product/:id" element={<ProductDetails />} />
+      <Route path="/customer/order/:id" element={<OrderDetails />} />
+      <Route path="/customer/service/:id" element={<ServiceDetails />} />
 
       {/* Service Provider */}
       <Route

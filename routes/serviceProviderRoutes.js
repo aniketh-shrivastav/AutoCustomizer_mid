@@ -126,7 +126,15 @@ router.post("/updateBookingStatus", serviceOnly, async (req, res) => {
         message: `Invalid status transition from ${booking.status} to ${newStatus}`,
       });
     }
+    const prevStatus = booking.status;
     booking.status = newStatus;
+    booking.statusHistory = booking.statusHistory || [];
+    booking.statusHistory.push({
+      from: prevStatus || null,
+      to: newStatus,
+      changedAt: new Date(),
+      changedBy: { id: req.session.user?.id, role: "service-provider" },
+    });
     await booking.save();
 
     // Emit earnings update event when booking status changes to "Ready" or "Completed"
@@ -167,9 +175,20 @@ router.post("/updateMultipleBookingStatus", serviceOnly, async (req, res) => {
   const { orderIds, newStatus } = req.body;
 
   try {
-    await ServiceBooking.updateMany(
-      { _id: { $in: orderIds } },
-      { $set: { status: newStatus } },
+    const bookings = await ServiceBooking.find({ _id: { $in: orderIds } });
+    await Promise.all(
+      bookings.map(async (booking) => {
+        const prevStatus = booking.status;
+        booking.status = newStatus;
+        booking.statusHistory = booking.statusHistory || [];
+        booking.statusHistory.push({
+          from: prevStatus || null,
+          to: newStatus,
+          changedAt: new Date(),
+          changedBy: { id: req.session.user?.id, role: "service-provider" },
+        });
+        await booking.save();
+      }),
     );
     res.json({ success: true });
   } catch (err) {
@@ -413,8 +432,28 @@ router.put("/updateBooking", serviceOnly, async (req, res) => {
     const booking = await ServiceBooking.findById(orderId);
     if (!booking) return res.status(404).send("Booking not found");
 
-    if (status) booking.status = status;
-    if (typeof totalCost !== "undefined") booking.totalCost = Number(totalCost);
+    if (status) {
+      const prevStatus = booking.status;
+      booking.status = status;
+      booking.statusHistory = booking.statusHistory || [];
+      booking.statusHistory.push({
+        from: prevStatus || null,
+        to: status,
+        changedAt: new Date(),
+        changedBy: { id: req.session.user?.id, role: "service-provider" },
+      });
+    }
+    if (typeof totalCost !== "undefined") {
+      const prevCost = booking.totalCost;
+      booking.totalCost = Number(totalCost);
+      booking.costHistory = booking.costHistory || [];
+      booking.costHistory.push({
+        from: typeof prevCost === "number" ? prevCost : null,
+        to: booking.totalCost,
+        changedAt: new Date(),
+        changedBy: { id: req.session.user?.id, role: "service-provider" },
+      });
+    }
 
     await booking.save();
     res.status(200).send("Booking updated successfully");
@@ -433,7 +472,15 @@ router.post("/updateCost/:id", serviceOnly, async (req, res) => {
     const booking = await ServiceBooking.findById(id);
     if (!booking) return res.status(404).send("Booking not found");
 
+    const prevCost = booking.totalCost;
     booking.totalCost = Number(totalCost);
+    booking.costHistory = booking.costHistory || [];
+    booking.costHistory.push({
+      from: typeof prevCost === "number" ? prevCost : null,
+      to: booking.totalCost,
+      changedAt: new Date(),
+      changedBy: { id: req.session.user?.id, role: "service-provider" },
+    });
     await booking.save();
 
     res.redirect("/service/bookingManagement");
@@ -456,19 +503,26 @@ router.post("/submit-rating/:id", async (req, res) => {
         .json({ error: "Please provide a valid rating (1-5)" });
     }
 
-    const updatedBooking = await ServiceBooking.findByIdAndUpdate(
-      bookingId,
-      {
-        rating: parseInt(rating),
-        review: review || "",
-        status: "Completed", // Ensure status is marked as completed
-      },
-      { new: true },
-    ).populate("customerId", "name");
-
+    const updatedBooking = await ServiceBooking.findById(bookingId).populate(
+      "customerId",
+      "name",
+    );
     if (!updatedBooking) {
       return res.status(404).json({ error: "Booking not found" });
     }
+
+    const prevStatus = updatedBooking.status;
+    updatedBooking.rating = parseInt(rating);
+    updatedBooking.review = review || "";
+    updatedBooking.status = "Completed"; // Ensure status is marked as completed
+    updatedBooking.statusHistory = updatedBooking.statusHistory || [];
+    updatedBooking.statusHistory.push({
+      from: prevStatus || null,
+      to: "Completed",
+      changedAt: new Date(),
+      changedBy: { id: updatedBooking.customerId?._id, role: "customer" },
+    });
+    await updatedBooking.save();
 
     // Update provider's average rating
     await updateProviderRating(updatedBooking.providerId);
@@ -515,6 +569,7 @@ router.get("/api/profile", serviceOnly, async (req, res) => {
       district = "",
       servicesOffered = [],
       paintColors = [],
+      profilePicture = "",
     } = user;
     res.json({
       success: true,
@@ -526,6 +581,7 @@ router.get("/api/profile", serviceOnly, async (req, res) => {
         district,
         servicesOffered,
         paintColors,
+        profilePicture,
       },
     });
   } catch (err) {

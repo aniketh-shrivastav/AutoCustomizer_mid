@@ -10,8 +10,8 @@
     "eject": "react-scripts eject"
   },
   "dependencies": {
-    "chart.js": "3.9.1",
     "@reduxjs/toolkit": "^2.2.0",
+    "chart.js": "3.9.1",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "react-redux": "^9.1.2",
@@ -21,6 +21,7 @@
     "web-vitals": "4.2.4"
   },
   "devDependencies": {
+    "baseline-browser-mapping": "^2.9.19",
     "cross-env": "^7.0.3",
     "eslint-plugin-react-hooks": "^7.0.1"
   },

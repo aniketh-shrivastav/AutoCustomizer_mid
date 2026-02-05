@@ -28,7 +28,7 @@ const ServiceBookingSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ["Open", "Confirmed", "Ready", "Rejected"],
+    enum: ["Open", "Confirmed", "Ready", "Completed", "Rejected"],
     default: "Open",
   },
   previousStatus: { type: String },
@@ -41,6 +41,28 @@ const ServiceBookingSchema = new mongoose.Schema({
     type: String,
   },
   createdAt: { type: Date, default: Date.now },
+  statusHistory: [
+    {
+      from: { type: String },
+      to: { type: String },
+      changedAt: { type: Date, default: Date.now },
+      changedBy: {
+        id: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        role: { type: String },
+      },
+    },
+  ],
+  costHistory: [
+    {
+      from: { type: Number },
+      to: { type: Number },
+      changedAt: { type: Date, default: Date.now },
+      changedBy: {
+        id: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        role: { type: String },
+      },
+    },
+  ],
 });
 
 module.exports = mongoose.model("ServiceBooking", ServiceBookingSchema);

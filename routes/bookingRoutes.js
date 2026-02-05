@@ -46,7 +46,7 @@ router.post("/create-booking", async (req, res) => {
             .map((c) =>
               String(c || "")
                 .trim()
-                .toLowerCase()
+                .toLowerCase(),
             )
             .filter((c) => /^#[0-9a-f]{6}$/.test(c))
         : [];
@@ -79,7 +79,7 @@ router.post("/create-booking", async (req, res) => {
     let totalCost = 0;
     selectedServices.forEach((serviceName) => {
       const matchedService = provider.servicesOffered.find(
-        (s) => s.name === serviceName
+        (s) => s.name === serviceName,
       );
       if (matchedService) {
         totalCost += matchedService.cost;
@@ -100,6 +100,22 @@ router.post("/create-booking", async (req, res) => {
       district,
       paintColor: normalizedPaintColor,
       totalCost, // ✅ Save the calculated cost
+      statusHistory: [
+        {
+          from: null,
+          to: "Open",
+          changedAt: new Date(),
+          changedBy: { id: customerId, role: "customer" },
+        },
+      ],
+      costHistory: [
+        {
+          from: null,
+          to: totalCost,
+          changedAt: new Date(),
+          changedBy: { id: customerId, role: "customer" },
+        },
+      ],
     });
 
     await booking.save();

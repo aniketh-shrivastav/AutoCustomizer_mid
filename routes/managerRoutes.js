@@ -275,7 +275,7 @@ router.get("/api/services", isAuthenticated, isManager, async (req, res) => {
   try {
     const serviceProvidersRaw = await User.find(
       { role: "service-provider", suspended: { $ne: true } },
-      "name email phone servicesOffered district",
+      "name email phone servicesOffered district profilePicture",
     );
 
     const providerIds = serviceProvidersRaw.map((p) => p._id).filter(Boolean);
@@ -322,14 +322,14 @@ router.get("/api/services", isAuthenticated, isManager, async (req, res) => {
     });
     const sellersAll = await SellerProfile.find().populate(
       "sellerId",
-      "name email phone suspended",
+      "name email phone profilePicture suspended",
     );
     const sellers = sellersAll.filter(
       (s) => s.sellerId && !s.sellerId.suspended,
     );
     const customersAll = await CustomerProfile.find().populate(
       "userId",
-      "name email phone suspended",
+      "name email phone profilePicture suspended",
     );
     const customers = customersAll.filter(
       (c) => c.userId && !c.userId.suspended,
@@ -1035,8 +1035,16 @@ router.post(
         return res.status(400).send("Already cancelled");
 
       // Save current status before cancelling
+      const prevStatus = order.orderStatus;
       order.previousStatus = order.orderStatus;
       order.orderStatus = "cancelled";
+      order.orderStatusHistory = order.orderStatusHistory || [];
+      order.orderStatusHistory.push({
+        from: prevStatus || null,
+        to: "cancelled",
+        changedAt: new Date(),
+        changedBy: { id: req.session.user?.id, role: "manager" },
+      });
       await order.save();
 
       if (req.accepts("json")) {
@@ -1075,8 +1083,17 @@ router.post(
           : res.status(400).send("Order is not cancelled");
 
       // Restore previous status
-      order.orderStatus = order.previousStatus || "pending"; // fallback to pending if missing
+      const restoreStatus = order.previousStatus || "pending";
+      const prevStatus = order.orderStatus;
+      order.orderStatus = restoreStatus; // fallback to pending if missing
       order.previousStatus = undefined; // clear it after restore
+      order.orderStatusHistory = order.orderStatusHistory || [];
+      order.orderStatusHistory.push({
+        from: prevStatus || null,
+        to: restoreStatus,
+        changedAt: new Date(),
+        changedBy: { id: req.session.user?.id, role: "manager" },
+      });
       await order.save();
 
       if (req.accepts("json")) {

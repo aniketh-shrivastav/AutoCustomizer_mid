@@ -15,7 +15,7 @@ const nameRegex = /^[A-Za-z\s.-]+$/;
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function ContactUs() {
-  useExternalCss("/styles/all.css");
+  useExternalCss("/styles/index.css");
   const [authed, setAuthed] = useState(false);
   const [values, setValues] = useState({
     name: "",
@@ -205,7 +205,7 @@ export default function ContactUs() {
         fontWeight: 600,
       },
     }),
-    [theme]
+    [theme],
   );
 
   const inputStyle = (key) => ({
@@ -215,13 +215,7 @@ export default function ContactUs() {
 
   return (
     <div className="bg-container" style={styles.page}>
-      <AllNav
-        authed={authed}
-        active="contact"
-        onToggleTheme={() => setTheme(theme === "dark" ? "light" : "dark")}
-        themeLabel={theme === "dark" ? "Light Mode" : "Dark Mode"}
-        themeButtonStyle={styles.navToggle}
-      />
+      <AllNav authed={authed} active="contact" />
 
       <div style={styles.shell}>
         <div style={styles.card}>
