@@ -20,7 +20,7 @@ router.post("/create-booking", async (req, res) => {
       paintColor,
     } = req.body;
 
-    const customerId = req.session.user.id;
+    const customerId = req.user.id;
 
     // Fetch provider to access service cost
     const provider = await User.findById(providerId);
@@ -127,3 +127,4 @@ router.post("/create-booking", async (req, res) => {
 });
 
 module.exports = router;
+

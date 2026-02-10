@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import CustomerNav from "../../components/CustomerNav";
 import CustomerFooter from "../../components/CustomerFooter";
+import { authFetch } from "../../utils/api";
 import "../../Css/customer.css";
 
 export default function PaymentSuccess() {
@@ -22,7 +23,7 @@ export default function PaymentSuccess() {
 
       try {
         // Verify the payment session
-        const res = await fetch(`/api/payments/verify-session/${sessionId}`, {
+        const res = await authFetch(`/api/payments/verify-session/${sessionId}`, {
           headers: { Accept: "application/json" },
         });
 
@@ -36,7 +37,7 @@ export default function PaymentSuccess() {
           setPaymentDetails(data);
 
           // Create the order after successful payment verification
-          const orderRes = await fetch("/customer/create-order", {
+          const orderRes = await authFetch("/customer/create-order", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",

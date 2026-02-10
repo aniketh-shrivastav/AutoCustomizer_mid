@@ -69,7 +69,7 @@ router.get("/index.html", customerOnly, (req, res) => {
 
 router.get("/booking", customerOnly, async (req, res) => {
   try {
-    const customerId = req.session.user.id;
+    const customerId = req.user.id;
 
     const customerProfile = await CustomerProfile.findOne({
       userId: customerId,
@@ -152,7 +152,7 @@ router.get("/booking.html", customerOnly, (req, res) => {
 // JSON API for booking static page
 router.get("/api/booking", customerOnly, async (req, res) => {
   try {
-    const customerId = req.session.user.id;
+    const customerId = req.user.id;
     const customerProfile = await CustomerProfile.findOne({
       userId: customerId,
     });
@@ -291,7 +291,7 @@ router.get("/api/provider/:id/reviews", customerOnly, async (req, res) => {
 
 router.get("/cart", customerOnly, async (req, res) => {
   try {
-    const cart = await Cart.findOne({ userId: req.session.user.id });
+    const cart = await Cart.findOne({ userId: req.user.id });
     res.render("customer/cart", {
       user: req.session.user,
       items: cart?.items || [],
@@ -314,7 +314,7 @@ router.get("/cart.html", customerOnly, (req, res) => {
 // JSON API for cart static page
 router.get("/api/cart", customerOnly, async (req, res) => {
   try {
-    const cart = await Cart.findOne({ userId: req.session.user.id });
+    const cart = await Cart.findOne({ userId: req.user.id });
     const items = (cart?.items || []).map((it) => ({
       productId: it.productId,
       name: it.name,
@@ -335,7 +335,7 @@ router.post("/create-order", customerOnly, orderController.createOrderFromCart);
 
 router.post("/cart/add", customerOnly, async (req, res) => {
   try {
-    const userId = req.session.user.id;
+    const userId = req.user.id;
     const { id } = req.body;
     console.log("[cart/add] raw body:", req.body);
     console.log("[cart/add] received id:", id);
@@ -389,7 +389,7 @@ router.post("/cart/add", customerOnly, async (req, res) => {
 });
 
 router.get("/history", customerOnly, async (req, res) => {
-  const customerId = req.session.user.id;
+  const customerId = req.user.id;
 
   try {
     // 1️⃣ Fetch bookings
@@ -449,7 +449,7 @@ router.get("/api/order/:id", customerOnly, async (req, res) => {
   try {
     const order = await Order.findOne({
       _id: req.params.id,
-      userId: req.session.user.id,
+      userId: req.user.id,
     })
       .populate("items.seller", "name email")
       .lean();
@@ -474,7 +474,7 @@ router.get("/api/service/:id", customerOnly, async (req, res) => {
   try {
     const booking = await ServiceBooking.findOne({
       _id: req.params.id,
-      customerId: req.session.user.id,
+      customerId: req.user.id,
     })
       .populate("providerId", "name email phone")
       .lean();
@@ -502,7 +502,7 @@ router.get("/history.html", customerOnly, (req, res) => {
 
 // JSON API for history static page
 router.get("/api/history", customerOnly, async (req, res) => {
-  const customerId = req.session.user.id;
+  const customerId = req.user.id;
   try {
     const bookings = await ServiceBooking.find({ customerId })
       .populate("providerId")
@@ -561,7 +561,7 @@ router.post("/cancel-order/:id", customerOnly, async (req, res) => {
   try {
     const order = await Order.findOne({
       _id: req.params.id,
-      userId: req.session.user.id,
+      userId: req.user.id,
     });
     if (!order || order.orderStatus !== "pending") {
       if (
@@ -594,7 +594,7 @@ router.post("/cancel-service/:id", customerOnly, async (req, res) => {
   try {
     const booking = await ServiceBooking.findOne({
       _id: req.params.id,
-      customerId: req.session.user.id,
+      customerId: req.user.id,
     });
     if (!booking || booking.status !== "Open") {
       if (
@@ -628,7 +628,7 @@ router.get("/payment", customerOnly, (req, res) => {
 
 router.get("/profile", customerOnly, async (req, res) => {
   try {
-    const userId = req.session.user.id;
+    const userId = req.user.id;
 
     // Fetch basic signup details
     const user = await User.findById(userId);
@@ -666,7 +666,7 @@ router.get("/profile.html", customerOnly, (req, res) => {
 // JSON API for profile static page
 router.get("/api/profile", customerOnly, async (req, res) => {
   try {
-    const userId = req.session.user.id;
+    const userId = req.user.id;
     const user = await User.findById(userId);
     let profile = await CustomerProfile.findOne({ userId });
     if (!profile) {
@@ -693,7 +693,7 @@ router.post(
   upload.single("profilePicture"),
   async (req, res) => {
     try {
-      const userId = req.session.user.id;
+      const userId = req.user.id;
       const { name, phone, address, district, carModel, payments } = req.body;
 
       await User.findByIdAndUpdate(userId, { name, phone }, { new: true });
@@ -985,7 +985,7 @@ router.post("/rate-service/:id", customerOnly, async (req, res) => {
     const booking = await ServiceBooking.findById(bookingId);
 
     // Validate booking exists and belongs to this customer
-    if (!booking || booking.customerId.toString() !== req.session.user.id) {
+    if (!booking || booking.customerId.toString() !== req.user.id) {
       return res
         .status(404)
         .json({ success: false, message: "Booking not found" });

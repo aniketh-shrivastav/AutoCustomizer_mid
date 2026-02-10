@@ -23,7 +23,7 @@ const rateLimitStore = new Map();
 const rateLimit = (options = {}) => {
   const {
     windowMs = 60 * 1000, // 1 minute default
-    maxRequests = 100,
+    maxRequests = 1,
     message = "Too many requests, please try again later.",
     keyGenerator = (req) =>
       req.ip || req.connection?.remoteAddress || "unknown",

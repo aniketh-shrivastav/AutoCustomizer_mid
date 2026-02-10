@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { authFetch } from "../../utils/api";
 
 function useLink(href) {
   useEffect(() => {
@@ -61,7 +62,7 @@ export default function SellerOrders() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/seller/api/orders", {
+      const res = await authFetch("/seller/api/orders", {
         headers: { Accept: "application/json" },
       });
       if (res.status === 401) {
@@ -127,10 +128,9 @@ export default function SellerOrders() {
     try {
       const deliveryDate = deliveryDates[uniqueId] || null;
 
-      const res = await fetch(`/seller/orders/${orderId}/status`, {
+      const res = await authFetch(`/seller/orders/${orderId}/status`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({
           newStatus,
           productId: productId || undefined,

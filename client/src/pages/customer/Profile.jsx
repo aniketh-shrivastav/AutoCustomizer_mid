@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import CustomerNav from "../../components/CustomerNav";
 import CustomerFooter from "../../components/CustomerFooter";
+import { authFetch } from "../../utils/api";
 import "../../Css/profile.css";
 import "../../Css/customer.css";
 
@@ -38,7 +39,7 @@ export default function CustomerProfile() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch("/customer/api/profile", {
+        const res = await authFetch("/customer/api/profile", {
           headers: { Accept: "application/json" },
         });
         if (res.status === 401) {
@@ -228,7 +229,7 @@ export default function CustomerProfile() {
         formData.append("profilePicture", profileImage);
       }
 
-      const res = await fetch("/customer/profile", {
+      const res = await authFetch("/customer/profile", {
         method: "POST",
         headers: {
           Accept: "application/json",
@@ -270,7 +271,7 @@ export default function CustomerProfile() {
     setStatus("Deleting...");
     setStatusColor("#333");
     try {
-      const res = await fetch("/customer/delete-profile", {
+      const res = await authFetch("/customer/delete-profile", {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
@@ -280,6 +281,9 @@ export default function CustomerProfile() {
       });
       if (!res.ok) throw new Error("Delete failed");
       alert("Profile deleted.");
+      // Clear JWT token and user data
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
       window.location.href = "/logout";
     } catch (e) {
       setStatus(e.message);
@@ -521,6 +525,9 @@ export default function CustomerProfile() {
                   className="customer-btn customer-btn-secondary"
                   onClick={(e) => {
                     e.preventDefault();
+                    // Clear JWT token and user data
+                    localStorage.removeItem("token");
+                    localStorage.removeItem("user");
                     const next = encodeURIComponent(
                       `${window.location.origin}/`,
                     );

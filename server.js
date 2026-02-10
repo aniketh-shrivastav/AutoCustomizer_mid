@@ -19,6 +19,9 @@ const {
   // Custom middleware (logging, security)
   requestLogger,
   securityHeaders,
+  contentSecurityPolicy,
+  rateLimit,
+  preventNoSQLInjection,
   // Error-handling middleware
   notFound,
   errorHandler,
@@ -80,6 +83,14 @@ app.use(express.urlencoded({ extended: true }));
 
 // Security headers
 app.use(securityHeaders);
+app.use(contentSecurityPolicy);
+app.use(
+  rateLimit({
+    windowMs: 60 * 1000,
+    maxRequests: 100,
+  }),
+);
+app.use(preventNoSQLInjection);
 
 // View engine setup
 app.set("view engine", "ejs");
@@ -196,6 +207,7 @@ io.on("connection", (socket) => {
 global.io = io;
 
 // Start Server
-httpServer.listen(3000, () => {
-  console.log("Server running at http://localhost:3000");
+const PORT = process.env.PORT || 3000;
+httpServer.listen(PORT, () => {
+  console.log(`Server running at http://localhost:${PORT}`);
 });

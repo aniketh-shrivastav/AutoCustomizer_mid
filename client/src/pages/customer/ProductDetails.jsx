@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import CustomerNav from "../../components/CustomerNav";
 import CustomerFooter from "../../components/CustomerFooter";
+import { authFetch } from "../../utils/api";
 import "../../Css/customer.css";
 import "../../Css/productDetails.css";
 
@@ -100,10 +101,7 @@ export default function ProductDetails() {
       try {
         setLoading(true);
         setError("");
-        const res = await fetch(`/customer/product/${id}`, {
-          headers: { Accept: "application/json" },
-          credentials: "include",
-        });
+        const res = await authFetch(`/customer/product/${id}`);
         if (res.status === 401) {
           navigate("/login", { replace: true });
           return;
@@ -141,13 +139,9 @@ export default function ProductDetails() {
     e.preventDefault();
     setReviewStatus("");
     try {
-      const res = await fetch(`/customer/product/${id}/review`, {
+      const res = await authFetch(`/customer/product/${id}/review`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        credentials: "include",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           rating: reviewForm.rating,
           review: reviewForm.review,
@@ -159,10 +153,7 @@ export default function ProductDetails() {
       }
 
       // Refresh product details to show updated review list
-      const refresh = await fetch(`/customer/product/${id}`, {
-        headers: { Accept: "application/json" },
-        credentials: "include",
-      });
+      const refresh = await authFetch(`/customer/product/${id}`);
       const refreshed = await refresh.json();
       setProduct(refreshed.product || null);
       setReviews(refreshed.reviews || []);

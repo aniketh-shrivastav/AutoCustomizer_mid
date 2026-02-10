@@ -51,7 +51,7 @@ function deriveOrderStatus(items, fallback = "pending") {
 // --- Dashboard JSON API (for static HTML hydration) ---
 router.get("/api/dashboard", isAuthenticated, isSeller, async (req, res) => {
   try {
-    const sellerId = req.session.user.id;
+    const sellerId = req.user.id;
 
     // Get all orders that have items belonging to this seller
     const allOrders = await Order.find({ "items.seller": sellerId })
@@ -225,14 +225,14 @@ router.post(
       };
       if (profilePicture) userUpdate.profilePicture = profilePicture;
 
-      await User.findByIdAndUpdate(req.session.user.id, userUpdate);
+      await User.findByIdAndUpdate(req.user.id, userUpdate);
 
       await SellerProfile.findOneAndUpdate(
-        { sellerId: req.session.user.id },
+        { sellerId: req.user.id },
         {
           ownerName,
           address,
-          sellerId: req.session.user.id,
+          sellerId: req.user.id,
         },
         { new: true, upsert: true },
       );
@@ -261,12 +261,12 @@ router.get(
   async (req, res) => {
     try {
       const sellerProfile = await SellerProfile.findOne({
-        sellerId: req.session.user.id,
+        sellerId: req.user.id,
       }).populate("sellerId", "name email phone profilePicture");
 
       if (!sellerProfile) {
         // Fetch fresh user data from database instead of stale session
-        const user = await User.findById(req.session.user.id).select(
+        const user = await User.findById(req.user.id).select(
           "name email phone profilePicture",
         );
         return res.json({
@@ -333,11 +333,11 @@ router.post(
       };
       if (profilePicture) userUpdate.profilePicture = profilePicture;
 
-      await User.findByIdAndUpdate(req.session.user.id, userUpdate);
+      await User.findByIdAndUpdate(req.user.id, userUpdate);
 
       await SellerProfile.findOneAndUpdate(
-        { sellerId: req.session.user.id },
-        { ownerName, address, sellerId: req.session.user.id },
+        { sellerId: req.user.id },
+        { ownerName, address, sellerId: req.user.id },
         { new: true, upsert: true },
       );
 
@@ -372,7 +372,7 @@ router.get("/orders", isAuthenticated, isSeller, async (req, res) => {
 // JSON API for seller orders (static HTML hydration)
 router.get("/api/orders", isAuthenticated, isSeller, async (req, res) => {
   try {
-    const sellerId = req.session.user.id;
+    const sellerId = req.user.id;
     const orders = await Order.find({ "items.seller": sellerId })
       .populate("userId", "name email")
       .sort({ placedAt: -1 })
@@ -437,7 +437,7 @@ router.post("/request-payout", isAuthenticated, isSeller, (req, res) => {
 // --- Reviews (seller) ---
 router.get("/api/reviews", isAuthenticated, isSeller, async (req, res) => {
   try {
-    const sellerId = req.session.user.id;
+    const sellerId = req.user.id;
     const reviews = await ProductReview.find({ seller: sellerId })
       .populate("productId", "name image")
       .populate("userId", "name")
@@ -544,7 +544,7 @@ router.post(
         image: uploadedImages[0].url, // Primary image for backward compatibility
         imagePublicId: uploadedImages[0].publicId,
         images: uploadedImages,
-        seller: req.session.user.id,
+        seller: req.user.id,
       });
 
       await newProduct.save();
@@ -615,7 +615,7 @@ router.get(
 // JSON API to get seller products (for static HTML hydration)
 router.get("/api/products", isAuthenticated, isSeller, async (req, res) => {
   try {
-    const sellerId = req.session.user.id;
+    const sellerId = req.user.id;
     const products = await Product.find({ seller: sellerId }).lean();
     res.json({ success: true, products });
   } catch (err) {
@@ -642,7 +642,7 @@ router.post(
       }
 
       // Ensure seller can only delete their own products
-      const sellerId = req.session.user.id;
+      const sellerId = req.user.id;
       const product = await Product.findOne({
         _id: productId,
         seller: sellerId,
@@ -713,7 +713,7 @@ router.post(
         }
 
         // Verify this item belongs to the seller
-        if (String(item.seller) !== String(req.session.user.id)) {
+        if (String(item.seller) !== String(req.user.id)) {
           return res.status(403).json({
             success: false,
             message: "Access denied: This item does not belong to you",
@@ -863,7 +863,7 @@ router.post(
       }
 
       // Verify this item belongs to the seller
-      if (String(item.seller) !== String(req.session.user.id)) {
+      if (String(item.seller) !== String(req.user.id)) {
         return res.status(403).json({
           success: false,
           message: "Access denied: This item does not belong to you",
@@ -1046,7 +1046,7 @@ router.post(
 
             // prevent duplicate by seller+sku
             const existing = await Product.findOne({
-              seller: req.session.user.id,
+              seller: req.user.id,
               sku,
             });
             if (existing) {
@@ -1105,7 +1105,7 @@ router.post(
               compatibility,
               image: uploaded.secure_url,
               imagePublicId: uploaded.public_id,
-              seller: req.session.user.id,
+              seller: req.user.id,
             });
             await newProd.save();
             resultSummary.inserted++;
@@ -1161,7 +1161,7 @@ router.post(
             }
 
             const existing = await Product.findOne({
-              seller: req.session.user.id,
+              seller: req.user.id,
               sku,
             });
             if (existing) {
@@ -1202,7 +1202,7 @@ router.post(
               compatibility,
               image: uploaded.secure_url,
               imagePublicId: uploaded.public_id,
-              seller: req.session.user.id,
+              seller: req.user.id,
             });
             await newProd.save();
             resultSummary.inserted++;
@@ -1253,3 +1253,4 @@ router.get("/api/bulk-upload-result", isAuthenticated, isSeller, (req, res) => {
 });
 
 module.exports = router;
+

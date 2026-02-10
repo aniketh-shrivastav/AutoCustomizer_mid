@@ -26,7 +26,7 @@ router.get("/dashboardService", serviceOnly, async (req, res) => {
 // JSON API for dashboard (static HTML hydration)
 router.get("/api/dashboard", serviceOnly, async (req, res) => {
   try {
-    const providerId = new mongoose.Types.ObjectId(req.session.user.id);
+    const providerId = new mongoose.Types.ObjectId(req.user.id);
 
     const bookings = await ServiceBooking.aggregate([
       { $match: { providerId } },
@@ -200,7 +200,7 @@ router.post("/updateMultipleBookingStatus", serviceOnly, async (req, res) => {
 // Earnings
 router.get("/earnings", serviceOnly, async (req, res) => {
   try {
-    const providerId = req.session.user.id;
+    const providerId = req.user.id;
 
     // Get all bookings for this provider with status "Ready"
     const completedBookings = await ServiceBooking.find({
@@ -243,7 +243,7 @@ router.get("/earnings", serviceOnly, async (req, res) => {
 // API endpoint for dynamic earnings data
 router.get("/api/earnings-data", serviceOnly, async (req, res) => {
   try {
-    const providerId = new mongoose.Types.ObjectId(req.session.user.id);
+    const providerId = new mongoose.Types.ObjectId(req.user.id);
     const timeRange = req.query.timeRange || "1"; // 1 = current month, 6 = 6 months, 12 = 1 year
 
     const currentDate = new Date();
@@ -384,7 +384,7 @@ router.get("/reviews", serviceOnly, async (req, res) => {
 router.get("/api/reviews", serviceOnly, async (req, res) => {
   try {
     const reviews = await ServiceBooking.find({
-      providerId: req.session.user.id,
+      providerId: req.user.id,
       rating: { $exists: true },
       review: { $exists: true },
     })
@@ -556,7 +556,7 @@ async function updateProviderRating(providerId) {
 // New API endpoint to get service provider profile data
 router.get("/api/profile", serviceOnly, async (req, res) => {
   try {
-    const user = await User.findById(req.session.user.id).lean();
+    const user = await User.findById(req.user.id).lean();
     if (!user)
       return res
         .status(404)
@@ -593,7 +593,7 @@ router.get("/api/profile", serviceOnly, async (req, res) => {
 // API endpoint for recent activity
 router.get("/api/recent-activity", serviceOnly, async (req, res) => {
   try {
-    const providerId = req.session.user.id;
+    const providerId = req.user.id;
     const limit = parseInt(req.query.limit) || 5; // Default to 5 activities
 
     // Get recent bookings with various statuses
@@ -672,7 +672,7 @@ function getTimeAgo(date) {
 // Static JSON API for booking management (service provider)
 router.get("/api/bookings", serviceOnly, async (req, res) => {
   try {
-    const providerId = req.session.user.id;
+    const providerId = req.user.id;
     let bookings = await ServiceBooking.find({ providerId })
       .populate("customerId", "name email")
       .sort({ createdAt: -1 })
@@ -720,3 +720,4 @@ router.get("/api/bookings", serviceOnly, async (req, res) => {
 });
 
 module.exports = router;
+

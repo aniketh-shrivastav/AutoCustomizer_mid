@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useMemo } from "react";
+import { authFetch } from "../../utils/api";
 import "../../Css/productManagement.css";
 
 // Utility hook to dynamically link CSS files (for compatibility with old CSS)
@@ -80,9 +81,8 @@ export default function ProductManagement() {
   async function loadProducts() {
     setLoading(true);
     try {
-      const res = await fetch("/seller/api/products", {
+      const res = await authFetch("/seller/api/products", {
         headers: { Accept: "application/json" },
-        credentials: "include",
       });
       if (res.status === 401) {
         window.location.href = "/login";
@@ -124,10 +124,9 @@ export default function ProductManagement() {
         }
       });
 
-      const res = await fetch("/seller/add-product", {
+      const res = await authFetch("/seller/add-product", {
         method: "POST",
         body: formData,
-        credentials: "include",
         headers: { Accept: "application/json" },
       });
 
@@ -163,9 +162,8 @@ export default function ProductManagement() {
   async function handleDelete(id) {
     if (!window.confirm("Delete this product?")) return;
     try {
-      const res = await fetch(`/seller/delete-product/${id}`, {
+      const res = await authFetch(`/seller/delete-product/${id}`, {
         method: "POST",
-        credentials: "include",
         headers: { Accept: "application/json" },
       });
       // Server currently redirects after delete; handle both JSON and redirect/HTML responses

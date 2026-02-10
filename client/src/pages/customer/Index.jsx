@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import CustomerNav from "../../components/CustomerNav";
 import CustomerFooter from "../../components/CustomerFooter";
+import { authFetch } from "../../utils/api";
 import "../../Css/customer.css";
 
 function useLink(href) {
@@ -22,6 +23,9 @@ export default function CustomerIndex() {
   }
   function handleLogout(e) {
     e.preventDefault();
+    // Clear JWT token and user data
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
     const next = encodeURIComponent(`${window.location.origin}/`);
     window.location.href = `${backendBase()}/logout?next=${next}`;
   }
@@ -42,9 +46,7 @@ export default function CustomerIndex() {
     async function load() {
       try {
         setLoading(true);
-        const res = await fetch("/customer/api/index", {
-          headers: { Accept: "application/json" },
-        });
+        const res = await authFetch("/customer/api/index");
         if (res.status === 401) {
           window.location.href = "/login";
           return;

@@ -203,7 +203,7 @@ router.post(
       }
       const msg = await Message.create({
         customerId,
-        senderId: req.session.user.id,
+        senderId: req.user.id,
         senderRole:
           req.session.user.role === "manager" ? "manager" : "customer",
         text: trimmed,
@@ -266,7 +266,7 @@ router.post(
 
       const msg = await Message.create({
         customerId,
-        senderId: req.session.user.id,
+        senderId: req.user.id,
         senderRole:
           req.session.user.role === "manager" ? "manager" : "customer",
         text:
@@ -369,3 +369,4 @@ router.get("/chat/unread-count", isAuthenticated, async (req, res) => {
 });
 
 module.exports = router;
+

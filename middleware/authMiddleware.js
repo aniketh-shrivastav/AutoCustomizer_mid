@@ -76,6 +76,16 @@ const sellerOnly = [isAuthenticated, isSeller];
 const customerOnly = [isAuthenticated, isCustomer];
 const serviceOnly = [isAuthenticated, isServiceProvider];
 
+/**
+ * JWT Authentication Middleware (placeholder)
+ * This is a passthrough since the app primarily uses session-based auth.
+ * Can be extended to verify JWT tokens from Authorization headers if needed.
+ */
+const jwtAuth = (req, res, next) => {
+  // Passthrough - session-based auth is handled by isAuthenticated
+  next();
+};
+
 module.exports = {
   wantsJSON,
   isAuthenticated,
@@ -88,4 +98,5 @@ module.exports = {
   sellerOnly,
   customerOnly,
   serviceOnly,
+  jwtAuth,
 };

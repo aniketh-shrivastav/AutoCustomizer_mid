@@ -2,6 +2,16 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import "../../Css/publicPages.css";
 
+// Helper to get auth headers with JWT token
+function getAuthHeaders() {
+  const token = localStorage.getItem("token");
+  const headers = { Accept: "application/json" };
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+  return headers;
+}
+
 const faqData = {
   customers: [
     {
@@ -81,7 +91,7 @@ export default function FAQ() {
     (async () => {
       try {
         const res = await fetch("/api/session", {
-          headers: { Accept: "application/json" },
+          headers: getAuthHeaders(),
         });
         if (!res.ok) throw new Error("session fetch failed");
         const data = await res.json();

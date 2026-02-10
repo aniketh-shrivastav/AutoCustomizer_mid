@@ -1,12 +1,13 @@
 import React, { useEffect, useRef, useState } from "react";
 import { io } from "socket.io-client";
 import CustomerNav from "../../components/CustomerNav";
+import { authFetch } from "../../utils/api";
 import "../../Css/customer.css";
 
 // Lightweight session fetch
 async function fetchSession() {
   try {
-    const res = await fetch("/api/session", {
+    const res = await authFetch("/api/session", {
       headers: { Accept: "application/json" },
     });
     if (!res.ok) return null;
@@ -59,7 +60,7 @@ export default function CustomerChat() {
       setUser(u);
 
       try {
-        const res = await fetch(`/chat/customer/${u.id}/messages`);
+        const res = await authFetch(`/chat/customer/${u.id}/messages`);
         const j = await res.json();
         if (!j.success) throw new Error(j.message || "Failed to load messages");
         setMessages(j.messages || []);
@@ -146,7 +147,7 @@ export default function CustomerChat() {
         const form = new FormData();
         form.append("file", pendingFile);
         if (text) form.append("text", text);
-        const res = await fetch(`/chat/customer/${user.id}/attachments`, {
+        const res = await authFetch(`/chat/customer/${user.id}/attachments`, {
           method: "POST",
           body: form,
         });
@@ -154,7 +155,7 @@ export default function CustomerChat() {
         if (!j.success) throw new Error(j.message || "Upload failed");
         setMessages((list) => [...list, j.message]);
       } else {
-        const res = await fetch(`/chat/customer/${user.id}/messages`, {
+        const res = await authFetch(`/chat/customer/${user.id}/messages`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -198,7 +199,7 @@ export default function CustomerChat() {
     if (!confirmed) return;
     try {
       setDeletingId(String(messageId));
-      const res = await fetch(
+      const res = await authFetch(
         `/chat/customer/${user.id}/messages/${messageId}`,
         {
           method: "DELETE",

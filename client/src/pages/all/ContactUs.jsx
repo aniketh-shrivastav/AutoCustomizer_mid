@@ -5,6 +5,16 @@ import "../../Css/publicPages.css";
 const nameRegex = /^[A-Za-z\s.-]+$/;
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+// Helper to get auth headers with JWT token
+function getAuthHeaders() {
+  const token = localStorage.getItem("token");
+  const headers = { Accept: "application/json" };
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+  return headers;
+}
+
 export default function ContactUs() {
   const [authed, setAuthed] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -23,7 +33,7 @@ export default function ContactUs() {
     (async () => {
       try {
         const res = await fetch("/api/session", {
-          headers: { Accept: "application/json" },
+          headers: getAuthHeaders(),
         });
         if (!res.ok) throw new Error("session");
         const data = await res.json();

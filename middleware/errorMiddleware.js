@@ -7,6 +7,8 @@
  * Type: Error-handling Middleware
  */
 
+const { logError } = require("./loggingMiddleware");
+
 /**
  * Helper to detect JSON requests
  */
@@ -38,15 +40,9 @@ function errorHandler(err, req, res, next) {
   const statusCode = Number(err.statusCode || err.status || 500);
   const message = err.message || "Internal Server Error";
 
-  // Log full error server-side
-  // Keep it concise but include stack for debugging.
-  console.error("[ERROR]", {
-    statusCode,
-    path: req.originalUrl,
-    method: req.method,
-    message,
-    stack: err.stack,
-  });
+  // Log full error to error.log file
+  const errorDetails = `[${req.method}] ${req.originalUrl} - Status: ${statusCode} - ${message}`;
+  logError(errorDetails, err);
 
   const isJson = wantsJson(req);
   if (isJson) {
