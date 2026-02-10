@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import CustomerNav from "../../components/CustomerNav";
+import CustomerFooter from "../../components/CustomerFooter";
+import "../../Css/customer.css";
 
 function useLink(href) {
   useEffect(() => {
@@ -52,128 +54,379 @@ export default function OrderDetails() {
     };
   }, [id, navigate]);
 
+  const getStatusClass = (status) => {
+    const statusMap = {
+      pending: "customer-status-pending",
+      confirmed: "customer-status-confirmed",
+      shipped: "customer-status-shipped",
+      delivered: "customer-status-delivered",
+      cancelled: "customer-status-cancelled",
+    };
+    return statusMap[status?.toLowerCase()] || "customer-status-pending";
+  };
+
   return (
-    <>
+    <div className="customer-page">
       <CustomerNav />
-      <div className="container mt-4">
-        {loading && <p>Loading order details...</p>}
-        {error && <p style={{ color: "crimson" }}>{error}</p>}
+      <main className="customer-main" style={{ maxWidth: "900px" }}>
+        {loading && (
+          <div className="customer-loading">
+            <div className="customer-spinner"></div>
+            <div className="customer-loading-text">
+              Loading order details...
+            </div>
+          </div>
+        )}
+
+        {error && (
+          <div className="customer-alert customer-alert-error">
+            <div className="customer-alert-icon">⚠️</div>
+            <div className="customer-alert-content">{error}</div>
+          </div>
+        )}
 
         {!loading && !error && order && (
           <div>
-            <h2>Order Details</h2>
-            <div
-              style={{
-                background: "#fff",
-                border: "1px solid #e5e7eb",
-                borderRadius: 12,
-                padding: 16,
-                marginBottom: 20,
-              }}
+            <button
+              type="button"
+              className="customer-btn customer-btn-secondary customer-btn-sm"
+              onClick={() => navigate("/customer/history")}
+              style={{ marginBottom: "24px" }}
             >
-              <p>
-                <strong>Order ID:</strong> {order._id}
-              </p>
-              <p>
-                <strong>Placed On:</strong>{" "}
-                {order.placedAt
-                  ? new Date(order.placedAt).toLocaleString()
-                  : ""}
-              </p>
-              <p>
-                <strong>Status:</strong> {order.orderStatus}
-              </p>
-              <p>
-                <strong>Payment Status:</strong> {order.paymentStatus}
-              </p>
-              <p>
-                <strong>Delivery Address:</strong> {order.deliveryAddress}
-              </p>
-              <p>
-                <strong>District:</strong> {order.district}
-              </p>
-              <p>
-                <strong>Total Amount:</strong> ₹{order.totalAmount}
-              </p>
-            </div>
+              ← Back to History
+            </button>
 
-            <h3>Items</h3>
-            <div style={{ display: "grid", gap: 12 }}>
-              {(order.items || []).map((item, idx) => (
+            <h1 className="customer-title" style={{ marginBottom: "24px" }}>
+              Order Details
+            </h1>
+
+            {/* Order Summary Card */}
+            <div className="customer-card" style={{ marginBottom: "24px" }}>
+              <div
+                className="customer-card-header"
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <div>
+                  <span
+                    style={{
+                      fontSize: "14px",
+                      color: "var(--customer-text-secondary)",
+                    }}
+                  >
+                    Order ID
+                  </span>
+                  <div style={{ fontWeight: "600", fontFamily: "monospace" }}>
+                    {order._id}
+                  </div>
+                </div>
+                <span
+                  className={`customer-status-badge ${getStatusClass(order.orderStatus)}`}
+                >
+                  {order.orderStatus}
+                </span>
+              </div>
+              <div className="customer-card-body">
                 <div
-                  key={`${item.productId}-${idx}`}
                   style={{
-                    border: "1px solid #e5e7eb",
-                    borderRadius: 12,
-                    padding: 12,
-                    background: "#fff",
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                    gap: "20px",
                   }}
                 >
-                  <div style={{ fontWeight: 600 }}>{item.name}</div>
-                  {item.image && (
-                    <img
-                      src={item.image}
-                      alt={item.name}
+                  <div>
+                    <span
                       style={{
-                        width: 120,
-                        height: 120,
-                        objectFit: "cover",
-                        borderRadius: 8,
-                        margin: "8px 0",
-                        border: "1px solid #e5e7eb",
+                        fontSize: "13px",
+                        color: "var(--customer-text-secondary)",
                       }}
-                    />
-                  )}
-                  <div>Quantity: {item.quantity}</div>
-                  <div>Price: ₹{item.price}</div>
-                  <div>Status: {item.itemStatus || order.orderStatus}</div>
-                  {item.seller && <div>Seller: {item.seller.name || ""}</div>}
+                    >
+                      Placed On
+                    </span>
+                    <div style={{ fontWeight: "500" }}>
+                      {order.placedAt
+                        ? new Date(order.placedAt).toLocaleString()
+                        : "-"}
+                    </div>
+                  </div>
+                  <div>
+                    <span
+                      style={{
+                        fontSize: "13px",
+                        color: "var(--customer-text-secondary)",
+                      }}
+                    >
+                      Payment Status
+                    </span>
+                    <div style={{ fontWeight: "500" }}>
+                      {order.paymentStatus}
+                    </div>
+                  </div>
+                  <div>
+                    <span
+                      style={{
+                        fontSize: "13px",
+                        color: "var(--customer-text-secondary)",
+                      }}
+                    >
+                      District
+                    </span>
+                    <div style={{ fontWeight: "500" }}>{order.district}</div>
+                  </div>
+                  <div>
+                    <span
+                      style={{
+                        fontSize: "13px",
+                        color: "var(--customer-text-secondary)",
+                      }}
+                    >
+                      Total Amount
+                    </span>
+                    <div
+                      style={{
+                        fontWeight: "700",
+                        fontSize: "1.25rem",
+                        color: "var(--customer-primary)",
+                      }}
+                    >
+                      ₹{order.totalAmount}
+                    </div>
+                  </div>
+                </div>
+                <div
+                  style={{
+                    marginTop: "16px",
+                    paddingTop: "16px",
+                    borderTop: "1px solid var(--customer-border)",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: "13px",
+                      color: "var(--customer-text-secondary)",
+                    }}
+                  >
+                    Delivery Address
+                  </span>
+                  <div style={{ fontWeight: "500" }}>
+                    {order.deliveryAddress}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Items Section */}
+            <h2 className="customer-subtitle" style={{ marginBottom: "16px" }}>
+              📦 Order Items
+            </h2>
+            <div style={{ display: "grid", gap: "16px", marginBottom: "24px" }}>
+              {(order.items || []).map((item, idx) => (
+                <div key={`${item.productId}-${idx}`} className="customer-card">
+                  <div
+                    className="customer-card-body"
+                    style={{
+                      display: "flex",
+                      gap: "20px",
+                      alignItems: "flex-start",
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    {item.image && (
+                      <img
+                        src={item.image}
+                        alt={item.name}
+                        style={{
+                          width: 100,
+                          height: 100,
+                          objectFit: "cover",
+                          borderRadius: "var(--customer-radius)",
+                          border: "1px solid var(--customer-border)",
+                        }}
+                      />
+                    )}
+                    <div style={{ flex: 1, minWidth: "200px" }}>
+                      <h4 style={{ fontWeight: "600", marginBottom: "8px" }}>
+                        {item.name}
+                      </h4>
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: "24px",
+                          flexWrap: "wrap",
+                          color: "var(--customer-text-secondary)",
+                          fontSize: "14px",
+                        }}
+                      >
+                        <span>
+                          Qty:{" "}
+                          <strong
+                            style={{ color: "var(--customer-text-primary)" }}
+                          >
+                            {item.quantity}
+                          </strong>
+                        </span>
+                        <span>
+                          Price:{" "}
+                          <strong style={{ color: "var(--customer-primary)" }}>
+                            ₹{item.price}
+                          </strong>
+                        </span>
+                        {item.seller && (
+                          <span>
+                            Seller:{" "}
+                            <strong
+                              style={{ color: "var(--customer-text-primary)" }}
+                            >
+                              {item.seller.name || ""}
+                            </strong>
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ marginTop: "8px" }}>
+                        <span
+                          className={`customer-status-badge ${getStatusClass(item.itemStatus || order.orderStatus)}`}
+                        >
+                          {item.itemStatus || order.orderStatus}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
 
                   {(item.itemStatusHistory || []).length > 0 && (
-                    <div style={{ marginTop: 8 }}>
-                      <strong>Status History</strong>
-                      <ul style={{ marginTop: 6 }}>
+                    <div className="customer-card-footer">
+                      <strong
+                        style={{
+                          fontSize: "13px",
+                          color: "var(--customer-text-secondary)",
+                        }}
+                      >
+                        Status History
+                      </strong>
+                      <div style={{ marginTop: "8px", fontSize: "13px" }}>
                         {(item.itemStatusHistory || []).map((h, i) => (
-                          <li key={i}>
-                            {h.from || "-"} → {h.to} on{" "}
-                            {h.changedAt
-                              ? new Date(h.changedAt).toLocaleString()
-                              : ""}
-                          </li>
+                          <div
+                            key={i}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "8px",
+                              marginBottom: "4px",
+                            }}
+                          >
+                            <span
+                              style={{
+                                background: "var(--customer-border)",
+                                padding: "2px 8px",
+                                borderRadius: "4px",
+                              }}
+                            >
+                              {h.from || "-"}
+                            </span>
+                            <span>→</span>
+                            <span
+                              style={{
+                                background: "var(--customer-primary)",
+                                color: "white",
+                                padding: "2px 8px",
+                                borderRadius: "4px",
+                              }}
+                            >
+                              {h.to}
+                            </span>
+                            <span
+                              style={{
+                                color: "var(--customer-text-muted)",
+                                marginLeft: "auto",
+                              }}
+                            >
+                              {h.changedAt
+                                ? new Date(h.changedAt).toLocaleString()
+                                : ""}
+                            </span>
+                          </div>
                         ))}
-                      </ul>
+                      </div>
                     </div>
                   )}
                 </div>
               ))}
             </div>
 
+            {/* Order Status History */}
             {(order.orderStatusHistory || []).length > 0 && (
-              <div style={{ marginTop: 20 }}>
-                <h3>Order Status History</h3>
-                <ul>
+              <div className="customer-card" style={{ marginBottom: "24px" }}>
+                <div className="customer-card-header">
+                  <h3 style={{ fontSize: "1rem", margin: 0 }}>
+                    📋 Order Status History
+                  </h3>
+                </div>
+                <div className="customer-card-body">
                   {(order.orderStatusHistory || []).map((h, i) => (
-                    <li key={i}>
-                      {h.from || "-"} → {h.to} on{" "}
-                      {h.changedAt
-                        ? new Date(h.changedAt).toLocaleString()
-                        : ""}
-                    </li>
+                    <div
+                      key={i}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "12px",
+                        padding: "8px 0",
+                        borderBottom:
+                          i < order.orderStatusHistory.length - 1
+                            ? "1px dashed var(--customer-border)"
+                            : "none",
+                      }}
+                    >
+                      <span
+                        style={{
+                          background: "var(--customer-bg-secondary)",
+                          padding: "4px 12px",
+                          borderRadius: "6px",
+                          fontWeight: "500",
+                        }}
+                      >
+                        {h.from || "-"}
+                      </span>
+                      <span
+                        style={{
+                          color: "var(--customer-primary)",
+                          fontSize: "20px",
+                        }}
+                      >
+                        →
+                      </span>
+                      <span
+                        style={{
+                          background: "var(--customer-primary)",
+                          color: "white",
+                          padding: "4px 12px",
+                          borderRadius: "6px",
+                          fontWeight: "500",
+                        }}
+                      >
+                        {h.to}
+                      </span>
+                      <span
+                        style={{
+                          color: "var(--customer-text-muted)",
+                          marginLeft: "auto",
+                          fontSize: "13px",
+                        }}
+                      >
+                        {h.changedAt
+                          ? new Date(h.changedAt).toLocaleString()
+                          : ""}
+                      </span>
+                    </div>
                   ))}
-                </ul>
+                </div>
               </div>
             )}
-
-            <button
-              type="button"
-              className="btn btn-secondary mt-3"
-              onClick={() => navigate("/customer/history")}
-            >
-              Back to History
-            </button>
           </div>
         )}
-      </div>
-    </>
+      </main>
+      <CustomerFooter />
+    </div>
   );
 }

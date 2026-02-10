@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import CustomerNav from "../../components/CustomerNav";
+import CustomerFooter from "../../components/CustomerFooter";
 import { useNavigate } from "react-router-dom";
 import { fetchCustomerHistory } from "../../store/customerSlice";
+import "../../Css/customer.css";
 
 const STALE_AFTER_MS = 1000 * 60 * 5; // 5 minutes
 
@@ -89,21 +91,33 @@ function safeJsonParse(raw, fallback) {
 
 function signatureForOrder(o) {
   const items = Array.isArray(o?.items) ? o.items : [];
+  const orderHistory = Array.isArray(o?.orderStatusHistory)
+    ? o.orderStatusHistory
+    : [];
   return JSON.stringify({
     placedAt: o?.placedAt || null,
     orderStatus: o?.orderStatus || null,
     totalAmount: o?.totalAmount ?? null,
+    // Include status history count and last change to detect updates
+    historyCount: orderHistory.length,
+    lastHistoryChange:
+      orderHistory.length > 0
+        ? orderHistory[orderHistory.length - 1]?.changedAt
+        : null,
     items: items.map((i) => ({
       productId: i?.productId || null,
       name: i?.name || null,
       price: i?.price ?? null,
       quantity: i?.quantity ?? null,
       itemStatus: i?.itemStatus || null,
+      itemHistoryCount: (i?.itemStatusHistory || []).length,
     })),
   });
 }
 
 function signatureForBooking(b) {
+  const statusHistory = Array.isArray(b?.statusHistory) ? b.statusHistory : [];
+  const costHistory = Array.isArray(b?.costHistory) ? b.costHistory : [];
   return JSON.stringify({
     createdAt: b?.createdAt || null,
     status: b?.status || null,
@@ -112,6 +126,17 @@ function signatureForBooking(b) {
       ? b.selectedServices
       : [],
     paintColor: b?.paintColor || null,
+    // Include history counts and last changes to detect updates
+    statusHistoryCount: statusHistory.length,
+    lastStatusChange:
+      statusHistory.length > 0
+        ? statusHistory[statusHistory.length - 1]?.changedAt
+        : null,
+    costHistoryCount: costHistory.length,
+    lastCostChange:
+      costHistory.length > 0
+        ? costHistory[costHistory.length - 1]?.changedAt
+        : null,
   });
 }
 
@@ -465,21 +490,34 @@ export default function CustomerHistory() {
   }
 
   return (
-    <>
+    <div className="customer-page">
       <CustomerNav />
 
-      <main>
+      <main className="customer-main" style={{ maxWidth: "1200px" }}>
+        <h1
+          className="customer-title"
+          style={{ textAlign: "center", marginBottom: "24px" }}
+        >
+          Order & Service History
+        </h1>
+
         <section
           style={{
             display: "flex",
             justifyContent: "space-between",
             gap: 12,
             flexWrap: "wrap",
-            marginBottom: 16,
+            marginBottom: 24,
             alignItems: "center",
+            padding: "16px 20px",
+            background: "var(--customer-bg-card)",
+            borderRadius: "var(--customer-radius)",
+            boxShadow: "var(--customer-shadow-sm)",
           }}
         >
-          <div style={{ color: "#4b5563", fontSize: 14 }}>
+          <div
+            style={{ color: "var(--customer-text-secondary)", fontSize: 14 }}
+          >
             {lastFetched
               ? `Last updated ${new Date(lastFetched).toLocaleString()}`
               : "History loads automatically when you visit this page."}
@@ -487,18 +525,11 @@ export default function CustomerHistory() {
           </div>
           <button
             type="button"
-            style={{
-              background: "#111827",
-              color: "white",
-              border: "none",
-              padding: "8px 16px",
-              borderRadius: 6,
-              cursor: loading ? "not-allowed" : "pointer",
-            }}
+            className="customer-btn customer-btn-primary customer-btn-sm"
             disabled={loading}
             onClick={refresh}
           >
-            {loading ? "Refreshing" : "Refresh"}
+            {loading ? "Refreshing..." : "↻ Refresh"}
           </button>
         </section>
 
@@ -993,33 +1024,7 @@ export default function CustomerHistory() {
         </div>
       </main>
 
-      <footer>
-        <div className="footer-container">
-          <div className="footer-section">
-            <h3>Contact Us</h3>
-            <p>Email: support@autocustomizer.com</p>
-            <p>Phone: +123-456-7890</p>
-            <p>Address: 123 Auto Street, Custom City</p>
-          </div>
-          <div className="footer-section">
-            <h3>Follow Us</h3>
-            <div className="social-icons">
-              <a href="#">
-                <img src="/images/facebook-icon.png" alt="Facebook" />
-              </a>
-              <a href="#">
-                <img src="/images/twitter-icon.png" alt="Twitter" />
-              </a>
-              <a href="#">
-                <img src="/images/instagram-icon.png" alt="Instagram" />
-              </a>
-            </div>
-          </div>
-        </div>
-        <div className="footer-bottom">
-          <p>© 2025 AutoCustomizer. All Rights Reserved.</p>
-        </div>
-      </footer>
+      <CustomerFooter />
 
       {/* Inline styles to match legacy */}
       <style>{`
@@ -1052,7 +1057,7 @@ export default function CustomerHistory() {
         .close { float:right; font-size:24px; cursor:pointer; }
         @media screen and (max-width: 768px) { .history-item { flex-direction:column; text-align:center; } .item-details { margin-bottom:15px; } }
 
-        .history-highlight { position:relative; background:#fff7cc; border:1px solid #f4d57a; box-shadow:0 0 0 3px rgba(245, 158, 11, 0.10); }
+        .history-highlight { position:relative; background:linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border:2px solid #f59e0b; box-shadow:0 0 0 4px rgba(245, 158, 11, 0.15); border-radius: var(--customer-radius, 12px); }
         .history-highlight::after {
           content:"NEW / UPDATED";
           position:absolute;
@@ -1069,53 +1074,78 @@ export default function CustomerHistory() {
         }
         .history-highlight-fade { animation: historyFadeOut 2.5s ease forwards; }
         @keyframes historyFadeOut {
-          0% { background:#fff7cc; }
+          0% { background:linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); }
           100% { background:transparent; }
         }
       `}</style>
 
       {/* Rating Modal */}
       {showRating && (
-        <div className="modal" style={{ display: "flex" }}>
-          <div className="modal-content">
-            <span className="close" onClick={closeRatingModal}>
-              &times;
-            </span>
-            <h3>Rate This Service</h3>
-            <form onSubmit={submitRating}>
-              <input type="hidden" name="bookingId" value={ratingBookingId} />
-              <label htmlFor="rating">Rating (1 to 5):</label>
-              <input
-                type="number"
-                name="rating"
-                id="rating"
-                min={1}
-                max={5}
-                required
-                value={ratingValue}
-                onChange={(e) => setRatingValue(e.target.value)}
-              />
-              <br />
-              <br />
-              <label htmlFor="review">Comment (optional):</label>
-              <br />
-              <textarea
-                name="review"
-                id="review"
-                rows={4}
-                cols={40}
-                value={ratingReview}
-                onChange={(e) => setRatingReview(e.target.value)}
-              />
-              <br />
-              <br />
-              <button type="submit" className="rate-btn">
-                Submit Rating
+        <div className="customer-modal-overlay" onClick={closeRatingModal}>
+          <div className="customer-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="customer-modal-header">
+              <h3 className="customer-modal-title">⭐ Rate This Service</h3>
+              <button
+                className="customer-modal-close"
+                onClick={closeRatingModal}
+              >
+                ×
               </button>
+            </div>
+            <form onSubmit={submitRating}>
+              <div className="customer-modal-body">
+                <input type="hidden" name="bookingId" value={ratingBookingId} />
+                <div className="customer-form-group">
+                  <label className="customer-label" htmlFor="rating">
+                    Rating (1 to 5)
+                  </label>
+                  <input
+                    type="number"
+                    name="rating"
+                    id="rating"
+                    min={1}
+                    max={5}
+                    required
+                    value={ratingValue}
+                    onChange={(e) => setRatingValue(e.target.value)}
+                    className="customer-input"
+                    style={{ maxWidth: "120px" }}
+                  />
+                </div>
+                <div className="customer-form-group">
+                  <label className="customer-label" htmlFor="review">
+                    Comment (optional)
+                  </label>
+                  <textarea
+                    name="review"
+                    id="review"
+                    rows={4}
+                    value={ratingReview}
+                    onChange={(e) => setRatingReview(e.target.value)}
+                    className="customer-input"
+                    placeholder="Share your experience..."
+                  />
+                </div>
+              </div>
+              <div className="customer-modal-footer">
+                <button
+                  type="button"
+                  className="customer-btn customer-btn-secondary"
+                  onClick={closeRatingModal}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="customer-btn customer-btn-success"
+                >
+                  Submit Rating
+                </button>
+              </div>
             </form>
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }

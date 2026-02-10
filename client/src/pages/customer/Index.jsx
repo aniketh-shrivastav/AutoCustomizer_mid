@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import CustomerNav from "../../components/CustomerNav";
+import CustomerFooter from "../../components/CustomerFooter";
+import "../../Css/customer.css";
 
 function useLink(href) {
   useEffect(() => {
@@ -26,7 +28,7 @@ export default function CustomerIndex() {
   // Load same CSS as static page (styles.css) and Bootstrap CDN
   useLink("/styles/styles.css");
   useLink(
-    "https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+    "https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css",
   );
 
   const [products, setProducts] = useState([]);
@@ -106,7 +108,7 @@ export default function CustomerIndex() {
         alert("Product added to cart successfully! 🛒");
       } else {
         alert(
-          "Failed to add product: " + ((j && j.message) || "Unknown error")
+          "Failed to add product: " + ((j && j.message) || "Unknown error"),
         );
       }
     } catch (e) {
@@ -122,100 +124,132 @@ export default function CustomerIndex() {
   }
 
   return (
-    <>
+    <div className="customer-page">
       <CustomerNav />
 
-      <main>
-        <div
-          className="search-bar"
-          style={{
-            display: "flex",
-            gap: 10,
-            flexWrap: "wrap",
-            alignItems: "center",
-            margin: "0 16px",
-          }}
-        >
+      <main className="customer-main">
+        {/* Search Section */}
+        <div className="customer-search-container">
           <input
             type="text"
             placeholder="Search for car parts..."
-            className="form-control"
-            style={{ maxWidth: 360 }}
+            className="customer-search-input"
             value={term}
             onChange={(e) => setTerm(e.target.value)}
           />
-          <div className="d-flex align-items-center" style={{ gap: 8 }}>
-            <label className="form-label mb-0">Category</label>
-            <select
-              className="form-select form-select-sm"
-              style={{ maxWidth: 220 }}
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-            >
-              <option value="">All categories</option>
-              {categories.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
+          <select
+            className="customer-filter-select"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+          >
+            <option value="">All Categories</option>
+            {categories.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Info Alert */}
+        <div className="customer-alert customer-alert-info">
+          <div className="customer-alert-icon">🛠️</div>
+          <div className="customer-alert-content">
+            <div className="customer-alert-title">
+              Important Instructions Before You Order
+            </div>
+            <ul style={{ margin: "8px 0 0 16px", lineHeight: "1.8" }}>
+              <li>
+                Please ensure that you <strong>update your profile</strong>{" "}
+                before ordering products.
+              </li>
+              <li>
+                If you plan to{" "}
+                <strong>book a service along with a product</strong>, book the
+                service first.
+              </li>
+            </ul>
+            <p style={{ marginTop: "8px", fontWeight: "500" }}>
+              Let's start customizing your car! 🚗
+            </p>
           </div>
         </div>
 
-        <section className="alert alert-info mx-3 mt-3" role="alert">
-          <h5 className="mb-2">🛠️ Important Instructions Before You Order</h5>
-          <ul className="mb-2">
-            <li>
-              Please ensure that you <strong>update your profile</strong> before
-              ordering products. An incomplete profile may cause errors during
-              order placement.
-            </li>
-            <li>
-              If you plan to{" "}
-              <strong>book a service along with a product</strong>, it's
-              recommended to book the service first to avoid any conflicts.
-            </li>
-          </ul>
-          <p className="mb-0">Let's start customizing our car! 🚗</p>
-        </section>
+        {/* Section Title */}
+        <h1
+          className="customer-title"
+          style={{ marginTop: "32px", marginBottom: "24px" }}
+        >
+          Available Car Parts
+        </h1>
 
-        <h2>Available Car Parts</h2>
+        {/* Loading State */}
+        {loading && (
+          <div className="customer-loading">
+            <div className="customer-spinner"></div>
+            <div className="customer-loading-text">Loading products...</div>
+          </div>
+        )}
 
-        {loading && <div className="mx-3">Loading products...</div>}
-        {error && <div className="mx-3 text-danger">{error}</div>}
+        {/* Error State */}
+        {error && (
+          <div className="customer-alert customer-alert-error">
+            <div className="customer-alert-icon">⚠️</div>
+            <div className="customer-alert-content">{error}</div>
+          </div>
+        )}
 
+        {/* Products Grid */}
         {!loading && !error && (
-          <div className="parts-list" id="parts-list">
+          <>
             {filtered.length === 0 ? (
-              <p>No products available.</p>
+              <div className="customer-empty-state">
+                <div className="customer-empty-icon">📦</div>
+                <h3 className="customer-empty-title">No Products Found</h3>
+                <p className="customer-empty-description">
+                  We couldn't find any products matching your search. Try
+                  adjusting your filters.
+                </p>
+              </div>
             ) : (
-              filtered.map((product) => (
-                <div
-                  key={productId(product)}
-                  className="part"
-                  data-name={product.name || ""}
-                  data-category={product.category || ""}
-                >
-                  <div className="card mb-4 shadow-sm">
-                    <img
-                      src={product.image || "/images/placeholder.jpg"}
-                      className="card-img-top"
-                      alt={product.name || "Product"}
-                    />
-                    <div className="card-body">
-                      <h5 className="card-title">
+              <div className="customer-product-grid">
+                {filtered.map((product) => (
+                  <div
+                    key={productId(product)}
+                    className="customer-product-card"
+                  >
+                    <div className="customer-product-image-wrapper">
+                      <img
+                        src={product.image || "/images/placeholder.jpg"}
+                        className="customer-product-image"
+                        alt={product.name || "Product"}
+                      />
+                      {product.isNew && (
+                        <span className="customer-product-badge new">New</span>
+                      )}
+                    </div>
+                    <div className="customer-product-content">
+                      {product.category && (
+                        <span className="customer-product-category">
+                          {product.category}
+                        </span>
+                      )}
+                      <h3 className="customer-product-name">
                         {product.name || "Unnamed Product"}
-                      </h5>
-                      <p className="card-text">₹{product.price || "0"}</p>
-                      <Link
-                        to={`/customer/product/${productId(product)}`}
-                        className="btn btn-sm btn-outline-primary"
-                      >
-                        View Details
-                      </Link>
-                      <div className="mt-3">
+                      </h3>
+                      <div className="customer-product-price">
+                        ₹{product.price || "0"}
+                      </div>
+                      <div className="customer-product-actions">
+                        <Link
+                          to={`/customer/product/${productId(product)}`}
+                          className="customer-btn customer-btn-outline customer-btn-sm"
+                        >
+                          View Details
+                        </Link>
                         <button
-                          className="btn btn-primary w-100"
+                          className="customer-btn customer-btn-primary customer-btn-sm"
+                          style={{ flex: 1 }}
                           onClick={(e) =>
                             addToCart(productId(product), e.currentTarget)
                           }
@@ -225,40 +259,14 @@ export default function CustomerIndex() {
                       </div>
                     </div>
                   </div>
-                </div>
-              ))
+                ))}
+              </div>
             )}
-          </div>
+          </>
         )}
       </main>
 
-      <footer>
-        <div className="footer-container">
-          <div className="footer-section">
-            <h3>Contact Us</h3>
-            <p>Email: support@autocustomizer.com</p>
-            <p>Phone: +123-456-7890</p>
-            <p>Address: 123 Auto Street, Custom City</p>
-          </div>
-          <div className="footer-section">
-            <h3>Follow Us</h3>
-            <div className="social-icons">
-              <a href="#">
-                <img src="/images/facebook-icon.png" alt="Facebook" />
-              </a>
-              <a href="#">
-                <img src="/images/twitter-icon.png" alt="Twitter" />
-              </a>
-              <a href="#">
-                <img src="/images/instagram-icon.png" alt="Instagram" />
-              </a>
-            </div>
-          </div>
-        </div>
-        <div className="footer-bottom">
-          <p>© 2025 AutoCustomizer. All Rights Reserved.</p>
-        </div>
-      </footer>
-    </>
+      <CustomerFooter />
+    </div>
   );
 }

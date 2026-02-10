@@ -28,7 +28,7 @@ export default function ProductManagement() {
     quantity: "",
     sku: "",
     compatibility: "",
-    image: null,
+    images: [],
   });
   const [errors, setErrors] = useState({});
   const [products, setProducts] = useState([]);
@@ -49,7 +49,8 @@ export default function ProductManagement() {
       price: (v) => (/^\d+(\.\d{1,2})?$/.test(v) ? "" : "Invalid price format"),
       quantity: (v) =>
         String(parseInt(v, 10)) === String(v) ? "" : "Quantity must be integer",
-      image: (v) => (v ? "" : "Product image required"),
+      images: (v) =>
+        v && v.length > 0 ? "" : "At least one product image required",
     }),
     [],
   );
@@ -116,8 +117,11 @@ export default function ProductManagement() {
       setStatus("Adding product...");
       const formData = new FormData();
       Object.entries(form).forEach(([k, v]) => {
-        if (k === "image" && v) formData.append("image", v);
-        else formData.append(k, v ?? "");
+        if (k === "images" && v && v.length > 0) {
+          v.forEach((file) => formData.append("images", file));
+        } else if (k !== "images") {
+          formData.append(k, v ?? "");
+        }
       });
 
       const res = await fetch("/seller/add-product", {
@@ -145,7 +149,7 @@ export default function ProductManagement() {
         quantity: "",
         sku: "",
         compatibility: "",
-        image: null,
+        images: [],
       });
       if (imageInputRef.current) imageInputRef.current.value = "";
       loadProducts();
@@ -277,16 +281,25 @@ export default function ProductManagement() {
           ))}
 
           <div className="form-group">
-            <label htmlFor="productImage">Product Image:</label>
+            <label htmlFor="productImage">Product Images (up to 5):</label>
             <input
               id="productImage"
               type="file"
               accept="image/*"
+              multiple
               ref={imageInputRef}
-              onChange={(e) => setField("image", e.target.files?.[0] || null)}
+              onChange={(e) => {
+                const files = Array.from(e.target.files || []).slice(0, 5);
+                setField("images", files);
+              }}
             />
-            {errors.image && (
-              <small style={{ color: "crimson" }}>{errors.image}</small>
+            {form.images && form.images.length > 0 && (
+              <div style={{ marginTop: 8, fontSize: 13, color: "#6b7280" }}>
+                {form.images.length} image(s) selected
+              </div>
+            )}
+            {errors.images && (
+              <small style={{ color: "crimson" }}>{errors.images}</small>
             )}
           </div>
 

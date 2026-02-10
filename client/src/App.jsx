@@ -29,6 +29,8 @@ import CustomerChat from "./pages/customer/Chat";
 import ProductDetails from "./pages/customer/ProductDetails";
 import OrderDetails from "./pages/customer/OrderDetails";
 import ServiceDetails from "./pages/customer/ServiceDetails";
+import PaymentSuccess from "./pages/customer/PaymentSuccess";
+import MockCheckout from "./pages/customer/MockCheckout";
 
 import ServiceDashboard from "./pages/service/DashboardService";
 import ServiceProfileSettings from "./pages/service/ProfileSettings";
@@ -97,16 +99,95 @@ export default function App() {
       <Route path="/faq" element={<FAQ />} />
       <Route path="/contactus" element={<ContactUs />} />
 
-      {/* Customer */}
-      <Route path="/customer/index" element={<CustomerIndex />} />
-      <Route path="/customer/booking" element={<CustomerBooking />} />
-      <Route path="/customer/history" element={<CustomerHistory />} />
-      <Route path="/customer/cart" element={<CustomerCart />} />
-      <Route path="/customer/profile" element={<CustomerProfile />} />
-      <Route path="/customer/chat" element={<CustomerChat />} />
-      <Route path="/customer/product/:id" element={<ProductDetails />} />
-      <Route path="/customer/order/:id" element={<OrderDetails />} />
-      <Route path="/customer/service/:id" element={<ServiceDetails />} />
+      {/* Customer (protected) */}
+      <Route
+        path="/customer/index"
+        element={
+          <RequireRole role="customer">
+            <CustomerIndex />
+          </RequireRole>
+        }
+      />
+      <Route
+        path="/customer/booking"
+        element={
+          <RequireRole role="customer">
+            <CustomerBooking />
+          </RequireRole>
+        }
+      />
+      <Route
+        path="/customer/history"
+        element={
+          <RequireRole role="customer">
+            <CustomerHistory />
+          </RequireRole>
+        }
+      />
+      <Route
+        path="/customer/cart"
+        element={
+          <RequireRole role="customer">
+            <CustomerCart />
+          </RequireRole>
+        }
+      />
+      <Route
+        path="/customer/profile"
+        element={
+          <RequireRole role="customer">
+            <CustomerProfile />
+          </RequireRole>
+        }
+      />
+      <Route
+        path="/customer/chat"
+        element={
+          <RequireRole role="customer">
+            <CustomerChat />
+          </RequireRole>
+        }
+      />
+      <Route
+        path="/customer/product/:id"
+        element={
+          <RequireRole role="customer">
+            <ProductDetails />
+          </RequireRole>
+        }
+      />
+      <Route
+        path="/customer/order/:id"
+        element={
+          <RequireRole role="customer">
+            <OrderDetails />
+          </RequireRole>
+        }
+      />
+      <Route
+        path="/customer/service/:id"
+        element={
+          <RequireRole role="customer">
+            <ServiceDetails />
+          </RequireRole>
+        }
+      />
+      <Route
+        path="/customer/payment-success"
+        element={
+          <RequireRole role="customer">
+            <PaymentSuccess />
+          </RequireRole>
+        }
+      />
+      <Route
+        path="/customer/mock-checkout"
+        element={
+          <RequireRole role="customer">
+            <MockCheckout />
+          </RequireRole>
+        }
+      />
 
       {/* Service Provider */}
       <Route

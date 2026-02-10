@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import CustomerNav from "../../components/CustomerNav";
+import CustomerFooter from "../../components/CustomerFooter";
+import "../../Css/customer.css";
+import "../../Css/productDetails.css";
 
 function useLink(href) {
   useEffect(() => {
@@ -10,6 +13,40 @@ function useLink(href) {
     document.head.appendChild(link);
     return () => document.head.removeChild(link);
   }, [href]);
+}
+
+// Star Rating Component for selecting rating
+function StarRatingInput({ rating, onChange }) {
+  const [hoverRating, setHoverRating] = useState(0);
+
+  return (
+    <div className="pd-star-input">
+      {[1, 2, 3, 4, 5].map((star) => (
+        <span
+          key={star}
+          onClick={() => onChange(star)}
+          onMouseEnter={() => setHoverRating(star)}
+          onMouseLeave={() => setHoverRating(0)}
+          className={`pd-star ${star <= (hoverRating || rating) ? "active" : ""}`}
+        >
+          ★
+        </span>
+      ))}
+    </div>
+  );
+}
+
+// Star Rating Display Component
+function StarRatingDisplay({ rating }) {
+  return (
+    <span className="pd-star-display">
+      {[1, 2, 3, 4, 5].map((star) => (
+        <span key={star} className={star <= rating ? "filled" : ""}>
+          {star <= rating ? "★" : "☆"}
+        </span>
+      ))}
+    </span>
+  );
 }
 
 export default function ProductDetails() {
@@ -33,6 +70,29 @@ export default function ProductDetails() {
   const [reviewStatus, setReviewStatus] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  // Image carousel state
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isHoveringImage, setIsHoveringImage] = useState(false);
+  const [showFullScreen, setShowFullScreen] = useState(false);
+
+  // Get all images (use images array if available, fallback to single image)
+  const productImages =
+    product?.images?.length > 0
+      ? product.images.map((img) => img.url || img)
+      : [product?.image || "/images/placeholder.jpg"];
+
+  const nextImage = (e) => {
+    e?.stopPropagation();
+    setCurrentImageIndex((prev) => (prev + 1) % productImages.length);
+  };
+
+  const prevImage = (e) => {
+    e?.stopPropagation();
+    setCurrentImageIndex(
+      (prev) => (prev - 1 + productImages.length) % productImages.length,
+    );
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -121,248 +181,318 @@ export default function ProductDetails() {
     <>
       <CustomerNav />
 
-      <div
-        style={{
-          background: "#f3f4f6",
-          minHeight: "100vh",
-          padding: "24px 0 40px",
-        }}
-      >
-        <div className="container">
-          {loading && <div>Loading product...</div>}
-          {error && <div className="text-danger mb-3">{error}</div>}
+      <div className="pd-page">
+        <div className="pd-container">
+          {/* Breadcrumb */}
+          <div className="pd-breadcrumb">
+            <a href="/customer/index">Products</a>
+            <span className="separator">›</span>
+            <span>{product?.name || "Loading..."}</span>
+          </div>
+
+          {loading && (
+            <div className="pd-loading">
+              <div className="pd-loading-spinner"></div>
+              <p>Loading product details...</p>
+            </div>
+          )}
+
+          {error && <div className="pd-error">⚠️ {error}</div>}
 
           {!loading && !error && product && (
-            <div className="row" style={{ gap: 16, alignItems: "flex-start" }}>
-              <div className="col-lg-5" style={{ flex: 1 }}>
+            <div className="pd-main-grid">
+              {/* Image Gallery */}
+              <div className="pd-gallery-card">
                 <div
-                  style={{
-                    background: "#fff",
-                    borderRadius: 12,
-                    padding: 16,
-                    boxShadow: "0 6px 18px rgba(15, 23, 42, 0.08)",
-                  }}
+                  className="pd-main-image-container"
+                  onMouseEnter={() => setIsHoveringImage(true)}
+                  onMouseLeave={() => setIsHoveringImage(false)}
                 >
                   <img
-                    src={product.image || "/images/placeholder.jpg"}
+                    src={productImages[currentImageIndex]}
                     alt={product.name || "Product"}
-                    style={{
-                      width: "100%",
-                      height: 380,
-                      objectFit: "contain",
-                      borderRadius: 10,
-                      background: "#f9fafb",
-                    }}
+                    onClick={() => setShowFullScreen(true)}
+                    className="pd-main-image"
                   />
+
+                  {productImages.length > 1 && (
+                    <>
+                      <button onClick={prevImage} className="pd-nav-btn prev">
+                        ‹
+                      </button>
+                      <button onClick={nextImage} className="pd-nav-btn next">
+                        ›
+                      </button>
+                    </>
+                  )}
                 </div>
+
+                {/* Thumbnail Strip */}
+                {productImages.length > 1 && (
+                  <div className="pd-thumbnails">
+                    {productImages.map((img, idx) => (
+                      <img
+                        key={idx}
+                        src={img}
+                        alt={`${product.name} - ${idx + 1}`}
+                        onClick={() => setCurrentImageIndex(idx)}
+                        className={`pd-thumbnail ${idx === currentImageIndex ? "active" : ""}`}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {/* Indicators */}
+                {productImages.length > 1 && (
+                  <div className="pd-indicators">
+                    {productImages.map((_, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => setCurrentImageIndex(idx)}
+                        className={`pd-indicator ${idx === currentImageIndex ? "active" : ""}`}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
 
-              <div className="col-lg-4" style={{ flex: 1 }}>
-                <div
-                  style={{
-                    background: "#fff",
-                    borderRadius: 12,
-                    padding: 18,
-                    boxShadow: "0 6px 18px rgba(15, 23, 42, 0.08)",
-                  }}
-                >
-                  <h2 style={{ fontSize: 26, fontWeight: 700 }}>
-                    {product.name}
-                  </h2>
-                  <div style={{ marginTop: 8, color: "#6b7280" }}>
-                    ⭐ {ratingSummary.avgRating} / 5
-                    <span style={{ marginLeft: 8 }}>
-                      ({ratingSummary.totalReviews} review(s))
-                    </span>
-                  </div>
-                  <div
-                    style={{
-                      marginTop: 12,
-                      fontSize: 22,
-                      fontWeight: 700,
-                      color: "#b12704",
-                    }}
-                  >
-                    ₹{product.price}
-                  </div>
-                  <hr />
-                  <p>
-                    <strong>Category:</strong> {product.category}
-                  </p>
-                  <p>
-                    <strong>Brand:</strong> {product.brand}
-                  </p>
-                  <p>
-                    <strong>SKU:</strong> {product.sku}
-                  </p>
-                  <p>
-                    <strong>Compatibility:</strong> {product.compatibility}
-                  </p>
-                  {product.seller && (
-                    <p>
-                      <strong>Seller:</strong> {product.seller.name}
-                    </p>
-                  )}
-                  <p style={{ color: "#374151" }}>{product.description}</p>
+              {/* Product Info */}
+              <div className="pd-info-card">
+                <h1 className="pd-product-title">{product.name}</h1>
 
+                <div className="pd-rating-row">
+                  <div className="pd-rating-stars">
+                    <StarRatingDisplay
+                      rating={Math.round(ratingSummary.avgRating)}
+                    />
+                  </div>
+                  <span className="pd-rating-text">
+                    <strong>{ratingSummary.avgRating.toFixed(1)}</strong> / 5 (
+                    {ratingSummary.totalReviews} reviews)
+                  </span>
+                </div>
+
+                <div className="pd-price-section">
+                  <div className="pd-price">
+                    <span className="pd-price-symbol">₹</span>
+                    {product.price?.toLocaleString()}
+                  </div>
+                  <div className="pd-price-label">Inclusive of all taxes</div>
+                </div>
+
+                <div className="pd-details-grid">
+                  <div className="pd-detail-item">
+                    <div className="pd-detail-label">Category</div>
+                    <div className="pd-detail-value">
+                      {product.category || "N/A"}
+                    </div>
+                  </div>
+                  <div className="pd-detail-item">
+                    <div className="pd-detail-label">Brand</div>
+                    <div className="pd-detail-value">
+                      {product.brand || "N/A"}
+                    </div>
+                  </div>
+                  <div className="pd-detail-item">
+                    <div className="pd-detail-label">SKU</div>
+                    <div className="pd-detail-value">
+                      {product.sku || "N/A"}
+                    </div>
+                  </div>
+                  <div className="pd-detail-item">
+                    <div className="pd-detail-label">Compatibility</div>
+                    <div className="pd-detail-value">
+                      {product.compatibility || "Universal"}
+                    </div>
+                  </div>
+                </div>
+
+                {product.seller && (
+                  <div className="pd-seller-badge">
+                    <div className="pd-seller-icon">
+                      {product.seller.name?.charAt(0).toUpperCase() || "S"}
+                    </div>
+                    <div className="pd-seller-info">
+                      <span className="pd-seller-label">Sold by</span>
+                      <span className="pd-seller-name">
+                        {product.seller.name}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="pd-description">{product.description}</div>
+
+                <div className="pd-actions">
                   <button
                     type="button"
-                    className="btn btn-secondary mt-2"
+                    className="pd-btn pd-btn-secondary"
                     onClick={() => navigate("/customer/index")}
                   >
-                    Back to Products
+                    ← Back to Products
                   </button>
                 </div>
               </div>
 
-              <div className="col-lg-3" style={{ flex: 0.9 }}>
-                <div
-                  style={{
-                    background: "#fff",
-                    borderRadius: 12,
-                    padding: 18,
-                    boxShadow: "0 6px 18px rgba(15, 23, 42, 0.08)",
-                    position: "sticky",
-                    top: 20,
-                  }}
-                >
-                  <h4 style={{ fontWeight: 700 }}>Customer Reviews</h4>
-                  <div style={{ marginBottom: 10, color: "#6b7280" }}>
-                    ⭐ {ratingSummary.avgRating} / 5
-                  </div>
+              {/* Reviews Section */}
+              <div className="pd-reviews-card">
+                <div className="pd-reviews-header">
+                  <h3 className="pd-reviews-title">
+                    <span className="pd-reviews-title-icon">⭐</span>
+                    Reviews
+                  </h3>
+                  <span className="pd-avg-rating">
+                    {ratingSummary.avgRating.toFixed(1)} / 5
+                  </span>
+                </div>
 
-                  {reviews.length === 0 ? (
-                    <p style={{ color: "#6b7280" }}>No reviews yet.</p>
-                  ) : (
-                    <div style={{ maxHeight: 240, overflowY: "auto" }}>
-                      {reviews.slice(0, 3).map((r) => (
-                        <div
-                          key={r._id}
-                          style={{
-                            borderBottom: "1px solid #e5e7eb",
-                            paddingBottom: 8,
-                            marginBottom: 8,
-                          }}
-                        >
-                          <div style={{ fontWeight: 600, fontSize: 14 }}>
-                            {r.userId?.name || "Customer"}
+                {reviews.length === 0 ? (
+                  <div className="pd-no-reviews">
+                    <div className="pd-no-reviews-icon">💬</div>
+                    <p>No reviews yet. Be the first to review!</p>
+                  </div>
+                ) : (
+                  <div className="pd-reviews-list">
+                    {reviews.slice(0, 3).map((r) => (
+                      <div key={r._id} className="pd-review-item">
+                        <div className="pd-review-header">
+                          <div className="pd-reviewer-info">
+                            <div className="pd-reviewer-avatar">
+                              {(r.userId?.name || "C").charAt(0).toUpperCase()}
+                            </div>
+                            <span className="pd-reviewer-name">
+                              {r.userId?.name || "Customer"}
+                            </span>
                           </div>
-                          <div style={{ fontSize: 13 }}>⭐ {r.rating} / 5</div>
-                          {r.review ? (
-                            <p style={{ margin: "4px 0 0", fontSize: 13 }}>
-                              {r.review}
-                            </p>
-                          ) : (
-                            <p style={{ margin: "4px 0 0", fontSize: 13 }}>
-                              No review text.
-                            </p>
+                          {r.verifiedPurchase && (
+                            <span className="pd-verified-badge">Verified</span>
                           )}
                         </div>
-                      ))}
-                      {reviews.length > 3 && (
-                        <div style={{ fontSize: 12, color: "#6b7280" }}>
-                          Showing latest 3 reviews
+                        <StarRatingDisplay rating={r.rating} />
+                        {r.review ? (
+                          <p className="pd-review-text">{r.review}</p>
+                        ) : (
+                          <p className="pd-no-review-text">No review text.</p>
+                        )}
+                      </div>
+                    ))}
+                    {reviews.length > 3 && (
+                      <div className="pd-more-reviews">
+                        Showing latest 3 of {reviews.length} reviews
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {canReview && (
+                  <div className="pd-review-form">
+                    <h4 className="pd-review-form-title">
+                      {userReview ? "Update Your Review" : "Write a Review"}
+                    </h4>
+                    <form onSubmit={submitReview}>
+                      <div className="pd-form-group">
+                        <label className="pd-form-label">Your Rating</label>
+                        <StarRatingInput
+                          rating={reviewForm.rating}
+                          onChange={(value) =>
+                            setReviewForm((prev) => ({
+                              ...prev,
+                              rating: value,
+                            }))
+                          }
+                        />
+                      </div>
+                      <div className="pd-form-group">
+                        <label className="pd-form-label">Your Review</label>
+                        <textarea
+                          className="pd-form-textarea"
+                          rows={3}
+                          placeholder="Share your experience with this product..."
+                          value={reviewForm.review}
+                          onChange={(e) =>
+                            setReviewForm((prev) => ({
+                              ...prev,
+                              review: e.target.value,
+                            }))
+                          }
+                        />
+                      </div>
+                      <button type="submit" className="pd-submit-btn">
+                        {userReview ? "Update Review" : "Submit Review"}
+                      </button>
+                      {reviewStatus && (
+                        <div
+                          className={`pd-review-status ${reviewStatus.includes("success") ? "success" : ""}`}
+                        >
+                          {reviewStatus}
                         </div>
                       )}
-                    </div>
-                  )}
+                    </form>
+                  </div>
+                )}
 
-                  {canReview && (
-                    <div style={{ marginTop: 16 }}>
-                      <h5 style={{ fontWeight: 700 }}>
-                        {userReview ? "Update Your Review" : "Write a Review"}
-                      </h5>
-                      <form onSubmit={submitReview}>
-                        <div className="mb-2">
-                          <label className="form-label">Rating</label>
-                          <select
-                            className="form-select"
-                            value={reviewForm.rating}
-                            onChange={(e) =>
-                              setReviewForm((prev) => ({
-                                ...prev,
-                                rating: Number(e.target.value),
-                              }))
-                            }
-                          >
-                            {[5, 4, 3, 2, 1].map((v) => (
-                              <option key={v} value={v}>
-                                {v} Star{v > 1 ? "s" : ""}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="mb-2">
-                          <label className="form-label">Review</label>
-                          <textarea
-                            className="form-control"
-                            rows={3}
-                            value={reviewForm.review}
-                            onChange={(e) =>
-                              setReviewForm((prev) => ({
-                                ...prev,
-                                review: e.target.value,
-                              }))
-                            }
-                          />
-                        </div>
-                        <button type="submit" className="btn btn-primary w-100">
-                          {userReview ? "Update Review" : "Submit Review"}
-                        </button>
-                        {reviewStatus && (
-                          <div style={{ marginTop: 8, fontSize: 13 }}>
-                            {reviewStatus}
-                          </div>
-                        )}
-                      </form>
-                    </div>
-                  )}
-
-                  {!canReview && userReview && (
-                    <div style={{ marginTop: 16 }}>
-                      <h5 style={{ fontWeight: 700 }}>Your Review</h5>
-                      <div style={{ fontSize: 13 }}>
-                        ⭐ {userReview.rating} / 5
-                      </div>
-                      <p style={{ marginTop: 6, fontSize: 13 }}>
-                        {userReview.review}
-                      </p>
-                    </div>
-                  )}
-                </div>
+                {!canReview && userReview && (
+                  <div className="pd-your-review">
+                    <h4 className="pd-your-review-title">Your Review</h4>
+                    <StarRatingDisplay rating={userReview.rating} />
+                    <p className="pd-review-text">{userReview.review}</p>
+                  </div>
+                )}
               </div>
             </div>
           )}
         </div>
       </div>
 
-      <footer>
-        <div className="footer-container">
-          <div className="footer-section">
-            <h3>Contact Us</h3>
-            <p>Email: support@autocustomizer.com</p>
-            <p>Phone: +123-456-7890</p>
-            <p>Address: 123 Auto Street, Custom City</p>
-          </div>
-          <div className="footer-section">
-            <h3>Follow Us</h3>
-            <div className="social-icons">
-              <a href="#">
-                <img src="/images/facebook-icon.png" alt="Facebook" />
-              </a>
-              <a href="#">
-                <img src="/images/twitter-icon.png" alt="Twitter" />
-              </a>
-              <a href="#">
-                <img src="/images/instagram-icon.png" alt="Instagram" />
-              </a>
+      <CustomerFooter />
+
+      {/* Full Screen Image Modal */}
+      {showFullScreen && (
+        <div
+          className="pd-fullscreen-modal"
+          onClick={() => setShowFullScreen(false)}
+        >
+          <button
+            className="pd-fullscreen-close"
+            onClick={() => setShowFullScreen(false)}
+          >
+            ×
+          </button>
+
+          {productImages.length > 1 && (
+            <>
+              <button onClick={prevImage} className="pd-fullscreen-nav prev">
+                ‹
+              </button>
+              <button onClick={nextImage} className="pd-fullscreen-nav next">
+                ›
+              </button>
+            </>
+          )}
+
+          <img
+            src={productImages[currentImageIndex]}
+            alt={product?.name || "Product"}
+            onClick={(e) => e.stopPropagation()}
+            className="pd-fullscreen-image"
+          />
+
+          {productImages.length > 1 && (
+            <div className="pd-fullscreen-indicators">
+              {productImages.map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCurrentImageIndex(idx);
+                  }}
+                  className={`pd-fullscreen-indicator ${idx === currentImageIndex ? "active" : ""}`}
+                />
+              ))}
             </div>
-          </div>
+          )}
         </div>
-        <div className="footer-bottom">
-          <p>© 2025 AutoCustomizer. All Rights Reserved.</p>
-        </div>
-      </footer>
+      )}
     </>
   );
 }

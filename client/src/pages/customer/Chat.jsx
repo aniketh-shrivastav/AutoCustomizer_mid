@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { io } from "socket.io-client";
 import CustomerNav from "../../components/CustomerNav";
+import "../../Css/customer.css";
 
 // Lightweight session fetch
 async function fetchSession() {
@@ -26,7 +27,7 @@ export default function CustomerChat() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [themeMode, setThemeMode] = useState(
-    () => document.documentElement.getAttribute("data-theme") || "light"
+    () => document.documentElement.getAttribute("data-theme") || "light",
   );
 
   const bottomRef = useRef(null);
@@ -87,7 +88,7 @@ export default function CustomerChat() {
       socketRef.current.on("chat:deleted", (payload) => {
         if (!payload?._id) return;
         setMessages((list) =>
-          list.filter((msg) => String(msg._id) !== String(payload._id))
+          list.filter((msg) => String(msg._id) !== String(payload._id)),
         );
       });
     })();
@@ -202,12 +203,12 @@ export default function CustomerChat() {
         {
           method: "DELETE",
           headers: { Accept: "application/json" },
-        }
+        },
       );
       const j = await res.json();
       if (!j.success) throw new Error(j.message || "Delete failed");
       setMessages((list) =>
-        list.filter((msg) => String(msg._id) !== String(messageId))
+        list.filter((msg) => String(msg._id) !== String(messageId)),
       );
     } catch (err) {
       alert(err.message || "Delete failed");
@@ -221,24 +222,20 @@ export default function CustomerChat() {
       style={{
         minHeight: "100vh",
         background: palette.pageBg,
-        paddingTop: "90px",
-        paddingBottom: "40px",
+        display: "flex",
+        flexDirection: "column",
       }}
     >
       <CustomerNav />
 
-      {/* Chat Container */}
+      {/* Chat Container - Full View */}
       <div
         style={{
-          maxWidth: 850,
-          height: "75vh",
-          margin: "0 auto",
-          background: palette.cardBg,
-          borderRadius: 20,
-          overflow: "hidden",
-          boxShadow: palette.cardShadow,
+          flex: 1,
           display: "flex",
           flexDirection: "column",
+          background: palette.cardBg,
+          overflow: "hidden",
           minHeight: 0,
         }}
       >
@@ -308,30 +305,6 @@ export default function CustomerChat() {
                       position: "relative",
                     }}
                   >
-                    {mine && (
-                      <button
-                        onClick={() => handleDeleteMessage(m._id)}
-                        disabled={deletingId === String(m._id)}
-                        style={{
-                          position: "absolute",
-                          top: -10,
-                          right: -10,
-                          border: "none",
-                          background: mine ? "rgba(0,0,0,0.25)" : "#e11d48",
-                          color: "#fff",
-                          width: 24,
-                          height: 24,
-                          borderRadius: "50%",
-                          cursor:
-                            deletingId === String(m._id) ? "wait" : "pointer",
-                          fontSize: 14,
-                          lineHeight: "24px",
-                        }}
-                        title="Delete message"
-                      >
-                        ×
-                      </button>
-                    )}
                     {m.attachment?.url ? (
                       m.attachment.type?.startsWith("image/") ? (
                         <a

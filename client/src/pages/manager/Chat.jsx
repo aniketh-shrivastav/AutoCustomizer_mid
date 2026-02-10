@@ -229,22 +229,18 @@ export default function ManagerChat() {
       style={{
         minHeight: "100vh",
         background: palette.pageBg,
-        paddingTop: "90px",
-        paddingBottom: "40px",
+        display: "flex",
+        flexDirection: "column",
       }}
     >
       <ManagerNav />
       <div
         style={{
-          maxWidth: 1100,
-          height: "75vh",
-          margin: "0 auto",
-          background: palette.cardBg,
-          borderRadius: 20,
-          overflow: "hidden",
-          boxShadow: palette.cardShadow,
+          flex: 1,
           display: "grid",
           gridTemplateColumns: "320px 1fr",
+          background: palette.cardBg,
+          overflow: "hidden",
           minHeight: 0,
         }}
       >

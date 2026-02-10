@@ -506,7 +506,8 @@ router.get("/api/history", customerOnly, async (req, res) => {
   try {
     const bookings = await ServiceBooking.find({ customerId })
       .populate("providerId")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
 
     const enrichedBookings = bookings.map((b) => {
       const provider = b.providerId;
@@ -522,12 +523,19 @@ router.get("/api/history", customerOnly, async (req, res) => {
           0,
         );
       }
-      return { ...b.toObject(), totalCost };
+      return {
+        ...b,
+        totalCost,
+        statusHistory: b.statusHistory || [],
+        costHistory: b.costHistory || [],
+      };
     });
 
-    const orders = await Order.find({ userId: customerId }).sort({
-      placedAt: -1,
-    });
+    const orders = await Order.find({ userId: customerId })
+      .populate("items.seller", "name email")
+      .sort({ placedAt: -1 })
+      .lean();
+
     const upcomingOrders = orders.filter((o) =>
       ["pending", "confirmed", "shipped"].includes(o.orderStatus),
     );
@@ -800,6 +808,36 @@ router.get("/product/:id", customerOnly, async (req, res) => {
       .sort({ createdAt: -1 })
       .lean();
 
+    // Check verified purchase status for each reviewer
+    const reviewsWithVerification = await Promise.all(
+      reviews.map(async (review) => {
+        const reviewerId = review.userId?._id || review.userId;
+        const hasVerifiedPurchase = reviewerId
+          ? await Order.exists({
+              userId: reviewerId,
+              $or: [
+                {
+                  items: {
+                    $elemMatch: {
+                      productId: productId,
+                      $or: [
+                        { itemStatus: "delivered" },
+                        { itemStatus: { $exists: false } },
+                      ],
+                    },
+                  },
+                },
+                {
+                  orderStatus: "delivered",
+                  "items.productId": productId,
+                },
+              ],
+            })
+          : false;
+        return { ...review, verifiedPurchase: Boolean(hasVerifiedPurchase) };
+      }),
+    );
+
     const existingReview = userId
       ? await ProductReview.findOne({ productId: productId, userId }).lean()
       : null;
@@ -834,7 +872,7 @@ router.get("/product/:id", customerOnly, async (req, res) => {
         product,
         user: req.session.user,
         ratingSummary,
-        reviews,
+        reviews: reviewsWithVerification,
         canReview: Boolean(hasPurchased),
         userReview: existingReview || null,
       });
@@ -845,7 +883,7 @@ router.get("/product/:id", customerOnly, async (req, res) => {
       product,
       user: req.session.user,
       ratingSummary,
-      reviews,
+      reviews: reviewsWithVerification,
       canReview: Boolean(hasPurchased),
       userReview: existingReview || null,
     });

@@ -21,6 +21,9 @@ const OrderItemSchema = new mongoose.Schema(
       enum: ["pending", "confirmed", "shipped", "delivered", "cancelled"],
       default: "pending",
     }, // Individual status for each product/item
+    deliveryDate: {
+      type: Date,
+    }, // Expected delivery date set by seller
     itemStatusHistory: [
       {
         from: { type: String },

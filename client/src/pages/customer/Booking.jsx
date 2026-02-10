@@ -1,5 +1,8 @@
-import React, { useEffect, useMemo, useState } from "react";
+﻿import React, { useEffect, useMemo, useState } from "react";
 import CustomerNav from "../../components/CustomerNav";
+import CustomerFooter from "../../components/CustomerFooter";
+import "../../Css/customer.css";
+import "../../Css/booking.css";
 
 function useLink(href) {
   useEffect(() => {
@@ -189,7 +192,7 @@ export default function CustomerBooking() {
       return (
         setFieldError(
           "paintColor",
-          "This provider hasn’t configured paint colors. Please choose a different provider for Car Painting.",
+          "This provider hasn't configured paint colors. Please choose a different provider for Car Painting.",
         ),
         false
       );
@@ -454,527 +457,662 @@ export default function CustomerBooking() {
     <>
       <CustomerNav />
 
-      <main>
-        <h1>Service Booking</h1>
-        <h2>Choose a Service Provider</h2>
-
-        {/* District filter (top-left below heading) */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-            margin: "8px 0 16px",
-          }}
-        >
-          <label htmlFor="district" style={{ fontWeight: 600 }}>
-            District
-          </label>
-          <select
-            id="district"
-            required
-            className={cls("district")}
-            value={district}
-            onChange={(e) => setDistrict(e.target.value)}
-            onBlur={validateDistrict}
-            style={{
-              padding: "8px 10px",
-              borderRadius: 8,
-              border: "1px solid #e5e7eb",
-            }}
-          >
-            <option value="">
-              {loading ? "Loading districts..." : "Select District"}
-            </option>
-            {uniqueDistricts.map((d) => (
-              <option key={d} value={d}>
-                {d}
-              </option>
-            ))}
-          </select>
-          <span className="error-msg" data-for="district">
-            {errors.district || ""}
-          </span>
-        </div>
-
-        {/* Provider Cards Grid */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
-            gap: 16,
-            marginBottom: 24,
-          }}
-        >
-          {!district && (
-            <p style={{ gridColumn: "1/-1" }}>
-              Select a district to see available service providers.
+      <div className="booking-page">
+        <div className="booking-container">
+          {/* Page Header */}
+          <div className="booking-header">
+            <h1 className="booking-title">Service Booking</h1>
+            <p className="booking-subtitle">
+              Choose a service provider and customize your booking
             </p>
-          )}
-          {providersForDistrict.length === 0 && district && (
-            <p style={{ gridColumn: "1/-1" }}>No providers in this district.</p>
-          )}
-          {district &&
-            providersForDistrict.map((p) => {
-              const rating = ratingsMap[String(p._id)]?.avgRating || 0;
-              const reviews = ratingsMap[String(p._id)]?.totalReviews || 0;
-              const minCost = (p.servicesOffered || []).reduce((m, s) => {
-                const c = Number(s.cost || 0);
-                return !isNaN(c) && c > 0
-                  ? m === null
-                    ? c
-                    : Math.min(m, c)
-                  : m;
-              }, null);
-              const selected = String(providerId) === String(p._id);
-              return (
-                <button
-                  key={p._id}
-                  onClick={() => setProviderId(String(p._id))}
-                  style={{
-                    textAlign: "left",
-                    padding: 14,
-                    borderRadius: 12,
-                    border: selected
-                      ? "2px solid #2563eb"
-                      : "1px solid #e5e7eb",
-                    background: selected ? "#eff6ff" : "#fff",
-                    cursor: "pointer",
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                    }}
-                  >
-                    <strong>{p.name}</strong>
-                    <span style={{ fontSize: 12, color: "#555" }}>
-                      {p.district || ""}
-                    </span>
-                  </div>
-                  <div style={{ marginTop: 6, fontSize: 13, color: "#444" }}>
-                    {(p.servicesOffered || []).slice(0, 4).map((s, i) => (
-                      <span key={s.name + i} style={{ marginRight: 8 }}>
-                        {s.name}
-                      </span>
-                    ))}
-                    {(p.servicesOffered || []).length > 4 && <span>…</span>}
-                  </div>
-                  <div style={{ marginTop: 8, fontSize: 13 }}>
-                    <span
-                      title={reviews > 0 ? `${rating} / 5` : "No reviews yet"}
-                    >
-                      ⭐ {reviews > 0 ? rating : "New"}
-                    </span>
-                    <span style={{ marginLeft: 8, color: "#666" }}>
-                      ({reviews} reviews)
-                    </span>
-                  </div>
-                  <div style={{ marginTop: 8, fontSize: 13, color: "#0b6" }}>
-                    {minCost != null
-                      ? `Starting at ₹${minCost} (Subject to change)`
-                      : "Contact for pricing"}
-                  </div>
-                </button>
-              );
-            })}
-        </div>
+          </div>
 
-        {providerId && (
-          <div
-            style={{
-              background: "#fff",
-              border: "1px solid #e5e7eb",
-              borderRadius: 12,
-              padding: 16,
-              marginBottom: 24,
-            }}
-          >
-            <h3 style={{ marginBottom: 12 }}>
-              Reviews for {provider?.name || "Service Provider"}
-            </h3>
-            {providerReviewsLoading && <p>Loading reviews...</p>}
-            {providerReviewsError && (
-              <p style={{ color: "crimson" }}>{providerReviewsError}</p>
-            )}
-            {!providerReviewsLoading &&
-              !providerReviewsError &&
-              providerReviews.length === 0 && <p>No reviews yet.</p>}
-            {!providerReviewsLoading &&
-              !providerReviewsError &&
-              providerReviews.length > 0 && (
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-                    gap: 16,
-                  }}
-                >
-                  {providerReviews.map((r) => (
+          {loading && (
+            <div className="booking-loading">
+              <div className="booking-loading-spinner"></div>
+              <p>Loading service providers...</p>
+            </div>
+          )}
+
+          {error && (
+            <div className="booking-error">
+              <span className="booking-error-icon">⚠️</span>
+              <span>{error}</span>
+            </div>
+          )}
+
+          {!loading && !error && (
+            <>
+              {/* Provider Selection Section */}
+              <div className="booking-section">
+                <div className="booking-section-header">
+                  <div className="booking-section-icon">📍</div>
+                  <div>
+                    <h2 className="booking-section-title">
+                      Select Service Provider
+                    </h2>
+                    <p className="booking-section-subtitle">
+                      Choose a provider in your district
+                    </p>
+                  </div>
+                </div>
+
+                {/* District Filter */}
+                <div className="booking-district-filter">
+                  <label className="booking-district-label" htmlFor="district">
+                    🏙️ Your District
+                  </label>
+                  <select
+                    id="district"
+                    required
+                    className={`booking-district-select ${errors.district ? "invalid" : ""}`}
+                    value={district}
+                    onChange={(e) => setDistrict(e.target.value)}
+                    onBlur={validateDistrict}
+                  >
+                    <option value="">Select your district</option>
+                    {uniqueDistricts.map((d) => (
+                      <option key={d} value={d}>
+                        {d}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.district && (
+                    <span className="booking-error-msg">{errors.district}</span>
+                  )}
+                </div>
+
+                {/* Provider Cards Grid */}
+                <div className="booking-providers-grid">
+                  {!district && (
                     <div
-                      key={r._id}
-                      style={{
-                        border: "1px solid #e5e7eb",
-                        borderRadius: 12,
-                        padding: 12,
-                        background: "#f9fafb",
-                      }}
+                      className="booking-empty-state"
+                      style={{ gridColumn: "1/-1" }}
                     >
-                      <div style={{ fontWeight: 600 }}>{r.customerName}</div>
-                      <div style={{ fontSize: 13 }}>⭐ {r.rating} / 5</div>
-                      {r.review ? (
-                        <p style={{ marginTop: 6 }}>{r.review}</p>
-                      ) : (
-                        <p style={{ marginTop: 6, color: "#6b7280" }}>
-                          No review text.
+                      <div className="booking-empty-icon">🔍</div>
+                      <p>
+                        Select a district above to see available service
+                        providers.
+                      </p>
+                    </div>
+                  )}
+
+                  {providersForDistrict.length === 0 && district && (
+                    <div
+                      className="booking-empty-state"
+                      style={{ gridColumn: "1/-1" }}
+                    >
+                      <div className="booking-empty-icon">😕</div>
+                      <p>No service providers available in this district.</p>
+                    </div>
+                  )}
+
+                  {district &&
+                    providersForDistrict.map((p) => {
+                      const rating = ratingsMap[String(p._id)]?.avgRating || 0;
+                      const reviews =
+                        ratingsMap[String(p._id)]?.totalReviews || 0;
+                      const minCost = (p.servicesOffered || []).reduce(
+                        (m, s) => {
+                          const c = Number(s.cost || 0);
+                          return !isNaN(c) && c > 0
+                            ? m === null
+                              ? c
+                              : Math.min(m, c)
+                            : m;
+                        },
+                        null,
+                      );
+                      const selected = String(providerId) === String(p._id);
+
+                      return (
+                        <button
+                          key={p._id}
+                          type="button"
+                          onClick={() => setProviderId(String(p._id))}
+                          className={`booking-provider-card ${selected ? "selected" : ""}`}
+                        >
+                          <div className="booking-provider-header">
+                            <h3 className="booking-provider-name">{p.name}</h3>
+                            <span className="booking-provider-district">
+                              {p.district || ""}
+                            </span>
+                          </div>
+
+                          <div className="booking-provider-services">
+                            {(p.servicesOffered || [])
+                              .slice(0, 3)
+                              .map((s, i) => (
+                                <span
+                                  key={s.name + i}
+                                  className="booking-service-tag"
+                                >
+                                  {s.name}
+                                </span>
+                              ))}
+                            {(p.servicesOffered || []).length > 3 && (
+                              <span className="booking-service-tag more">
+                                +{(p.servicesOffered || []).length - 3} more
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="booking-provider-meta">
+                            <div className="booking-provider-rating">
+                              <span className="booking-rating-stars">⭐</span>
+                              <span>
+                                {reviews > 0 ? rating.toFixed(1) : "New"}
+                              </span>
+                              <span className="booking-rating-text">
+                                ({reviews} reviews)
+                              </span>
+                            </div>
+                            <span className="booking-provider-price">
+                              {minCost != null
+                                ? `From ₹${minCost}`
+                                : "Contact for pricing"}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                </div>
+              </div>
+
+              {/* Provider Reviews */}
+              {providerId && (
+                <div className="booking-section booking-reviews-section">
+                  <div className="booking-section-header">
+                    <div className="booking-section-icon">⭐</div>
+                    <div>
+                      <h2 className="booking-section-title">
+                        Customer Reviews
+                      </h2>
+                      <p className="booking-section-subtitle">
+                        for {provider?.name || "Service Provider"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {providerReviewsLoading && (
+                    <div
+                      className="booking-loading"
+                      style={{ padding: "40px" }}
+                    >
+                      <div className="booking-loading-spinner"></div>
+                      <p>Loading reviews...</p>
+                    </div>
+                  )}
+
+                  {providerReviewsError && (
+                    <div className="booking-error">{providerReviewsError}</div>
+                  )}
+
+                  {!providerReviewsLoading &&
+                    !providerReviewsError &&
+                    providerReviews.length === 0 && (
+                      <div className="booking-empty-state">
+                        <div className="booking-empty-icon">💬</div>
+                        <p>No reviews yet for this provider.</p>
+                      </div>
+                    )}
+
+                  {!providerReviewsLoading &&
+                    !providerReviewsError &&
+                    providerReviews.length > 0 && (
+                      <div className="booking-reviews-grid">
+                        {providerReviews.map((r) => (
+                          <div key={r._id} className="booking-review-card">
+                            <div className="booking-review-header">
+                              <span className="booking-reviewer-name">
+                                {r.customerName}
+                              </span>
+                              <span className="booking-review-rating">
+                                ⭐ {r.rating}/5
+                              </span>
+                            </div>
+                            {r.review ? (
+                              <p className="booking-review-text">{r.review}</p>
+                            ) : (
+                              <p
+                                className="booking-review-text"
+                                style={{
+                                  color: "#94a3b8",
+                                  fontStyle: "italic",
+                                }}
+                              >
+                                No review text provided.
+                              </p>
+                            )}
+                            <span className="booking-review-date">
+                              {r.createdAt
+                                ? new Date(r.createdAt).toLocaleDateString()
+                                : ""}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                </div>
+              )}
+
+              {/* Booking Form Section */}
+              <div className="booking-section">
+                <div className="booking-section-header">
+                  <div className="booking-section-icon">📝</div>
+                  <div>
+                    <h2 className="booking-section-title">Booking Details</h2>
+                    <p className="booking-section-subtitle">
+                      Fill in your service requirements
+                    </p>
+                  </div>
+                </div>
+
+                <form
+                  id="booking-form"
+                  className="booking-form"
+                  onSubmit={onSubmit}
+                >
+                  {/* Selected Provider (hidden for validation) */}
+                  <input type="hidden" value={providerId} />
+                  {errors.provider && (
+                    <div className="booking-error-msg">{errors.provider}</div>
+                  )}
+
+                  {/* Services Selection */}
+                  <div className="booking-form-group">
+                    <label className="booking-form-label">
+                      <span className="booking-form-label-icon">🔧</span>
+                      Select Services
+                    </label>
+                    <div
+                      id="services-section"
+                      className="booking-services-grid"
+                    >
+                      {offeredServices.length === 0 && (
+                        <p style={{ color: "#64748b", gridColumn: "1/-1" }}>
+                          {providerId
+                            ? "No services available"
+                            : "Select a provider to see available services"}
                         </p>
                       )}
-                      <div style={{ fontSize: 12, color: "#9ca3af" }}>
-                        {r.createdAt
-                          ? new Date(r.createdAt).toLocaleDateString()
-                          : ""}
+                      {offeredServices.map((name) => {
+                        const isSelected = services.includes(name);
+                        return (
+                          <div
+                            key={name}
+                            onClick={() => {
+                              setServices((prev) =>
+                                isSelected
+                                  ? prev.filter((s) => s !== name)
+                                  : [...prev, name],
+                              );
+                            }}
+                            className={`booking-service-option ${isSelected ? "selected" : ""}`}
+                          >
+                            <div className="booking-service-checkbox"></div>
+                            <div className="booking-service-info">
+                              <div className="booking-service-name">{name}</div>
+                              <div className="booking-service-price">
+                                From ₹{serviceCostMap[name] || "N/A"}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {errors.services && (
+                      <span className="booking-error-msg">
+                        {errors.services}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Paint Color Selection */}
+                  {isCarPaintingSelected && (
+                    <div
+                      id="paint-color-section"
+                      className="booking-paint-section"
+                    >
+                      <label className="booking-paint-title">
+                        🎨 Choose Paint Color
+                      </label>
+
+                      {providerPaintColors.length > 0 ? (
+                        <div className="booking-paint-grid">
+                          {providerPaintColors.map((c) => {
+                            const selected =
+                              String(paintColor || "").toLowerCase() === c;
+                            return (
+                              <button
+                                type="button"
+                                key={c}
+                                onClick={() => {
+                                  setPaintColor(c);
+                                  setFieldError("paintColor", "");
+                                }}
+                                title={c}
+                                className={`booking-paint-color ${selected ? "selected" : ""}`}
+                                style={{ background: c }}
+                              />
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <p className="booking-paint-empty">
+                          This provider hasn't configured paint colors. Please
+                          choose a different provider.
+                        </p>
+                      )}
+                      {errors.paintColor && (
+                        <span className="booking-error-msg">
+                          {errors.paintColor}
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Cost Display */}
+                  {services.length > 0 && (
+                    <div className="booking-cost-display">
+                      <div>
+                        <div className="booking-cost-label">
+                          Estimated Starting Cost
+                        </div>
+                        <div className="booking-cost-value">
+                          ₹{estimatedTotal.toLocaleString()}
+                        </div>
+                      </div>
+                      <div className="booking-cost-note">
+                        * Final cost may vary based on service requirements
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
-          </div>
-        )}
+                  )}
 
-        <h2>Fill Your Booking Details</h2>
-
-        <form id="booking-form" onSubmit={onSubmit}>
-          {/* District selection moved above provider cards */}
-
-          <label htmlFor="service-provider">Selected Service Provider</label>
-          <select
-            id="service-provider"
-            required
-            className={cls("provider")}
-            value={providerId}
-            onChange={(e) => setProviderId(e.target.value)}
-            onBlur={validateProvider}
-            disabled={!district}
-          >
-            <option value="">
-              {district ? "Select from cards above" : "Select district first"}
-            </option>
-            {district &&
-              providersForDistrict.map((p) => (
-                <option key={p._id} value={p._id}>
-                  {p.name} {p.district ? `(${p.district})` : ""}
-                </option>
-              ))}
-          </select>
-          <span className="error-msg" data-for="service-provider">
-            {errors.provider || ""}
-          </span>
-
-          <label>Select Services:</label>
-          <div
-            id="services-section"
-            className={cls("services")}
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
-              gap: 10,
-            }}
-          >
-            {offeredServices.map((name) => (
-              <label
-                key={name}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  border: "1px solid #e5e7eb",
-                  borderRadius: 8,
-                  padding: 8,
-                }}
-              >
-                <input
-                  type="checkbox"
-                  checked={services.includes(name)}
-                  onChange={(e) => {
-                    setServices((prev) =>
-                      e.target.checked
-                        ? [...prev, name]
-                        : prev.filter((s) => s !== name),
-                    );
-                  }}
-                />
-                <span>{name}</span>
-                <span
-                  style={{ marginLeft: "auto", fontSize: 12, color: "#0b6" }}
-                >
-                  ₹{serviceCostMap[name] || "N/A"} starting
-                </span>
-              </label>
-            ))}
-          </div>
-          <span className="error-msg" data-for="service">
-            {errors.services || ""}
-          </span>
-
-          {/* Car Painting Color Selection */}
-          {isCarPaintingSelected && (
-            <div
-              id="paint-color-section"
-              style={{
-                marginTop: 14,
-                padding: 12,
-                border: "1px solid #e5e7eb",
-                borderRadius: 10,
-              }}
-            >
-              <label
-                style={{ fontWeight: 600, display: "block", marginBottom: 8 }}
-              >
-                Choose Paint Color
-              </label>
-
-              {providerPaintColors.length > 0 ? (
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-                  {providerPaintColors.map((c) => {
-                    const selected =
-                      String(paintColor || "").toLowerCase() === c;
-                    return (
-                      <button
-                        type="button"
-                        key={c}
-                        onClick={() => {
-                          setPaintColor(c);
-                          setFieldError("paintColor", "");
-                        }}
-                        title={c}
-                        style={{
-                          width: 42,
-                          height: 42,
-                          borderRadius: 10,
-                          border: selected
-                            ? "2px solid #2563eb"
-                            : "1px solid #cbd5e1",
-                          background: c,
-                          cursor: "pointer",
-                        }}
+                  {/* Form Row - Date & Car Info */}
+                  <div className="booking-form-row">
+                    <div className="booking-form-group">
+                      <label className="booking-form-label" htmlFor="date">
+                        <span className="booking-form-label-icon">📅</span>
+                        Preferred Date
+                        <span className="booking-form-hint">
+                          (min 7 days from today)
+                        </span>
+                      </label>
+                      <input
+                        type="date"
+                        id="date"
+                        required
+                        min={minDate}
+                        value={date}
+                        onChange={(e) => setDate(e.target.value)}
+                        onBlur={validateDate}
+                        className={`booking-form-input ${errors.date ? "invalid" : ""}`}
                       />
-                    );
-                  })}
-                </div>
-              ) : (
-                <div style={{ fontSize: 13, color: "#666" }}>
-                  This provider hasn’t configured paint colors for Car Painting.
-                  Please choose a different provider.
-                </div>
-              )}
+                      {errors.date && (
+                        <span className="booking-error-msg">{errors.date}</span>
+                      )}
+                    </div>
 
-              <span className="error-msg" data-for="paint-color">
-                {errors.paintColor || ""}
-              </span>
-            </div>
+                    <div className="booking-form-group">
+                      <label className="booking-form-label" htmlFor="car-model">
+                        <span className="booking-form-label-icon">🚗</span>
+                        Car Model
+                        <span className="booking-form-hint">
+                          (Company & Model)
+                        </span>
+                      </label>
+                      <input
+                        type="text"
+                        id="car-model"
+                        required
+                        placeholder="e.g., Maruti Swift, Honda City"
+                        value={carModel}
+                        onChange={(e) => setCarModel(e.target.value)}
+                        onBlur={validateCarModel}
+                        className={`booking-form-input ${errors.carModel ? "invalid" : ""}`}
+                      />
+                      {errors.carModel && (
+                        <span className="booking-error-msg">
+                          {errors.carModel}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Form Row - Year & Phone */}
+                  <div className="booking-form-row">
+                    <div className="booking-form-group">
+                      <label className="booking-form-label" htmlFor="car-year">
+                        <span className="booking-form-label-icon">📆</span>
+                        Year Purchased
+                      </label>
+                      <input
+                        type="number"
+                        id="car-year"
+                        required
+                        placeholder="e.g., 2020"
+                        value={carYear}
+                        min="1980"
+                        max={new Date().getFullYear()}
+                        onChange={(e) => setCarYear(e.target.value)}
+                        onBlur={validateCarYear}
+                        className={`booking-form-input ${errors.carYear ? "invalid" : ""}`}
+                      />
+                      {errors.carYear && (
+                        <span className="booking-error-msg">
+                          {errors.carYear}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="booking-form-group">
+                      <label className="booking-form-label" htmlFor="phone">
+                        <span className="booking-form-label-icon">📞</span>
+                        Phone Number
+                      </label>
+                      <input
+                        type="tel"
+                        id="phone"
+                        required
+                        placeholder="Enter 10-digit number"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        onBlur={validatePhone}
+                        className={`booking-form-input ${errors.phone ? "invalid" : ""}`}
+                      />
+                      {errors.phone && (
+                        <span className="booking-error-msg">
+                          {errors.phone}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Address */}
+                  <div className="booking-form-group">
+                    <label className="booking-form-label" htmlFor="address">
+                      <span className="booking-form-label-icon">📍</span>
+                      Your Address
+                    </label>
+                    <textarea
+                      id="address"
+                      rows={3}
+                      placeholder="Enter your complete address for service pickup"
+                      required
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                      onBlur={validateAddress}
+                      className={`booking-form-textarea ${errors.address ? "invalid" : ""}`}
+                    />
+                    {errors.address && (
+                      <span className="booking-error-msg">
+                        {errors.address}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Description */}
+                  <div className="booking-form-group">
+                    <label className="booking-form-label" htmlFor="description">
+                      <span className="booking-form-label-icon">💬</span>
+                      Service Requirements
+                      <span className="booking-form-hint">
+                        (Include vehicle number)
+                      </span>
+                    </label>
+                    <textarea
+                      id="description"
+                      rows={4}
+                      placeholder="Describe your service needs in detail. Include your vehicle registration number..."
+                      required
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      onBlur={validateDescription}
+                      className={`booking-form-textarea ${errors.description ? "invalid" : ""}`}
+                    />
+                    {errors.description && (
+                      <span className="booking-error-msg">
+                        {errors.description}
+                      </span>
+                    )}
+                  </div>
+
+                  <button type="submit" className="booking-submit-btn">
+                    📋 Review Booking
+                  </button>
+                </form>
+
+                {showSummary && (
+                  <div id="summary-box" className="booking-summary">
+                    <div className="booking-summary-header">
+                      <div className="booking-summary-icon">📋</div>
+                      <h3 className="booking-summary-title">Booking Summary</h3>
+                    </div>
+
+                    <div className="booking-summary-grid">
+                      <div className="booking-summary-item">
+                        <div className="booking-summary-label">
+                          🚗 Car Model
+                        </div>
+                        <div className="booking-summary-value">
+                          {carModel.trim()}
+                        </div>
+                      </div>
+
+                      <div className="booking-summary-item">
+                        <div className="booking-summary-label">📆 Year</div>
+                        <div className="booking-summary-value">{carYear}</div>
+                      </div>
+
+                      <div className="booking-summary-item full-width">
+                        <div className="booking-summary-label">
+                          🔧 Services Selected
+                        </div>
+                        <div className="booking-summary-value">
+                          {services.join(", ")}
+                        </div>
+                      </div>
+
+                      {isCarPaintingSelected && paintColor && (
+                        <div className="booking-summary-item">
+                          <div className="booking-summary-label">
+                            🎨 Paint Color
+                          </div>
+                          <div
+                            className="booking-summary-value"
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "0.5rem",
+                            }}
+                          >
+                            <span
+                              style={{
+                                width: 20,
+                                height: 20,
+                                borderRadius: "50%",
+                                background: paintColor,
+                                border: "2px solid #fff",
+                                boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
+                              }}
+                            ></span>
+                            {String(paintColor).trim()}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="booking-summary-item">
+                        <div className="booking-summary-label">👤 Provider</div>
+                        <div className="booking-summary-value">
+                          {provider?.name || ""}
+                        </div>
+                      </div>
+
+                      <div className="booking-summary-item">
+                        <div className="booking-summary-label">📍 District</div>
+                        <div className="booking-summary-value">{district}</div>
+                      </div>
+
+                      <div className="booking-summary-item">
+                        <div className="booking-summary-label">📅 Date</div>
+                        <div className="booking-summary-value">{date}</div>
+                      </div>
+
+                      <div className="booking-summary-item">
+                        <div className="booking-summary-label">📞 Phone</div>
+                        <div className="booking-summary-value">
+                          {phone.trim()}
+                        </div>
+                      </div>
+
+                      <div className="booking-summary-item full-width">
+                        <div className="booking-summary-label">🏠 Address</div>
+                        <div className="booking-summary-value">
+                          {address.trim()}
+                        </div>
+                      </div>
+
+                      <div className="booking-summary-item full-width">
+                        <div className="booking-summary-label">
+                          💬 Description
+                        </div>
+                        <div className="booking-summary-value">
+                          {description.trim()}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="booking-summary-total">
+                      <div className="booking-summary-total-label">
+                        Estimated Total
+                      </div>
+                      <div className="booking-summary-total-value">
+                        ₹{estimatedTotal.toLocaleString()}
+                      </div>
+                    </div>
+                    <p className="booking-summary-note">
+                      * Costs shown are starting estimates and subject to change
+                      based on actual service requirements.
+                    </p>
+
+                    <button
+                      type="button"
+                      id="confirm-booking"
+                      className="booking-confirm-btn"
+                      onClick={confirmBooking}
+                    >
+                      ✅ Confirm Booking
+                    </button>
+                  </div>
+                )}
+              </div>
+            </>
           )}
-
-          <p
-            id="serviceCostDisplay"
-            style={{ margin: "10px 0", fontWeight: "bold" }}
-          >
-            {services.length > 0
-              ? `Starting Cost(s) (Subject to change): ${services
-                  .map((s) => `₹${serviceCostMap[s] || "N/A"}`)
-                  .join(", ")}`
-              : ""}
-          </p>
-
-          <label htmlFor="date">
-            Select Date:(Preferred date when you want it to be done although not
-            guaranteed)
-          </label>
-          <input
-            type="date"
-            id="date"
-            required
-            min={minDate}
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            onBlur={validateDate}
-            className={cls("date")}
-          />
-          <span className="error-msg" data-for="date">
-            {errors.date || ""}
-          </span>
-
-          <label htmlFor="car-model">Car Model:(Company and Model)</label>
-          <input
-            type="text"
-            id="car-model"
-            required
-            placeholder="Enter your car model"
-            value={carModel}
-            onChange={(e) => setCarModel(e.target.value)}
-            onBlur={validateCarModel}
-            className={cls("carModel")}
-          />
-          <label htmlFor="car-year">Year Car Was Bought:</label>
-          <input
-            type="number"
-            id="car-year"
-            required
-            placeholder="e.g., 2020"
-            value={carYear}
-            min="1980"
-            max={new Date().getFullYear()}
-            onChange={(e) => setCarYear(e.target.value)}
-            onBlur={validateCarYear}
-            className={cls("carYear")}
-          />
-          <span className="error-msg" data-for="car-year">
-            {errors.carYear || ""}
-          </span>
-          <span className="error-msg" data-for="car-model">
-            {errors.carModel || ""}
-          </span>
-
-          <label htmlFor="phone">Phone Number:</label>
-          <input
-            type="tel"
-            id="phone"
-            required
-            placeholder="Enter 10-digit number"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            onBlur={validatePhone}
-            className={cls("phone")}
-          />
-          <span className="error-msg" data-for="phone">
-            {errors.phone || ""}
-          </span>
-
-          <label htmlFor="address">Address:</label>
-          <textarea
-            id="address"
-            rows={4}
-            placeholder="Enter your address"
-            required
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-            onBlur={validateAddress}
-            className={cls("address")}
-          />
-          <span className="error-msg" data-for="address">
-            {errors.address || ""}
-          </span>
-
-          <label htmlFor="description">
-            Describe Your Service Needs:(Ensure you have Vehicle number else the
-            service will be rejected)
-          </label>
-          <textarea
-            id="description"
-            rows={4}
-            placeholder="Tell us more about your requirements..."
-            required
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            onBlur={validateDescription}
-            className={cls("description")}
-          />
-          <span className="error-msg" data-for="description">
-            {errors.description || ""}
-          </span>
-
-          <button type="submit">Book Now</button>
-        </form>
-
-        {showSummary && (
-          <div id="summary-box" style={{ marginTop: 20, display: "block" }}>
-            <div>
-              <h3>Booking Summary</h3>
-              <p>
-                <strong>Car Model:</strong> {carModel.trim()}
-              </p>
-              <p>
-                <strong>Services:</strong> {services.join(", ")}
-              </p>
-              {isCarPaintingSelected && paintColor ? (
-                <p>
-                  <strong>Paint Color:</strong>{" "}
-                  {String(paintColor).trim().toLowerCase()}
-                </p>
-              ) : null}
-              <p>
-                <strong>Provider:</strong> {provider?.name || ""}
-              </p>
-              <p>
-                <strong>District:</strong> {district}
-              </p>
-              <p>
-                <strong>Date:</strong> {date}
-              </p>
-              <p>
-                <strong>Estimated Cost:</strong> ₹{estimatedTotal}
-              </p>
-              <p style={{ fontSize: 12, color: "#666" }}>
-                Costs shown are starting estimates and subject to change.
-              </p>
-              <p>
-                <strong>Phone:</strong> {phone.trim()}
-              </p>
-              <p>
-                <strong>Address:</strong> {address.trim()}
-              </p>
-              <p>
-                <strong>Description:</strong> {description.trim()}
-              </p>
-              <p>
-                <strong>Car Year:</strong> {carYear}
-              </p>
-              <button
-                type="button"
-                id="confirm-booking"
-                onClick={confirmBooking}
-              >
-                Confirm Booking
-              </button>
-            </div>
-          </div>
-        )}
-      </main>
-
-      <footer>
-        <div className="footer-container">
-          <div className="footer-section">
-            <h3>Contact Us</h3>
-            <p>Email: support@autocustomizer.com</p>
-            <p>Phone: +123-456-7890</p>
-            <p>Address: 123 Auto Street, Custom City</p>
-          </div>
-          <div className="footer-section">
-            <h3>Follow Us</h3>
-            <div className="social-icons">
-              <a href="#">
-                <img src="/images/facebook-icon.png" alt="Facebook" />
-              </a>
-              <a href="#">
-                <img src="/images/twitter-icon.png" alt="Twitter" />
-              </a>
-              <a href="#">
-                <img src="/images/instagram-icon.png" alt="Instagram" />
-              </a>
-            </div>
-          </div>
         </div>
-        <div className="footer-bottom">
-          <p>© 2025 AutoCustomizer. All Rights Reserved.</p>
-        </div>
-      </footer>
+      </div>
 
-      {/* Inline error styles to match legacy page */}
-      <style>{`
-        .error-msg { display:block; font-size:0.8rem; color:#e53935; margin-top:4px; min-height:14px; }
-        input.invalid, select.invalid, textarea.invalid { border-color:#e53935 !important; box-shadow:0 0 0 1px #e53935; }
-      `}</style>
+      <CustomerFooter />
     </>
   );
 }

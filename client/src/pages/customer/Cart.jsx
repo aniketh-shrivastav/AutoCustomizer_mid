@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import CustomerNav from "../../components/CustomerNav";
+import CustomerFooter from "../../components/CustomerFooter";
+import "../../Css/customer.css";
 
 function useLink(href) {
   useEffect(() => {
@@ -21,6 +23,8 @@ export default function CustomerCart() {
   const [showPayment, setShowPayment] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("");
+  const [cardPaymentEnabled, setCardPaymentEnabled] = useState(false);
+  const [processingPayment, setProcessingPayment] = useState(false);
 
   function backendBase() {
     const { protocol, hostname, port } = window.location;
@@ -35,11 +39,11 @@ export default function CustomerCart() {
 
   const totalCount = useMemo(
     () => items.reduce((sum, i) => sum + i.quantity, 0),
-    [items]
+    [items],
   );
   const totalAmount = useMemo(
     () => items.reduce((sum, i) => sum + i.price * i.quantity, 0),
-    [items]
+    [items],
   );
 
   useEffect(() => {
@@ -47,14 +51,27 @@ export default function CustomerCart() {
     async function load() {
       try {
         setLoading(true);
-        const res = await fetch("/customer/api/cart", {
-          headers: { Accept: "application/json" },
-        });
-        if (!res.ok) throw new Error("Failed to load cart");
-        const j = await res.json();
+        // Load cart and check Stripe config
+        const [cartRes, configRes] = await Promise.all([
+          fetch("/customer/api/cart", {
+            headers: { Accept: "application/json" },
+          }),
+          fetch("/api/payments/config", {
+            headers: { Accept: "application/json" },
+          }),
+        ]);
+
+        if (!cartRes.ok) throw new Error("Failed to load cart");
+        const j = await cartRes.json();
         if (cancelled) return;
         setItems(j.items || []);
         setUserId(j.user?.id || "");
+
+        // Check if card payment is enabled (Stripe or Mock)
+        if (configRes.ok) {
+          const config = await configRes.json();
+          setCardPaymentEnabled(config.stripeEnabled || config.mockEnabled);
+        }
       } catch (e) {
         if (!cancelled) setError(e.message || "Failed to load cart");
       } finally {
@@ -96,7 +113,49 @@ export default function CustomerCart() {
     setShowPayment(true);
   }
 
+  async function handleStripeCheckout() {
+    try {
+      setProcessingPayment(true);
+      const res = await fetch("/api/payments/create-checkout-session", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          items: items.map((item) => ({
+            productId: item.productId,
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity,
+            image: item.image,
+          })),
+          successUrl: `${window.location.origin}/customer/payment-success?session_id={CHECKOUT_SESSION_ID}`,
+          cancelUrl: `${window.location.origin}/customer/cart`,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to create checkout session");
+      }
+
+      // Redirect to Stripe Checkout
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (e) {
+      alert(e.message || "Payment failed. Please try again.");
+      setProcessingPayment(false);
+    }
+  }
+
   async function placeOrder() {
+    if (paymentMethod === "card") {
+      await handleStripeCheckout();
+      return;
+    }
+
     try {
       const res = await fetch("/customer/create-order", {
         method: "POST",
@@ -106,65 +165,96 @@ export default function CustomerCart() {
         },
         body: JSON.stringify({ paymentMethod }),
       });
-      
+
       const data = await res.json().catch(() => ({}));
-      
+
       if (!res.ok) {
         const errorMessage = data.message || "Order failed. Please try again.";
         alert(errorMessage);
-        
-        // If it's a profile issue, redirect to profile page
-        if (errorMessage.includes("profile") || errorMessage.includes("address") || errorMessage.includes("district")) {
+
+        if (
+          errorMessage.includes("profile") ||
+          errorMessage.includes("address") ||
+          errorMessage.includes("district")
+        ) {
           if (window.confirm("Would you like to update your profile now?")) {
             window.location.href = "/customer/profile";
           }
         }
         return;
       }
-      
+
       alert(data.message || "Order placed successfully!");
       window.location.href = "/customer/history";
     } catch (e) {
-      alert(e.message || "An error occurred while placing your order. Please try again.");
+      alert(
+        e.message ||
+          "An error occurred while placing your order. Please try again.",
+      );
       console.error("Order placement error:", e);
     }
   }
 
   return (
-    <>
+    <div className="customer-page">
       <CustomerNav cartCount={totalCount} />
 
-      <main>
-        <h2>Your Cart Items</h2>
-        <div className="underline"></div>
+      <main className="customer-main">
+        <h1
+          className="customer-title"
+          style={{ textAlign: "center", marginBottom: "32px" }}
+        >
+          Your Shopping Cart
+        </h1>
 
         {loading ? (
-          <p className="empty-cart">Loading...</p>
+          <div className="customer-loading">
+            <div className="customer-spinner"></div>
+            <div className="customer-loading-text">Loading your cart...</div>
+          </div>
         ) : error ? (
-          <p className="empty-cart">Failed to load cart.</p>
+          <div className="customer-alert customer-alert-error">
+            <div className="customer-alert-icon">⚠️</div>
+            <div className="customer-alert-content">{error}</div>
+          </div>
         ) : items.length === 0 ? (
-          <p className="empty-cart">Your cart is empty.</p>
+          <div className="customer-empty-state">
+            <div className="customer-empty-icon">🛒</div>
+            <h3 className="customer-empty-title">Your Cart is Empty</h3>
+            <p className="customer-empty-description">
+              Looks like you haven't added any products yet. Start shopping to
+              fill your cart!
+            </p>
+            <a
+              href="/customer/index"
+              className="customer-btn customer-btn-primary"
+            >
+              Browse Products
+            </a>
+          </div>
         ) : (
-          <div className="cart-container">
+          <div className="customer-cart-container">
             {items.map((it) => (
-              <div
-                className="cart-item"
-                key={it.productId}
-                data-id={it.productId}
-              >
-                <img src={it.image} alt={it.name} />
-                <div className="item-details">
-                  <strong>{it.name}</strong>
-                  <br />₹{it.price}
+              <div className="customer-cart-item" key={it.productId}>
+                <img
+                  src={it.image}
+                  alt={it.name}
+                  className="customer-cart-item-image"
+                />
+                <div className="customer-cart-item-details">
+                  <h4 className="customer-cart-item-name">{it.name}</h4>
+                  <div className="customer-cart-item-price">₹{it.price}</div>
                 </div>
-                <div className="quantity-controls">
+                <div className="customer-quantity-controls">
                   <button
+                    className="customer-quantity-btn"
                     onClick={() => updateQuantity(it.productId, "decrease")}
                   >
-                    -
+                    −
                   </button>
-                  <span>{it.quantity}</span>
+                  <span className="customer-quantity-value">{it.quantity}</span>
                   <button
+                    className="customer-quantity-btn"
                     onClick={() => updateQuantity(it.productId, "increase")}
                   >
                     +
@@ -172,114 +262,233 @@ export default function CustomerCart() {
                 </div>
               </div>
             ))}
-          </div>
-        )}
 
-        <div style={{ textAlign: "center", margin: "30px 0 10px" }}>
-          <a href="/customer/index">
-            <button id="buyproducts-btn">Buy Products</button>
-          </a>
-        </div>
-        <div
-          id="checkout-trigger"
-          style={{
-            textAlign: "center",
-            margin: "10px 0 30px",
-            display: items.length > 0 ? "block" : "none",
-          }}
-        >
-          <button id="checkout-btn" onClick={buildSummary}>
-            Proceed to Checkout
-          </button>
-        </div>
-
-        {/* Payment selection */}
-        {showPayment && (
-          <div className="payment-container" id="payment-selection">
-            <h2>Order Summary</h2>
-            <div id="order-summary">
+            {/* Cart Summary */}
+            <div className="customer-cart-summary">
+              <h3
+                style={{
+                  marginBottom: "16px",
+                  color: "var(--customer-text-primary)",
+                }}
+              >
+                Order Summary
+              </h3>
               {items.map((it) => (
-                <p key={it.productId}>
-                  <strong>{it.name}</strong> — ₹{it.price} x {it.quantity} = ₹
-                  {it.price * it.quantity}
-                </p>
+                <div
+                  key={it.productId}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    marginBottom: "8px",
+                    color: "var(--customer-text-secondary)",
+                  }}
+                >
+                  <span>
+                    {it.name} × {it.quantity}
+                  </span>
+                  <span>₹{it.price * it.quantity}</span>
+                </div>
               ))}
-              <h3 style={{ marginTop: 20 }}>Total: ₹{totalAmount}</h3>
+              <div className="customer-cart-total">
+                <span>Total Amount</span>
+                <span className="customer-cart-total-amount">
+                  ₹{totalAmount}
+                </span>
+              </div>
             </div>
-            <h2>Select Payment Method</h2>
-            <div id="saved-payments" className="payment-method"></div>
-            <label>
-              <input
-                type="radio"
-                name="payment-method"
-                value="cod"
-                checked={paymentMethod === "cod"}
-                onChange={() => setPaymentMethod("cod")}
-              />
-              Cash on Delivery
-            </label>
-            <br />
-            <button
-              id="confirm-payment"
-              onClick={() => {
-                if (!paymentMethod) {
-                  alert("Please select a payment method.");
-                  return;
-                }
-                setShowPayment(false);
-                setShowCheckout(true);
-                alert(
-                  "Payment method confirmed! Please proceed to place your order."
-                );
+
+            {/* Action Buttons */}
+            <div
+              style={{
+                display: "flex",
+                gap: "16px",
+                justifyContent: "center",
+                marginTop: "24px",
+                flexWrap: "wrap",
               }}
             >
-              Confirm Payment Method
-            </button>
-          </div>
-        )}
-
-        {/* Checkout */}
-        {showCheckout && (
-          <div className="checkout-container" id="checkout-section">
-            <h2>Choose an Option</h2>
-            <div className="checkout-options">
-              <button id="place-order" onClick={placeOrder}>
-                Place Order
+              <a
+                href="/customer/index"
+                className="customer-btn customer-btn-secondary"
+              >
+                Continue Shopping
+              </a>
+              <button
+                className="customer-btn customer-btn-primary customer-btn-lg"
+                onClick={buildSummary}
+              >
+                Proceed to Checkout
               </button>
             </div>
           </div>
         )}
-      </main>
 
-      {/* Style block from legacy page */}
-      <style>{`
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        header .logo img { height: 80px; }
-        h2 { margin-top: 10px; }
-        main { background: transparent !important; box-shadow: none !important; width: 100% !important; max-width: none !important; padding: 0 0 40px 0 !important; margin: 0 auto; }
-        .cart-container { max-width: 900px; margin: 20px auto; padding: 20px; background: #fff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        .cart-item { display:flex; justify-content:space-between; align-items:center; padding:16px; margin-bottom:12px; border:1px solid #e0e0e0; border-radius:10px; background:#f9f9f9; }
-        .cart-item img { width:80px; height:80px; object-fit:contain; border-radius:8px; }
-        .item-details { flex:1; text-align:left; margin-left:20px; }
-        .quantity-controls { display:flex; align-items:center; gap:8px; }
-        .quantity-controls button { padding:4px 10px; font-size:16px; background:#007bff; color:#fff; border:none; border-radius:4px; cursor:pointer; }
-        .quantity-controls button:hover { filter:brightness(0.9); }
-        .quantity-controls span { min-width:24px; display:inline-block; text-align:center; }
-        .empty-cart { text-align:center; font-size:20px; color:#888; margin-top:40px; }
-        #buyproducts-btn, #checkout-btn { padding:10px 20px; font-size:16px; background:#007bff; color:#fff; border:none; border-radius:5px; cursor:pointer; }
-        #buyproducts-btn:hover, #checkout-btn:hover { background:#0069d5; }
-        .payment-container, .checkout-container { max-width:600px; margin:30px auto; padding:20px; background:#fff; border-radius:10px; box-shadow:0 4px 12px rgba(0,0,0,0.1); }
-        .checkout-options button, #confirm-payment { padding:10px 20px; border:none; border-radius:5px; font-size:16px; margin:10px 5px; cursor:pointer; color:#fff; }
-        #place-order { background:#28a745; }
-        #place-order:hover { filter:brightness(0.9); }
-        #confirm-payment { background:#ff9800; }
-        #confirm-payment:hover { filter:brightness(0.95); }
-        .payment-method { display:flex; justify-content:center; gap:10px; margin-bottom:10px; }
-        .payment-method label { display:flex; align-items:center; padding:5px 10px; border:1px solid #ddd; border-radius:5px; cursor:pointer; }
-        .payment-method input { margin-right:8px; }
-        .cart-link { position:relative; }
-        .cart-link .badge { position:absolute; top:-6px; right:-10px; background:#ff3b3b; color:#fff; border-radius:50%; padding:2px 6px; font-size:12px; }
-      `}</style>
-    </>
+        {/* Payment Selection Modal */}
+        {showPayment && (
+          <div
+            className="customer-modal-overlay"
+            onClick={() => setShowPayment(false)}
+          >
+            <div
+              className="customer-modal"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="customer-modal-header">
+                <h3 className="customer-modal-title">Select Payment Method</h3>
+                <button
+                  className="customer-modal-close"
+                  onClick={() => setShowPayment(false)}
+                >
+                  ×
+                </button>
+              </div>
+              <div className="customer-modal-body">
+                {/* Card Payment Option */}
+                {cardPaymentEnabled && (
+                  <div
+                    className={`customer-payment-option ${paymentMethod === "card" ? "selected" : ""}`}
+                    onClick={() => setPaymentMethod("card")}
+                  >
+                    <div className="customer-payment-radio"></div>
+                    <div>
+                      <div className="customer-payment-label">
+                        💳 Pay with Card
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "13px",
+                          color: "var(--customer-text-secondary)",
+                          marginTop: "4px",
+                        }}
+                      >
+                        Secure payment with credit/debit card
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Cash on Delivery Option */}
+                <div
+                  className={`customer-payment-option ${paymentMethod === "cod" ? "selected" : ""}`}
+                  onClick={() => setPaymentMethod("cod")}
+                >
+                  <div className="customer-payment-radio"></div>
+                  <div>
+                    <div className="customer-payment-label">
+                      💵 Cash on Delivery
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "13px",
+                        color: "var(--customer-text-secondary)",
+                        marginTop: "4px",
+                      }}
+                    >
+                      Pay when your order arrives
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="customer-modal-footer">
+                <button
+                  className="customer-btn customer-btn-secondary"
+                  onClick={() => setShowPayment(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="customer-btn customer-btn-success"
+                  onClick={() => {
+                    if (!paymentMethod) {
+                      alert("Please select a payment method.");
+                      return;
+                    }
+                    if (paymentMethod === "card") {
+                      setShowPayment(false);
+                      placeOrder();
+                    } else {
+                      setShowPayment(false);
+                      setShowCheckout(true);
+                    }
+                  }}
+                  disabled={processingPayment}
+                >
+                  {processingPayment ? "Processing..." : "Confirm Payment"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Checkout Confirmation Modal */}
+        {showCheckout && (
+          <div
+            className="customer-modal-overlay"
+            onClick={() => setShowCheckout(false)}
+          >
+            <div
+              className="customer-modal"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="customer-modal-header">
+                <h3 className="customer-modal-title">Confirm Your Order</h3>
+                <button
+                  className="customer-modal-close"
+                  onClick={() => setShowCheckout(false)}
+                >
+                  ×
+                </button>
+              </div>
+              <div
+                className="customer-modal-body"
+                style={{ textAlign: "center" }}
+              >
+                <div style={{ fontSize: "48px", marginBottom: "16px" }}>📦</div>
+                <h4 style={{ marginBottom: "8px" }}>
+                  Ready to Place Your Order?
+                </h4>
+                <p style={{ color: "var(--customer-text-secondary)" }}>
+                  Total Amount:{" "}
+                  <strong
+                    style={{
+                      color: "var(--customer-primary)",
+                      fontSize: "1.25rem",
+                    }}
+                  >
+                    ₹{totalAmount}
+                  </strong>
+                </p>
+                <p
+                  style={{
+                    color: "var(--customer-text-secondary)",
+                    fontSize: "14px",
+                  }}
+                >
+                  Payment Method: Cash on Delivery
+                </p>
+              </div>
+              <div
+                className="customer-modal-footer"
+                style={{ justifyContent: "center" }}
+              >
+                <button
+                  className="customer-btn customer-btn-secondary"
+                  onClick={() => setShowCheckout(false)}
+                >
+                  Go Back
+                </button>
+                <button
+                  className="customer-btn customer-btn-success customer-btn-lg"
+                  onClick={placeOrder}
+                >
+                  ✓ Place Order
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </main>
+      <CustomerFooter />
+    </div>
   );
 }

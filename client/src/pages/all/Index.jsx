@@ -1,23 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import AllNav from "../../components/AllNav";
-
-function useExternalCss(href) {
-  useEffect(() => {
-    const link = document.createElement("link");
-    link.rel = "stylesheet";
-    link.href = href;
-    document.head.appendChild(link);
-    return () => document.head.removeChild(link);
-  }, [href]);
-}
+import { useNavigate, Link } from "react-router-dom";
+import "../../Css/publicPages.css";
 
 export default function AllIndex() {
   const navigate = useNavigate();
   const [session, setSession] = useState({ authenticated: false });
-
-  // Load CSS exactly like index.html
-  useExternalCss("/styles/index.css");
+  const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -39,180 +27,347 @@ export default function AllIndex() {
     };
   }, []);
 
-  const authed = !!session.authenticated;
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 50);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
-  const redirectOrLogin = (event, targetPath) => {
-    event.preventDefault();
-    navigate(authed ? targetPath : "/login");
-  };
+  const authed = !!session.authenticated;
 
   const ctaProps = (targetPath) => ({
     href: authed ? targetPath : "/login",
-    onClick: (event) => redirectOrLogin(event, targetPath),
+    onClick: (e) => {
+      e.preventDefault();
+      navigate(authed ? targetPath : "/login");
+    },
   });
 
   return (
-    <>
-      {/* ---------------- NAV ---------------- */}
-      <AllNav authed={authed} active="home" />
+    <div className="public-page">
+      {/* Premium Navigation */}
+      <nav className={`pp-nav ${scrolled ? "scrolled" : ""}`}>
+        <Link to="/" className="pp-nav-logo">
+          <span className="pp-nav-logo-icon">🚗</span>
+          AutoCustomizer
+        </Link>
+        <ul className="pp-nav-links">
+          <li>
+            <Link to="/" className="pp-nav-link active">
+              Home
+            </Link>
+          </li>
+          <li>
+            <Link to="/contactus" className="pp-nav-link">
+              Contact
+            </Link>
+          </li>
+          <li>
+            <Link to="/faq" className="pp-nav-link">
+              FAQ
+            </Link>
+          </li>
+          {!authed && (
+            <>
+              <li>
+                <Link to="/login" className="pp-nav-link">
+                  Login
+                </Link>
+              </li>
+              <li>
+                <Link to="/signup" className="pp-nav-cta">
+                  Get Started
+                </Link>
+              </li>
+            </>
+          )}
+          {authed && (
+            <li>
+              <Link to="/customer/index" className="pp-nav-cta">
+                Dashboard
+              </Link>
+            </li>
+          )}
+        </ul>
+      </nav>
 
-      {/* ---------------- HEADER (MISSING IN YOUR BUILD BEFORE) ---------------- */}
-      <header>
-        <h1>Welcome to AutoCustomizer</h1>
-        <p>
-          The ultimate marketplace connecting car enthusiasts, quality parts
-          sellers, and expert service providers.
-        </p>
-      </header>
-
-      {/* ---------------- HERO ---------------- */}
-      <section className="hero">
-        <img
-          src="/public/images2/car-customization.png"
-          alt="Car Customization"
-        />
-
-        <div className="hero-content">
-          <h2>Your Car, Your Style!</h2>
-          <p>
-            Whether you're looking to customize your car, sell premium parts, or
-            offer your expert services – AutoCustomizer is your platform.
-          </p>
-
-          <div className="cta-buttons">
-            <a {...ctaProps("/customer/index")} className="btn">
-              Browse Products
-            </a>
-            <a {...ctaProps("/customer/booking")} className="btn">
-              Book a Service
-            </a>
-            <a {...ctaProps("/seller/dashboard")} className="btn seller-btn">
-              Sell Products
-            </a>
-            <a {...ctaProps("/service/dashboard")} className="btn provider-btn">
-              Offer Services
-            </a>
+      {/* Hero Section */}
+      <section className="pp-hero">
+        <div className="pp-hero-content">
+          <div className="pp-hero-text">
+            <div className="pp-hero-badge">
+              <span>✨</span> #1 Auto Customization Platform
+            </div>
+            <h1 className="pp-hero-title">
+              Transform Your Ride with <span>Premium Parts</span> & Expert
+              Services
+            </h1>
+            <p className="pp-hero-subtitle">
+              The ultimate marketplace connecting car enthusiasts with quality
+              parts sellers and verified service providers. Build your dream car
+              today.
+            </p>
+            <div className="pp-hero-buttons">
+              <a
+                {...ctaProps("/customer/index")}
+                className="pp-btn pp-btn-primary"
+              >
+                🛒 Browse Products
+              </a>
+              <a
+                {...ctaProps("/customer/booking")}
+                className="pp-btn pp-btn-secondary"
+              >
+                📅 Book a Service
+              </a>
+            </div>
+            <div className="pp-hero-stats">
+              <div className="pp-stat">
+                <div className="pp-stat-number">10K+</div>
+                <div className="pp-stat-label">Products Available</div>
+              </div>
+              <div className="pp-stat">
+                <div className="pp-stat-number">500+</div>
+                <div className="pp-stat-label">Service Providers</div>
+              </div>
+              <div className="pp-stat">
+                <div className="pp-stat-number">50K+</div>
+                <div className="pp-stat-label">Happy Customers</div>
+              </div>
+            </div>
+          </div>
+          <div className="pp-hero-image">
+            <img src="/images2/car-customization.png" alt="Car Customization" />
           </div>
         </div>
       </section>
 
-      {/* ---------------- USER TYPES ---------------- */}
-      <section className="user-types">
-        <h2>AutoCustomizer For Everyone</h2>
-
-        <div className="user-type-container">
-          <div className="user-type">
+      {/* User Types Section */}
+      <section className="pp-user-types">
+        <div className="pp-section-header">
+          <span className="pp-section-label">For Everyone</span>
+          <h2 className="pp-section-title">
+            One Platform, Multiple Possibilities
+          </h2>
+          <p className="pp-section-subtitle">
+            Whether you're a car owner, parts seller, or service provider,
+            AutoCustomizer has everything you need.
+          </p>
+        </div>
+        <div className="pp-user-grid">
+          <div className="pp-user-card">
+            <div className="pp-user-icon">🚘</div>
             <h3>Car Owners</h3>
             <p>
               Find premium parts and expert services to customize your vehicle
-              exactly how you want it.
+              exactly how you want it. Access verified sellers and top-rated
+              service providers.
             </p>
-            <a href="/signup" className="btn small">
+            <Link to="/signup" className="pp-btn pp-btn-primary">
               Get Started
-            </a>
+            </Link>
           </div>
-
-          <div className="user-type">
+          <div className="pp-user-card">
+            <div className="pp-user-icon">🏪</div>
             <h3>Parts Sellers</h3>
             <p>
               Reach thousands of car enthusiasts looking for quality parts.
-              Manage inventory, sales, and grow your business.
+              Manage inventory, track sales, and grow your business with our
+              powerful tools.
             </p>
-            <a href="/signup" className="btn small">
+            <Link to="/signup" className="pp-btn pp-btn-seller">
               Start Selling
-            </a>
+            </Link>
           </div>
-
-          <div className="user-type">
+          <div className="pp-user-card">
+            <div className="pp-user-icon">🔧</div>
             <h3>Service Providers</h3>
             <p>
               Showcase your expertise, get booked online, and expand your
-              customer base through our platform.
+              customer base. Manage appointments and grow your reputation.
             </p>
-            <a href="/signup" className="btn small">
+            <Link to="/signup" className="pp-btn pp-btn-provider">
               Offer Services
-            </a>
+            </Link>
           </div>
         </div>
       </section>
 
-      {/* ---------------- FEATURES ---------------- */}
-      <section className="features">
-        <div className="feature">
-          <img src="/public/images2/products.png" alt="Car Parts" />
-          <h3>Wide Range of Car Parts</h3>
-          <p>
-            Find or sell the best quality car parts & accessories for all
-            customization needs.
-          </p>
+      {/* Features Section */}
+      <section className="pp-features">
+        <div className="pp-section-header">
+          <span className="pp-section-label">Features</span>
+          <h2 className="pp-section-title">Everything You Need in One Place</h2>
         </div>
-
-        <div className="feature">
-          <img src="/public/images2/service.png" alt="Car Service" />
-          <h3>Top Service Providers</h3>
-          <p>
-            Choose from or join our network of expert service providers for car
-            wrapping, tuning, and more.
-          </p>
-        </div>
-
-        <div className="feature">
-          <img src="/public/images2/easy-booking.png" alt="Easy Booking" />
-          <h3>Easy Platform for All</h3>
-          <p>
-            Shop with ease, book services instantly, or manage your
-            seller/provider business through our intuitive dashboard.
-          </p>
+        <div className="pp-features-grid">
+          <div className="pp-feature-card">
+            <div className="pp-feature-icon">🛡️</div>
+            <h3>Verified Sellers</h3>
+            <p>
+              All sellers go through our verification process to ensure quality
+              and authenticity of products.
+            </p>
+          </div>
+          <div className="pp-feature-card">
+            <div className="pp-feature-icon">💳</div>
+            <h3>Secure Payments</h3>
+            <p>
+              Multiple payment options with end-to-end encryption for safe and
+              hassle-free transactions.
+            </p>
+          </div>
+          <div className="pp-feature-card">
+            <div className="pp-feature-icon">📦</div>
+            <h3>Fast Delivery</h3>
+            <p>
+              Get your parts delivered quickly with our reliable shipping
+              partners across the country.
+            </p>
+          </div>
+          <div className="pp-feature-card">
+            <div className="pp-feature-icon">📅</div>
+            <h3>Easy Booking</h3>
+            <p>
+              Book services with just a few clicks. Choose your preferred date,
+              time, and service provider.
+            </p>
+          </div>
+          <div className="pp-feature-card">
+            <div className="pp-feature-icon">⭐</div>
+            <h3>Reviews & Ratings</h3>
+            <p>
+              Make informed decisions with genuine reviews from verified
+              customers and detailed ratings.
+            </p>
+          </div>
+          <div className="pp-feature-card">
+            <div className="pp-feature-icon">💬</div>
+            <h3>24/7 Support</h3>
+            <p>
+              Our dedicated support team is always ready to help you with any
+              questions or issues.
+            </p>
+          </div>
         </div>
       </section>
 
-      {/* ---------------- BENEFITS ---------------- */}
-      <section className="benefits">
-        <h2>Why Join AutoCustomizer as a Business Partner?</h2>
-
-        <div className="benefits-container">
-          <div className="benefit">
-            <h3>Targeted Audience</h3>
-            <p>
-              Connect directly with car enthusiasts actively looking for your
-              products and services.
-            </p>
+      {/* Benefits / CTA Section */}
+      <section className="pp-benefits">
+        <div className="pp-section-header">
+          <span className="pp-section-label">Why Choose Us</span>
+          <h2 className="pp-section-title">Join Our Growing Community</h2>
+        </div>
+        <div className="pp-benefits-grid">
+          <div className="pp-benefit-item">
+            <div className="pp-benefit-check">✓</div>
+            <div>
+              <h4>Targeted Audience</h4>
+              <p>Connect with passionate car enthusiasts</p>
+            </div>
           </div>
-
-          <div className="benefit">
-            <h3>Business Tools</h3>
-            <p>
-              Access inventory management, scheduling, analytics, and payment
-              processing tools.
-            </p>
+          <div className="pp-benefit-item">
+            <div className="pp-benefit-check">✓</div>
+            <div>
+              <h4>Business Tools</h4>
+              <p>Analytics, inventory, and payment features</p>
+            </div>
           </div>
-
-          <div className="benefit">
-            <h3>Growth Opportunity</h3>
-            <p>
-              Expand your reach and grow your business through our marketplace
-              platform.
-            </p>
+          <div className="pp-benefit-item">
+            <div className="pp-benefit-check">✓</div>
+            <div>
+              <h4>Growth Opportunity</h4>
+              <p>Expand your reach nationwide</p>
+            </div>
           </div>
-
-          <div className="benefit">
-            <h3>Seamless Experience</h3>
-            <p>
-              Our platform handles the technical details so you can focus on
-              your core business.
-            </p>
+          <div className="pp-benefit-item">
+            <div className="pp-benefit-check">✓</div>
+            <div>
+              <h4>Seamless Experience</h4>
+              <p>Focus on business, we handle the tech</p>
+            </div>
           </div>
         </div>
-
-        <a href="/faq" className="btn large">
-          Learn More About Our Business Solutions
-        </a>
+        <div className="pp-cta-box">
+          <h3>Ready to Get Started?</h3>
+          <p>
+            Join thousands of satisfied users and take your automotive journey
+            to the next level.
+          </p>
+          <Link to="/signup" className="pp-btn">
+            Create Free Account
+          </Link>
+        </div>
       </section>
 
-      {/* ---------------- FOOTER ---------------- */}
-      <footer>
-        <p>© 2025 AutoCustomizer. All rights reserved.</p>
+      {/* Footer */}
+      <footer className="pp-footer">
+        <div className="pp-footer-content">
+          <div className="pp-footer-brand">
+            <h3>🚗 AutoCustomizer</h3>
+            <p>
+              Your one-stop destination for premium automotive customization
+              parts and expert services.
+            </p>
+            <div className="pp-footer-social">
+              <a href="#">📘</a>
+              <a href="#">🐦</a>
+              <a href="#">📷</a>
+              <a href="#">🔗</a>
+            </div>
+          </div>
+          <div className="pp-footer-links">
+            <h4>Quick Links</h4>
+            <ul>
+              <li>
+                <Link to="/">Home</Link>
+              </li>
+              <li>
+                <Link to="/contactus">Contact Us</Link>
+              </li>
+              <li>
+                <Link to="/faq">FAQ</Link>
+              </li>
+              <li>
+                <Link to="/signup">Sign Up</Link>
+              </li>
+            </ul>
+          </div>
+          <div className="pp-footer-links">
+            <h4>For Business</h4>
+            <ul>
+              <li>
+                <Link to="/signup">Become a Seller</Link>
+              </li>
+              <li>
+                <Link to="/signup">Service Provider</Link>
+              </li>
+              <li>
+                <Link to="/faq">Business FAQ</Link>
+              </li>
+            </ul>
+          </div>
+          <div className="pp-footer-links">
+            <h4>Support</h4>
+            <ul>
+              <li>
+                <a href="mailto:autocustomizer25@gmail.com">
+                  autocustomizer25@gmail.com
+                </a>
+              </li>
+              <li>
+                <a href="tel:+918121178720">+91 8121178720</a>
+              </li>
+              <li>IIIT Sri City, Gyan Marg, AP - 517417</li>
+            </ul>
+          </div>
+        </div>
+        <div className="pp-footer-bottom">
+          <p>© 2025 AutoCustomizer. All rights reserved.</p>
+          <div>
+            <a href="#">Privacy Policy</a> • <a href="#">Terms of Service</a>
+          </div>
+        </div>
       </footer>
-    </>
+    </div>
   );
 }

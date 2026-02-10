@@ -54,6 +54,8 @@ export default function SellerOrders() {
   const [originalStatuses, setOriginalStatuses] = useState({});
   // Store pending status changes (not yet saved)
   const [pendingStatuses, setPendingStatuses] = useState({});
+  // Store delivery dates
+  const [deliveryDates, setDeliveryDates] = useState({});
 
   async function loadOrders() {
     setLoading(true);
@@ -76,11 +78,18 @@ export default function SellerOrders() {
       setOrders(loadedOrders);
       // Initialize original statuses and clear pending changes using uniqueId
       const statusMap = {};
+      const dateMap = {};
       loadedOrders.forEach((o) => {
         const uniqueId = o.uniqueId || `${o.orderId}-${o.productId || ""}`;
         statusMap[uniqueId] = o.originalStatus || o.status;
+        if (o.deliveryDate) {
+          dateMap[uniqueId] = new Date(o.deliveryDate)
+            .toISOString()
+            .split("T")[0];
+        }
       });
       setOriginalStatuses(statusMap);
+      setDeliveryDates(dateMap);
       setPendingStatuses({});
     } catch (e) {
       setError("Failed to load orders");
@@ -116,6 +125,8 @@ export default function SellerOrders() {
     }
 
     try {
+      const deliveryDate = deliveryDates[uniqueId] || null;
+
       const res = await fetch(`/seller/orders/${orderId}/status`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -124,6 +135,7 @@ export default function SellerOrders() {
           newStatus,
           productId: productId || undefined,
           itemIndex: itemIndex !== undefined ? itemIndex : undefined,
+          deliveryDate: deliveryDate || undefined,
         }),
       });
 
@@ -278,6 +290,7 @@ export default function SellerOrders() {
                     "Product",
                     "Qty",
                     "Delivery Address",
+                    "Delivery Date",
                     "Status",
                     "Action",
                   ].map((h) => (
@@ -299,7 +312,7 @@ export default function SellerOrders() {
                 {loading ? (
                   <tr>
                     <td
-                      colSpan={7}
+                      colSpan={8}
                       style={{ textAlign: "center", padding: 20 }}
                     >
                       Loading...
@@ -308,7 +321,7 @@ export default function SellerOrders() {
                 ) : error ? (
                   <tr>
                     <td
-                      colSpan={7}
+                      colSpan={8}
                       style={{ textAlign: "center", padding: 20, color: "red" }}
                     >
                       {error}
@@ -317,7 +330,7 @@ export default function SellerOrders() {
                 ) : orders.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={7}
+                      colSpan={8}
                       style={{
                         textAlign: "center",
                         padding: 25,
@@ -374,6 +387,41 @@ export default function SellerOrders() {
                           style={{ padding: 8, borderBottom: "1px solid #ddd" }}
                         >
                           {o.deliveryAddress}
+                        </td>
+                        <td
+                          style={{ padding: 8, borderBottom: "1px solid #ddd" }}
+                        >
+                          <input
+                            type="date"
+                            value={deliveryDates[uniqueId] || ""}
+                            onChange={(e) =>
+                              setDeliveryDates((prev) => ({
+                                ...prev,
+                                [uniqueId]: e.target.value,
+                              }))
+                            }
+                            disabled={disabled}
+                            min={new Date().toISOString().split("T")[0]}
+                            style={{
+                              padding: "4px 8px",
+                              borderRadius: 6,
+                              border: "1px solid #ccc",
+                              fontSize: 13,
+                            }}
+                          />
+                          {deliveryDates[uniqueId] && (
+                            <div
+                              style={{
+                                fontSize: 11,
+                                color: "#6b7280",
+                                marginTop: 2,
+                              }}
+                            >
+                              {new Date(
+                                deliveryDates[uniqueId],
+                              ).toLocaleDateString()}
+                            </div>
+                          )}
                         </td>
                         <td
                           style={{ padding: 8, borderBottom: "1px solid #ddd" }}

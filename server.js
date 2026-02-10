@@ -127,6 +127,7 @@ const profileSettingsRoutes = require("./routes/profileSettingsRoutes");
 const cartRoutes = require("./routes/cartRoutes");
 const bookingRoutes = require("./routes/bookingRoutes");
 const chatRoutes = require("./routes/chatRoutes");
+const paymentRoutes = require("./routes/paymentRoutes");
 
 // Mount routes
 app.use("/", profileSettingsRoutes);
@@ -139,9 +140,34 @@ app.use("/seller", sellerRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/bookings", bookingRoutes);
 app.use("/", chatRoutes);
+app.use("/api/payments", paymentRoutes);
 
 // ------------------------------------------------------------
-// 7. ERROR-HANDLING MIDDLEWARE (Must be last!)
+// 8. REACT APP SERVING (for production)
+// ------------------------------------------------------------
+// Serve React app static files
+app.use(express.static(path.join(__dirname, "client", "build")));
+
+// Catch-all route for React Router - must be after API routes
+app.get("*", (req, res, next) => {
+  // Skip API routes and static files
+  if (
+    req.path.startsWith("/api/") ||
+    req.path.includes(".") ||
+    req.path === "/login" ||
+    req.path === "/signup" ||
+    req.path === "/logout" ||
+    req.path === "/forgot-password"
+  ) {
+    return next();
+  }
+
+  // Serve React app for all other routes
+  res.sendFile(path.join(__dirname, "client", "build", "index.html"));
+});
+
+// ------------------------------------------------------------
+// 9. ERROR-HANDLING MIDDLEWARE (Must be last!)
 // ------------------------------------------------------------
 // 404 handler - catches unmatched routes
 app.use(notFound);

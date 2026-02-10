@@ -109,10 +109,10 @@ router.get("/api/dashboard", isAuthenticated, isSeller, async (req, res) => {
       `[Dashboard] Seller ${sellerIdStr}: Total Earnings = ${totalEarnings} from ${deliveredItemsCount} delivered items`,
     );
 
-    // Get Stock Alerts: Products with quantity <= 5
+    // Get Stock Alerts: Products with quantity <= 15
     const lowStockProducts = await Product.find({
       seller: sellerId,
-      quantity: { $lte: 5 },
+      quantity: { $lte: 15 },
     })
       .select("name quantity")
       .sort({ quantity: 1 })
@@ -397,6 +397,7 @@ router.get("/api/orders", isAuthenticated, isSeller, async (req, res) => {
             deliveryAddress: order.deliveryAddress,
             district: order.district,
             status: itemStatus, // Use item-specific status
+            deliveryDate: item.deliveryDate || null, // Expected delivery date
             placedAt: order.placedAt,
           });
         }
@@ -483,7 +484,7 @@ router.post(
   "/add-product",
   isAuthenticated,
   isSeller,
-  memoryUpload.single("image"),
+  memoryUpload.array("images", 5),
   async (req, res) => {
     try {
       const {
@@ -497,27 +498,39 @@ router.post(
         compatibility,
       } = req.body;
 
-      if (!req.file) {
-        return res.status(400).send("Product image required.");
+      if (!req.files || req.files.length === 0) {
+        return res
+          .status(400)
+          .json({
+            success: false,
+            message: "At least one product image required.",
+          });
       }
 
-      // Upload directly from memory buffer to Cloudinary (avoids slow disk I/O)
-      const uploadRes = await new Promise((resolve, reject) => {
-        const stream = cloudinary.uploader.upload_stream(
-          {
-            folder: "autocustomizer/products",
-            fetch_format: "auto",
-            quality: "auto",
-            resource_type: "image",
-            timeout: 120000,
-          },
-          (err, result) => {
-            if (err) return reject(err);
-            return resolve(result);
-          },
-        );
-        stream.end(req.file.buffer);
-      });
+      // Upload all images to Cloudinary
+      const uploadedImages = [];
+      for (const file of req.files) {
+        const uploadRes = await new Promise((resolve, reject) => {
+          const stream = cloudinary.uploader.upload_stream(
+            {
+              folder: "autocustomizer/products",
+              fetch_format: "auto",
+              quality: "auto",
+              resource_type: "image",
+              timeout: 120000,
+            },
+            (err, result) => {
+              if (err) return reject(err);
+              return resolve(result);
+            },
+          );
+          stream.end(file.buffer);
+        });
+        uploadedImages.push({
+          url: uploadRes.secure_url,
+          publicId: uploadRes.public_id,
+        });
+      }
 
       const newProduct = new Product({
         name,
@@ -528,8 +541,9 @@ router.post(
         quantity,
         sku,
         compatibility,
-        image: uploadRes.secure_url,
-        imagePublicId: uploadRes.public_id,
+        image: uploadedImages[0].url, // Primary image for backward compatibility
+        imagePublicId: uploadedImages[0].publicId,
+        images: uploadedImages,
         seller: req.session.user.id,
       });
 
@@ -679,7 +693,7 @@ router.post(
   async (req, res) => {
     try {
       const { orderId } = req.params;
-      const { newStatus, productId, itemIndex } = req.body;
+      const { newStatus, productId, itemIndex, deliveryDate } = req.body;
 
       const order = await Order.findById(orderId);
       if (!order) {
@@ -716,6 +730,26 @@ router.post(
             success: false,
             message: `Cannot change status after it's marked as ${currentItemStatus}`,
           });
+        }
+
+        // Require delivery date when confirming an order
+        if (newStatus === "confirmed") {
+          const existingDeliveryDate = order.items[itemIndex].deliveryDate;
+          if (!deliveryDate && !existingDeliveryDate) {
+            return res.status(400).json({
+              success: false,
+              message: "Please set a delivery date before confirming the order",
+            });
+          }
+          // Update delivery date if provided
+          if (deliveryDate) {
+            order.items[itemIndex].deliveryDate = new Date(deliveryDate);
+          }
+        }
+
+        // Update delivery date if provided (for any status)
+        if (deliveryDate) {
+          order.items[itemIndex].deliveryDate = new Date(deliveryDate);
         }
 
         // Update the specific item's status
@@ -791,6 +825,58 @@ router.post(
       await order.save();
 
       res.json({ success: true });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ success: false, message: "Server error" });
+    }
+  },
+);
+
+// --- Update delivery date for an order item ---
+router.post(
+  "/orders/:orderId/delivery-date",
+  isAuthenticated,
+  isSeller,
+  async (req, res) => {
+    try {
+      const { orderId } = req.params;
+      const { itemIndex, deliveryDate } = req.body;
+
+      if (!deliveryDate) {
+        return res
+          .status(400)
+          .json({ success: false, message: "Delivery date is required" });
+      }
+
+      const order = await Order.findById(orderId);
+      if (!order) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Order not found" });
+      }
+
+      const item = order.items[itemIndex];
+      if (!item) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Order item not found" });
+      }
+
+      // Verify this item belongs to the seller
+      if (String(item.seller) !== String(req.session.user.id)) {
+        return res.status(403).json({
+          success: false,
+          message: "Access denied: This item does not belong to you",
+        });
+      }
+
+      order.items[itemIndex].deliveryDate = new Date(deliveryDate);
+      await order.save();
+
+      res.json({
+        success: true,
+        message: "Delivery date updated successfully",
+      });
     } catch (err) {
       console.error(err);
       res.status(500).json({ success: false, message: "Server error" });

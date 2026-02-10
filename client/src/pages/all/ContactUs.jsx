@@ -1,44 +1,23 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import AllNav from "../../components/AllNav";
-
-function useExternalCss(href) {
-  useEffect(() => {
-    const link = document.createElement("link");
-    link.rel = "stylesheet";
-    link.href = href;
-    document.head.appendChild(link);
-    return () => document.head.removeChild(link);
-  }, [href]);
-}
+import React, { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
+import "../../Css/publicPages.css";
 
 const nameRegex = /^[A-Za-z\s.-]+$/;
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function ContactUs() {
-  useExternalCss("/styles/index.css");
   const [authed, setAuthed] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const [values, setValues] = useState({
     name: "",
     email: "",
     subject: "",
     message: "",
   });
-  const [theme, setTheme] = useState("dark");
-
-  useEffect(() => {
-    const saved = localStorage.getItem("theme");
-    if (saved) setTheme(saved);
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem("theme", theme);
-  }, [theme]);
-
   const [errors, setErrors] = useState({});
   const [submittedFlag, setSubmittedFlag] = useState(false);
   const formRef = useRef(null);
 
-  // Session to hide login/signup like legacy
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -58,15 +37,22 @@ export default function ContactUs() {
     };
   }, []);
 
-  // Detect ?submitted=true to show success alert (parity with legacy)
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 50);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("submitted") === "true") {
       setSubmittedFlag(true);
-      // Clean URL
       if (window.history.replaceState) {
-        const cleanUrl = window.location.origin + window.location.pathname;
-        window.history.replaceState(null, "", cleanUrl);
+        window.history.replaceState(
+          null,
+          "",
+          window.location.origin + window.location.pathname,
+        );
       }
     }
   }, []);
@@ -77,24 +63,17 @@ export default function ContactUs() {
   };
 
   function validateField(name, value) {
-    if (name === "name") {
-      if (!value.trim() || !nameRegex.test(value.trim()))
-        return "Only letters and spaces allowed.";
-    }
+    if (name === "name" && (!value.trim() || !nameRegex.test(value.trim())))
+      return "Only letters and spaces allowed.";
     if (name === "email") {
-      if (!emailRegex.test(value.trim()))
-        return "Enter a valid lowercase email.";
+      if (!emailRegex.test(value.trim())) return "Enter a valid email.";
       if (/[A-Z]/.test(value))
         return "Email must not contain uppercase letters.";
     }
-    if (name === "subject") {
-      if (value.trim().length < 3)
-        return "Subject must be at least 3 characters.";
-    }
-    if (name === "message") {
-      if (value.trim().length < 10)
-        return "Message must be at least 10 characters.";
-    }
+    if (name === "subject" && value.trim().length < 3)
+      return "Subject must be at least 3 characters.";
+    if (name === "message" && value.trim().length < 10)
+      return "Message must be at least 10 characters.";
     return "";
   }
 
@@ -110,208 +89,258 @@ export default function ContactUs() {
 
   const onBlur = (e) => {
     const { name, value } = e.target;
-    const msg = validateField(name, value);
-    setErrors((prev) => ({ ...prev, [name]: msg }));
+    setErrors((prev) => ({ ...prev, [name]: validateField(name, value) }));
   };
 
-  // Submit as a normal POST to preserve backend redirect behavior. Still a React form with validation.
   const onSubmit = (e) => {
     if (!validateAll()) {
       e.preventDefault();
       return;
     }
-    // Let the native form POST to /contactus (proxied) so server redirect adds ?submitted=true
   };
 
-  const styles = useMemo(
-    () => ({
-      page: {
-        backgroundImage:
-          theme === "dark"
-            ? "radial-gradient(#4b4a4a, #2d2b2b)"
-            : "radial-gradient(#d6d6d6, #ffffff)",
-        minHeight: "100vh",
-        color: theme === "dark" ? "white" : "black",
-        paddingBottom: 40,
-      },
-
-      shell: {
-        display: "flex",
-        justifyContent: "center",
-        padding: "40px 16px",
-      },
-      card: {
-        width: "100%",
-        maxWidth: 700,
-        backgroundColor: theme === "dark" ? "rgba(51,49,49,0.95)" : "#ffffff",
-        borderRadius: 16,
-        boxShadow: "0 10px 30px rgba(0,0,0,0.25)",
-        padding: 24,
-        color: theme === "dark" ? "white" : "black",
-      },
-
-      heading: { margin: 0, fontSize: 28 },
-      label: {
-        display: "block",
-        marginBottom: 6,
-        color: theme === "dark" ? "#e5e7eb" : "#222",
-        fontWeight: 600,
-      },
-
-      inputBase: {
-        display: "block",
-        width: "100%",
-        padding: "12px 14px",
-        borderRadius: 8,
-        border: "1px solid #d1d5db",
-        background: theme === "dark" ? "#fff" : "#f5f5f5",
-        color: "#111827",
-        outline: "none",
-        boxShadow: "inset 0 1px 2px rgba(0,0,0,0.05)",
-      },
-
-      error: { color: "#ef4444", fontSize: 12, marginTop: 6 },
-      textarea: { minHeight: 140, resize: "vertical" },
-      button: {
-        backgroundColor: theme === "dark" ? "#1e1e2d" : "#e6e6e6",
-        color: theme === "dark" ? "white" : "black",
-        padding: "12px 16px",
-        border: "none",
-        cursor: "pointer",
-        height: 44,
-        borderRadius: 8,
-        width: 200,
-        marginTop: 12,
-        fontWeight: 700,
-      },
-
-      buttonWrap: { display: "flex", justifyContent: "flex-end" },
-      success: {
-        background: "#064e3b",
-        color: "#d1fae5",
-        padding: 10,
-        borderRadius: 8,
-        margin: "12px 0",
-      },
-      fieldWrap: { marginBottom: 14 },
-      navToggle: {
-        marginLeft: 20,
-        padding: "6px 12px",
-        borderRadius: 8,
-        background: theme === "dark" ? "rgba(255,255,255,0.08)" : "#1e1e2d",
-        border: "1px solid #ffffff",
-        color: "#ffffff",
-        cursor: "pointer",
-        fontWeight: 600,
-      },
-    }),
-    [theme],
-  );
-
-  const inputStyle = (key) => ({
-    ...styles.inputBase,
-    borderColor: errors[key] ? "#ef4444" : "#d1d5db",
-  });
-
   return (
-    <div className="bg-container" style={styles.page}>
-      <AllNav authed={authed} active="contact" />
+    <div className="public-page">
+      {/* Premium Navigation */}
+      <nav className={`pp-nav ${scrolled ? "scrolled" : ""}`}>
+        <Link to="/" className="pp-nav-logo">
+          <span className="pp-nav-logo-icon">🚗</span>
+          AutoCustomizer
+        </Link>
+        <ul className="pp-nav-links">
+          <li>
+            <Link to="/" className="pp-nav-link">
+              Home
+            </Link>
+          </li>
+          <li>
+            <Link to="/contactus" className="pp-nav-link active">
+              Contact
+            </Link>
+          </li>
+          <li>
+            <Link to="/faq" className="pp-nav-link">
+              FAQ
+            </Link>
+          </li>
+          {!authed && (
+            <>
+              <li>
+                <Link to="/login" className="pp-nav-link">
+                  Login
+                </Link>
+              </li>
+              <li>
+                <Link to="/signup" className="pp-nav-cta">
+                  Get Started
+                </Link>
+              </li>
+            </>
+          )}
+          {authed && (
+            <li>
+              <Link to="/customer/index" className="pp-nav-cta">
+                Dashboard
+              </Link>
+            </li>
+          )}
+        </ul>
+      </nav>
 
-      <div style={styles.shell}>
-        <div style={styles.card}>
-          <div style={{ textAlign: "left", marginBottom: 6 }}>
-            <h2 style={styles.heading}>Contact Us</h2>
+      {/* Contact Section */}
+      <section className="pp-contact">
+        <div className="pp-contact-container">
+          {/* Contact Information */}
+          <div className="pp-contact-info">
+            <h1>
+              Get in <span>Touch</span>
+            </h1>
+            <p>
+              Have questions about our products, services, or your order? We'd
+              love to hear from you. Send us a message and we'll respond as soon
+              as possible.
+            </p>
+
+            <div className="pp-contact-methods">
+              <div className="pp-contact-method">
+                <div className="pp-contact-method-icon">📧</div>
+                <div className="pp-contact-method-text">
+                  <h4>Email Us</h4>
+                  <p>autocustomizer25@gmail.com</p>
+                </div>
+              </div>
+              <div className="pp-contact-method">
+                <div className="pp-contact-method-icon">📞</div>
+                <div className="pp-contact-method-text">
+                  <h4>Call Us</h4>
+                  <p>+91 8121178720</p>
+                </div>
+              </div>
+              <div className="pp-contact-method">
+                <div className="pp-contact-method-icon">📍</div>
+                <div className="pp-contact-method-text">
+                  <h4>Visit Us</h4>
+                  <p>IIIT Sri City, Gyan Marg, Sri City, AP - 517417</p>
+                </div>
+              </div>
+              <div className="pp-contact-method">
+                <div className="pp-contact-method-icon">⏰</div>
+                <div className="pp-contact-method-text">
+                  <h4>Business Hours</h4>
+                  <p>Mon - Sat: 9AM - 6PM</p>
+                </div>
+              </div>
+            </div>
           </div>
 
-          {submittedFlag && (
-            <div style={styles.success}>
-              Thank you! Your message has been submitted.
-            </div>
-          )}
+          {/* Contact Form */}
+          <div className="pp-contact-form-card">
+            <h2>Send a Message</h2>
 
-          <form
-            ref={formRef}
-            method="POST"
-            action="/contactus"
-            onSubmit={onSubmit}
-          >
-            <div style={styles.fieldWrap}>
-              <label htmlFor="name" style={styles.label}>
-                Name
-              </label>
-              <input
-                id="name"
-                name="name"
-                value={values.name}
-                onChange={onChange}
-                onBlur={onBlur}
-                required
-                style={inputStyle("name")}
-              />
-              {errors.name && <div style={styles.error}>{errors.name}</div>}
-            </div>
+            {submittedFlag && (
+              <div className="pp-success-message">
+                <span>✅</span> Thank you! Your message has been submitted
+                successfully.
+              </div>
+            )}
 
-            <div style={styles.fieldWrap}>
-              <label htmlFor="email" style={styles.label}>
-                Email
-              </label>
-              <input
-                id="email"
-                type="email"
-                name="email"
-                value={values.email}
-                onChange={onChange}
-                onBlur={onBlur}
-                required
-                style={inputStyle("email")}
-              />
-              {errors.email && <div style={styles.error}>{errors.email}</div>}
-            </div>
+            <form
+              ref={formRef}
+              method="POST"
+              action="/contactus"
+              onSubmit={onSubmit}
+            >
+              <div className="pp-form-group">
+                <label htmlFor="name">Full Name</label>
+                <input
+                  id="name"
+                  name="name"
+                  value={values.name}
+                  onChange={onChange}
+                  onBlur={onBlur}
+                  required
+                  className={`pp-form-input ${errors.name ? "error" : ""}`}
+                  placeholder="Enter your name"
+                />
+                {errors.name && (
+                  <div className="pp-form-error">{errors.name}</div>
+                )}
+              </div>
 
-            <div style={styles.fieldWrap}>
-              <label htmlFor="subject" style={styles.label}>
-                Subject
-              </label>
-              <input
-                id="subject"
-                name="subject"
-                value={values.subject}
-                onChange={onChange}
-                onBlur={onBlur}
-                required
-                style={inputStyle("subject")}
-              />
-              {errors.subject && (
-                <div style={styles.error}>{errors.subject}</div>
-              )}
-            </div>
+              <div className="pp-form-group">
+                <label htmlFor="email">Email Address</label>
+                <input
+                  id="email"
+                  type="email"
+                  name="email"
+                  value={values.email}
+                  onChange={onChange}
+                  onBlur={onBlur}
+                  required
+                  className={`pp-form-input ${errors.email ? "error" : ""}`}
+                  placeholder="Enter your email"
+                />
+                {errors.email && (
+                  <div className="pp-form-error">{errors.email}</div>
+                )}
+              </div>
 
-            <div style={styles.fieldWrap}>
-              <label htmlFor="message" style={styles.label}>
-                Message (please include order Id or Booking Id if necessary)
-              </label>
-              <textarea
-                id="message"
-                name="message"
-                value={values.message}
-                onChange={onChange}
-                onBlur={onBlur}
-                required
-                style={{ ...inputStyle("message"), ...styles.textarea }}
-              />
-              {errors.message && (
-                <div style={styles.error}>{errors.message}</div>
-              )}
-            </div>
+              <div className="pp-form-group">
+                <label htmlFor="subject">Subject</label>
+                <input
+                  id="subject"
+                  name="subject"
+                  value={values.subject}
+                  onChange={onChange}
+                  onBlur={onBlur}
+                  required
+                  className={`pp-form-input ${errors.subject ? "error" : ""}`}
+                  placeholder="What's this about?"
+                />
+                {errors.subject && (
+                  <div className="pp-form-error">{errors.subject}</div>
+                )}
+              </div>
 
-            <div style={styles.buttonWrap}>
-              <button type="submit" className="mb-3" style={styles.button}>
-                Submit
+              <div className="pp-form-group">
+                <label htmlFor="message">
+                  Message (include Order ID or Booking ID if applicable)
+                </label>
+                <textarea
+                  id="message"
+                  name="message"
+                  value={values.message}
+                  onChange={onChange}
+                  onBlur={onBlur}
+                  required
+                  className={`pp-form-textarea ${errors.message ? "error" : ""}`}
+                  placeholder="Tell us how we can help..."
+                />
+                {errors.message && (
+                  <div className="pp-form-error">{errors.message}</div>
+                )}
+              </div>
+
+              <button
+                type="submit"
+                className="pp-btn pp-btn-primary"
+                style={{ width: "100%", justifyContent: "center" }}
+              >
+                📨 Send Message
               </button>
-            </div>
-          </form>
+            </form>
+          </div>
         </div>
-      </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="pp-footer">
+        <div className="pp-footer-content">
+          <div className="pp-footer-brand">
+            <h3>🚗 AutoCustomizer</h3>
+            <p>
+              Your one-stop destination for premium automotive customization.
+            </p>
+            <div className="pp-footer-social">
+              <a href="#">📘</a>
+              <a href="#">🐦</a>
+              <a href="#">📷</a>
+              <a href="#">🔗</a>
+            </div>
+          </div>
+          <div className="pp-footer-links">
+            <h4>Quick Links</h4>
+            <ul>
+              <li>
+                <Link to="/">Home</Link>
+              </li>
+              <li>
+                <Link to="/contactus">Contact Us</Link>
+              </li>
+              <li>
+                <Link to="/faq">FAQ</Link>
+              </li>
+            </ul>
+          </div>
+          <div className="pp-footer-links">
+            <h4>Support</h4>
+            <ul>
+              <li>
+                <a href="mailto:autocustomizer25@gmail.com">
+                  autocustomizer25@gmail.com
+                </a>
+              </li>
+              <li>
+                <a href="tel:+918121178720">+91 8121178720</a>
+              </li>
+              <li>IIIT Sri City, Gyan Marg, AP - 517417</li>
+            </ul>
+          </div>
+        </div>
+        <div className="pp-footer-bottom">
+          <p>© 2025 AutoCustomizer. All rights reserved.</p>
+        </div>
+      </footer>
     </div>
   );
 }

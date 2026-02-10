@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useRef } from "react";
 import CustomerNav from "../../components/CustomerNav";
+import CustomerFooter from "../../components/CustomerFooter";
 import "../../Css/profile.css";
+import "../../Css/customer.css";
 
 function useLink(href) {
   useEffect(() => {
@@ -286,147 +288,264 @@ export default function CustomerProfile() {
   }
 
   return (
-    <>
+    <div className="customer-page">
       <CustomerNav />
-      <div className="profile-wrapper">
-        <div className="profile-container">
-          <a className="back-link" href="/customer/index">
+      <main className="customer-main">
+        <div className="customer-profile-container">
+          <a
+            className="customer-btn customer-btn-secondary customer-btn-sm"
+            href="/customer/index"
+            style={{ marginBottom: "24px", display: "inline-flex" }}
+          >
             ← Back to Dashboard
           </a>
 
-          <div className="profile-header">
-            <h2>My Profile</h2>
-            <p>Manage your account information</p>
-          </div>
-
-          {/* Profile Picture Section */}
-          <div className="profile-picture-section">
-            <div className="profile-picture-wrapper">
-              <img
-                src={
-                  imagePreview ||
-                  "https://via.placeholder.com/140?text=No+Image"
-                }
-                alt="Profile"
-                className="profile-picture-preview"
-              />
-              <div className="camera-icon-overlay" onClick={triggerFileInput}>
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                  <path d="M12 15.2A3.2 3.2 0 1 0 12 8.8a3.2 3.2 0 0 0 0 6.4zm0-5a1.8 1.8 0 1 1 0 3.6 1.8 1.8 0 0 1 0-3.6z" />
-                  <path d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm11 15H4V6h4.05l1.83-2h4.24l1.83 2H20v11z" />
-                </svg>
-              </div>
+          {/* Profile Header */}
+          <div className="customer-profile-header">
+            <div
+              className="profile-picture-wrapper"
+              style={{ position: "relative", display: "inline-block" }}
+            >
+              {imagePreview ? (
+                <img
+                  src={imagePreview}
+                  alt="Profile"
+                  className="customer-profile-avatar"
+                />
+              ) : (
+                <div className="customer-profile-avatar-placeholder">👤</div>
+              )}
+              <button
+                type="button"
+                onClick={triggerFileInput}
+                style={{
+                  position: "absolute",
+                  bottom: "8px",
+                  right: "8px",
+                  width: "36px",
+                  height: "36px",
+                  borderRadius: "50%",
+                  background: "white",
+                  border: "none",
+                  cursor: "pointer",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "18px",
+                }}
+              >
+                📷
+              </button>
             </div>
             <input
               ref={fileInputRef}
               type="file"
               accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
               onChange={handleImageChange}
-              className="file-input-hidden"
+              style={{ display: "none" }}
             />
-            <label className="upload-label" onClick={triggerFileInput}>
-              Choose Profile Picture
-            </label>
-            {fileName && <div className="file-name-display">{fileName}</div>}
+            <h2 className="customer-profile-name" style={{ color: "white" }}>
+              {form.name || "Your Name"}
+            </h2>
+            {fileName && <p className="customer-profile-email">{fileName}</p>}
           </div>
 
-          <form onSubmit={onSubmit} id="profileForm">
-            {[
-              {
-                name: "name",
-                label: "Full Name",
-                placeholder: "Enter your name",
-              },
-              {
-                name: "phone",
-                label: "Phone Number",
-                placeholder: "Enter your phone number",
-              },
-              {
-                name: "address",
-                label: "Address",
-                placeholder: "Enter your address",
-              },
-              {
-                name: "district",
-                label: "District",
-                placeholder: "Enter your district",
-              },
-              {
-                name: "carModel",
-                label: "Car Model",
-                placeholder: "Enter your car model",
-              },
-              {
-                name: "payments",
-                label: "Payments (COD or e-payments)",
-                placeholder: "Enter payment details",
-              },
-            ].map((f) => (
-              <div className="form-group" key={f.name}>
-                <label htmlFor={f.name}>{f.label}</label>
-                <input
-                  id={f.name}
-                  name={f.name}
-                  placeholder={f.placeholder}
-                  value={form[f.name] || ""}
-                  onChange={(e) => setField(f.name, e.target.value)}
-                  onBlur={() => {
-                    // live validate per field
-                    const map = {
-                      name: validateName,
-                      phone: validatePhone,
-                      address: validateAddress,
-                      district: validateDistrict,
-                      carModel: validateCarModel,
-                      payments: validatePayments,
-                    };
-                    map[f.name]?.();
-                  }}
-                  className={errors[f.name] ? "invalid" : undefined}
-                />
-                {errors[f.name] ? (
-                  <div className="error error-text">{errors[f.name]}</div>
-                ) : null}
+          {/* Profile Form */}
+          <div className="customer-profile-form">
+            <form onSubmit={onSubmit}>
+              {/* Personal Information Section */}
+              <div className="customer-profile-section">
+                <h3 className="customer-profile-section-title">
+                  <span>👤</span> Personal Information
+                </h3>
+                <div className="customer-profile-grid">
+                  <div className="customer-form-group">
+                    <label className="customer-label" htmlFor="name">
+                      Full Name
+                    </label>
+                    <input
+                      id="name"
+                      name="name"
+                      placeholder="Enter your name"
+                      value={form.name || ""}
+                      onChange={(e) => setField("name", e.target.value)}
+                      onBlur={validateName}
+                      className={`customer-input ${errors.name ? "customer-input-error" : ""}`}
+                    />
+                    {errors.name && (
+                      <div className="customer-error-text">{errors.name}</div>
+                    )}
+                  </div>
+                  <div className="customer-form-group">
+                    <label className="customer-label" htmlFor="phone">
+                      Phone Number
+                    </label>
+                    <input
+                      id="phone"
+                      name="phone"
+                      placeholder="Enter your phone number"
+                      value={form.phone || ""}
+                      onChange={(e) => setField("phone", e.target.value)}
+                      onBlur={validatePhone}
+                      className={`customer-input ${errors.phone ? "customer-input-error" : ""}`}
+                    />
+                    {errors.phone && (
+                      <div className="customer-error-text">{errors.phone}</div>
+                    )}
+                  </div>
+                </div>
               </div>
-            ))}
-            <div className="buttons">
-              <button type="submit" className="btn btn-save">
-                Save Changes
-              </button>
-              <button
-                type="button"
-                className="btn btn-logout"
-                onClick={(e) => {
-                  e.preventDefault();
-                  const next = encodeURIComponent(`${window.location.origin}/`);
-                  const base =
-                    window.location.port === "5173"
-                      ? `${window.location.protocol}//${window.location.hostname}:3000`
-                      : "";
-                  window.location.href = `${base}/logout?next=${next}`;
+
+              {/* Address Information Section */}
+              <div className="customer-profile-section">
+                <h3 className="customer-profile-section-title">
+                  <span>📍</span> Address Information
+                </h3>
+                <div className="customer-profile-grid">
+                  <div className="customer-form-group">
+                    <label className="customer-label" htmlFor="address">
+                      Address
+                    </label>
+                    <input
+                      id="address"
+                      name="address"
+                      placeholder="Enter your address"
+                      value={form.address || ""}
+                      onChange={(e) => setField("address", e.target.value)}
+                      onBlur={validateAddress}
+                      className={`customer-input ${errors.address ? "customer-input-error" : ""}`}
+                    />
+                    {errors.address && (
+                      <div className="customer-error-text">
+                        {errors.address}
+                      </div>
+                    )}
+                  </div>
+                  <div className="customer-form-group">
+                    <label className="customer-label" htmlFor="district">
+                      District
+                    </label>
+                    <input
+                      id="district"
+                      name="district"
+                      placeholder="Enter your district"
+                      value={form.district || ""}
+                      onChange={(e) => setField("district", e.target.value)}
+                      onBlur={validateDistrict}
+                      className={`customer-input ${errors.district ? "customer-input-error" : ""}`}
+                    />
+                    {errors.district && (
+                      <div className="customer-error-text">
+                        {errors.district}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Vehicle & Payment Section */}
+              <div className="customer-profile-section">
+                <h3 className="customer-profile-section-title">
+                  <span>🚗</span> Vehicle & Payment
+                </h3>
+                <div className="customer-profile-grid">
+                  <div className="customer-form-group">
+                    <label className="customer-label" htmlFor="carModel">
+                      Car Model
+                    </label>
+                    <input
+                      id="carModel"
+                      name="carModel"
+                      placeholder="Enter your car model"
+                      value={form.carModel || ""}
+                      onChange={(e) => setField("carModel", e.target.value)}
+                      onBlur={validateCarModel}
+                      className={`customer-input ${errors.carModel ? "customer-input-error" : ""}`}
+                    />
+                    {errors.carModel && (
+                      <div className="customer-error-text">
+                        {errors.carModel}
+                      </div>
+                    )}
+                  </div>
+                  <div className="customer-form-group">
+                    <label className="customer-label" htmlFor="payments">
+                      Payment Method
+                    </label>
+                    <input
+                      id="payments"
+                      name="payments"
+                      placeholder="Enter payment details (COD/e-payments)"
+                      value={form.payments || ""}
+                      onChange={(e) => setField("payments", e.target.value)}
+                      onBlur={validatePayments}
+                      className={`customer-input ${errors.payments ? "customer-input-error" : ""}`}
+                    />
+                    {errors.payments && (
+                      <div className="customer-error-text">
+                        {errors.payments}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Status Message */}
+              {status && (
+                <div
+                  className={`customer-alert ${statusColor === "green" ? "customer-alert-success" : statusColor === "red" ? "customer-alert-error" : "customer-alert-info"}`}
+                  style={{ marginBottom: "24px" }}
+                >
+                  <div className="customer-alert-content">{status}</div>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div
+                style={{
+                  display: "flex",
+                  gap: "12px",
+                  flexWrap: "wrap",
+                  justifyContent: "center",
                 }}
               >
-                Logout
-              </button>
-              <button
-                type="button"
-                className="btn btn-delete"
-                onClick={onDelete}
-              >
-                Delete Profile
-              </button>
-            </div>
-            <div
-              className={`status ${statusColor === "green" ? "success" : statusColor === "red" ? "error" : ""}`}
-              id="statusMsg"
-              style={{ color: statusColor }}
-            >
-              {status}
-            </div>
-          </form>
+                <button
+                  type="submit"
+                  className="customer-btn customer-btn-primary customer-btn-lg"
+                >
+                  Save Changes
+                </button>
+                <button
+                  type="button"
+                  className="customer-btn customer-btn-secondary"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    const next = encodeURIComponent(
+                      `${window.location.origin}/`,
+                    );
+                    const base =
+                      window.location.port === "5173"
+                        ? `${window.location.protocol}//${window.location.hostname}:3000`
+                        : "";
+                    window.location.href = `${base}/logout?next=${next}`;
+                  }}
+                >
+                  Logout
+                </button>
+                <button
+                  type="button"
+                  className="customer-btn customer-btn-danger"
+                  onClick={onDelete}
+                >
+                  Delete Account
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
-      </div>
-    </>
+      </main>
+      <CustomerFooter />
+    </div>
   );
 }

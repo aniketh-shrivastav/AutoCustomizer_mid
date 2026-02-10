@@ -474,85 +474,197 @@ router.get(
       doc.pipe(res);
 
       const currency = (val) => `₹${Number(val || 0).toLocaleString("en-IN")}`;
+      const pageWidth = doc.page.width - 80; // Account for margins
 
+      // Helper function to draw a table
+      function drawTable(headers, rows, options = {}) {
+        const {
+          colWidths = [],
+          startX = 40,
+          headerBg = "#1e3a5f",
+          headerColor = "#ffffff",
+          rowBg = "#f8fafc",
+          altRowBg = "#e2e8f0",
+        } = options;
+        let y = doc.y;
+        const rowHeight = 25;
+        const cellPadding = 8;
+        const tableWidth = colWidths.reduce((sum, w) => sum + w, 0);
+
+        // Draw header row
+        doc.fillColor(headerBg).rect(startX, y, tableWidth, rowHeight).fill();
+        doc.fillColor(headerColor).font("Helvetica-Bold").fontSize(10);
+        let x = startX;
+        headers.forEach((header, i) => {
+          doc.text(header, x + cellPadding, y + 7, {
+            width: colWidths[i] - cellPadding * 2,
+          });
+          x += colWidths[i];
+        });
+        y += rowHeight;
+
+        // Draw data rows
+        doc.font("Helvetica").fontSize(10);
+        rows.forEach((row, rowIndex) => {
+          const bg = rowIndex % 2 === 0 ? rowBg : altRowBg;
+          doc.fillColor(bg).rect(startX, y, tableWidth, rowHeight).fill();
+          doc.fillColor("#1f2937");
+          x = startX;
+          row.forEach((cell, i) => {
+            doc.text(String(cell), x + cellPadding, y + 7, {
+              width: colWidths[i] - cellPadding * 2,
+            });
+            x += colWidths[i];
+          });
+          y += rowHeight;
+        });
+
+        // Draw table border
+        doc.strokeColor("#cbd5e1").lineWidth(1);
+        doc
+          .rect(
+            startX,
+            doc.y - rows.length * rowHeight - rowHeight,
+            tableWidth,
+            (rows.length + 1) * rowHeight,
+          )
+          .stroke();
+
+        doc.y = y + 10;
+      }
+
+      // Title
       doc
-        .fontSize(22)
+        .fillColor("#1e3a5f")
+        .fontSize(24)
         .font("Helvetica-Bold")
         .text("Manager Dashboard Report", { align: "center" });
+      doc.moveDown(0.3);
       doc
-        .moveDown(0.3)
-        .fontSize(12)
+        .fillColor("#6b7280")
+        .fontSize(11)
         .font("Helvetica")
         .text(`Generated on ${new Date().toLocaleString()}`, {
           align: "center",
         });
-      doc.moveDown(1);
+      doc.moveDown(1.5);
 
-      doc.fontSize(16).font("Helvetica-Bold").text("Summary");
-      doc.moveDown(0.3);
-      doc.fontSize(12).font("Helvetica");
-      doc.text(`Total Users: ${stats.totalUsers}`);
-      doc.text(`Total Earnings: ${currency(stats.totalEarnings)}`);
-      doc.text(`Commission (20%): ${currency(stats.commission)}`);
-      doc.text(`Pending Products: ${stats.pendingProducts.length}`);
-      doc.text(`Approved Products: ${stats.approvedProducts.length}`);
-      doc.text(`Rejected Products: ${stats.rejectedProducts.length}`);
-      doc.moveDown(1);
+      // Summary Section
+      doc
+        .fillColor("#1e3a5f")
+        .fontSize(16)
+        .font("Helvetica-Bold")
+        .text("Summary Overview");
+      doc.moveDown(0.5);
 
-      doc.fontSize(16).font("Helvetica-Bold").text("User Distribution");
-      doc.moveDown(0.3);
+      const summaryColWidths = [pageWidth * 0.5, pageWidth * 0.5];
+      drawTable(
+        ["Metric", "Value"],
+        [
+          ["Total Users", stats.totalUsers],
+          ["Total Earnings", currency(stats.totalEarnings)],
+          ["Commission (20%)", currency(stats.commission)],
+          ["Pending Products", stats.pendingProducts.length],
+          ["Approved Products", stats.approvedProducts.length],
+          ["Rejected Products", stats.rejectedProducts.length],
+        ],
+        { colWidths: summaryColWidths },
+      );
+      doc.moveDown(0.5);
+
+      // User Distribution Section
+      doc
+        .fillColor("#1e3a5f")
+        .fontSize(16)
+        .font("Helvetica-Bold")
+        .text("User Distribution");
+      doc.moveDown(0.5);
+
       const roleLabels = [
         { label: "Customers", idx: 0 },
         { label: "Service Providers", idx: 1 },
         { label: "Sellers", idx: 2 },
         { label: "Managers", idx: 3 },
       ];
-      doc.fontSize(12).font("Helvetica");
-      roleLabels.forEach((role) => {
-        doc.text(`${role.label}: ${stats.userCounts[role.idx] || 0}`);
-      });
-      doc.moveDown(1);
+      drawTable(
+        ["User Type", "Count"],
+        roleLabels.map((role) => [role.label, stats.userCounts[role.idx] || 0]),
+        { colWidths: summaryColWidths },
+      );
+      doc.moveDown(0.5);
 
+      // Monthly Revenue Section
       const revenueChart = stats?.charts?.monthlyRevenue;
-      if (revenueChart) {
+      if (
+        revenueChart &&
+        revenueChart.labels &&
+        revenueChart.labels.length > 0
+      ) {
         doc
+          .fillColor("#1e3a5f")
           .fontSize(16)
           .font("Helvetica-Bold")
           .text("Monthly Revenue & Commission");
-        doc.moveDown(0.3);
-        doc.fontSize(12).font("Helvetica");
-        revenueChart.labels.forEach((label, idx) => {
-          doc.text(`${label}`, { continued: true });
-          doc.text(`Revenue: ${currency(revenueChart.totalRevenue[idx] || 0)}`);
-          doc.text(
-            `Commission: ${currency(revenueChart.commission[idx] || 0)}`,
-          );
-          doc.moveDown(0.5);
+        doc.moveDown(0.5);
+
+        const revenueColWidths = [
+          pageWidth * 0.34,
+          pageWidth * 0.33,
+          pageWidth * 0.33,
+        ];
+        const revenueRows = revenueChart.labels.map((label, idx) => [
+          label,
+          currency(revenueChart.totalRevenue[idx] || 0),
+          currency(revenueChart.commission[idx] || 0),
+        ]);
+        drawTable(["Month", "Revenue", "Commission"], revenueRows, {
+          colWidths: revenueColWidths,
         });
-        doc.moveDown(1);
+        doc.moveDown(0.5);
       }
 
+      // User Growth Section
       const userGrowthChart = stats?.charts?.userGrowth;
-      if (userGrowthChart) {
-        doc.fontSize(16).font("Helvetica-Bold").text("User Growth");
-        doc.moveDown(0.3);
-        doc.fontSize(12).font("Helvetica");
-        userGrowthChart.labels.forEach((label, idx) => {
-          const total = userGrowthChart.totalUsers[idx] || 0;
-          const providers = userGrowthChart.serviceProviders[idx] || 0;
-          const sellers = userGrowthChart.sellers[idx] || 0;
-          doc.text(`${label}`);
-          doc.text(`Total Users: ${total}`);
-          doc.text(`Service Providers: ${providers}`);
-          doc.text(`Sellers: ${sellers}`);
-          doc.moveDown(0.5);
-        });
-        doc.moveDown(1);
+      if (
+        userGrowthChart &&
+        userGrowthChart.labels &&
+        userGrowthChart.labels.length > 0
+      ) {
+        // Check if we need a new page
+        if (doc.y > doc.page.height - 200) {
+          doc.addPage();
+        }
+
+        doc
+          .fillColor("#1e3a5f")
+          .fontSize(16)
+          .font("Helvetica-Bold")
+          .text("User Growth");
+        doc.moveDown(0.5);
+
+        const growthColWidths = [
+          pageWidth * 0.25,
+          pageWidth * 0.25,
+          pageWidth * 0.25,
+          pageWidth * 0.25,
+        ];
+        const growthRows = userGrowthChart.labels.map((label, idx) => [
+          label,
+          userGrowthChart.totalUsers[idx] || 0,
+          userGrowthChart.serviceProviders[idx] || 0,
+          userGrowthChart.sellers[idx] || 0,
+        ]);
+        drawTable(
+          ["Month", "Total Users", "Service Providers", "Sellers"],
+          growthRows,
+          { colWidths: growthColWidths },
+        );
       }
 
+      // Footer
       doc
-        .fontSize(10)
         .fillColor("#6b7280")
+        .fontSize(10)
         .text("AutoCustomizer © 2025", 40, doc.page.height - 50, {
           align: "center",
         });
