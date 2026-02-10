@@ -136,7 +136,7 @@ document.addEventListener("DOMContentLoaded", function () {
           !/^[A-Za-z\s.-]+$/.test(userData.name.trim()))
       ) {
         alert(
-          "Name should not start with spaces or contain numbers/special characters."
+          "Name should not start with spaces or contain numbers/special characters.",
         );
         return;
       }
@@ -147,7 +147,7 @@ document.addEventListener("DOMContentLoaded", function () {
           !/^[A-Za-z\s.-]+$/.test(userData.businessName.trim()))
       ) {
         alert(
-          "Business name should not start with spaces or contain numbers/special characters."
+          "Business name should not start with spaces or contain numbers/special characters.",
         );
         return;
       }
@@ -158,7 +158,7 @@ document.addEventListener("DOMContentLoaded", function () {
           !/^[A-Za-z\s.-]+$/.test(userData.workshopName.trim()))
       ) {
         alert(
-          "Workshop name should not start with spaces or contain numbers/special characters."
+          "Workshop name should not start with spaces or contain numbers/special characters.",
         );
         return;
       }

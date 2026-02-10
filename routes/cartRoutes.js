@@ -20,7 +20,7 @@ router.delete("/remove/:userId", async (req, res) => {
     { userId: req.params.userId },
     {
       $pull: { items: { productId } },
-    }
+    },
   );
   if (req.headers.accept && req.headers.accept.includes("application/json")) {
     return res.json({ success: true });
@@ -63,7 +63,7 @@ router.put("/update/:userId", customerOnly, async (req, res) => {
     }
 
     const item = cart.items.find(
-      (item) => item.productId === productId.toString()
+      (item) => item.productId === productId.toString(),
     );
     if (!item) {
       return res
@@ -92,7 +92,7 @@ router.put("/update/:userId", customerOnly, async (req, res) => {
       if (item.quantity <= 0) {
         // Remove item if quantity is 0
         cart.items = cart.items.filter(
-          (i) => i.productId !== productId.toString()
+          (i) => i.productId !== productId.toString(),
         );
       }
     } else {

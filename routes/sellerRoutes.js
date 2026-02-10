@@ -499,12 +499,10 @@ router.post(
       } = req.body;
 
       if (!req.files || req.files.length === 0) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message: "At least one product image required.",
-          });
+        return res.status(400).json({
+          success: false,
+          message: "At least one product image required.",
+        });
       }
 
       // Upload all images to Cloudinary
@@ -1253,4 +1251,3 @@ router.get("/api/bulk-upload-result", isAuthenticated, isSeller, (req, res) => {
 });
 
 module.exports = router;
-

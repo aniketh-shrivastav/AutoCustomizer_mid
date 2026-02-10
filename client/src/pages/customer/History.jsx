@@ -4,7 +4,6 @@ import CustomerNav from "../../components/CustomerNav";
 import CustomerFooter from "../../components/CustomerFooter";
 import { useNavigate } from "react-router-dom";
 import { fetchCustomerHistory } from "../../store/customerSlice";
-import { authFetch } from "../../utils/api";
 import "../../Css/customer.css";
 
 const STALE_AFTER_MS = 1000 * 60 * 5; // 5 minutes
@@ -166,9 +165,6 @@ export default function CustomerHistory() {
   const navigate = useNavigate();
   function handleLogout(e) {
     e.preventDefault();
-    // Clear JWT token and user data
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
     const next = encodeURIComponent(`${window.location.origin}/`);
     window.location.href = `${backendBase}/logout?next=${next}`;
   }
@@ -360,7 +356,7 @@ export default function CustomerHistory() {
   async function cancelOrder(id) {
     if (!window.confirm("Are you sure you want to cancel this order?")) return;
     try {
-      const res = await authFetch(`/customer/cancel-order/${id}`, {
+      const res = await fetch(`/customer/cancel-order/${id}`, {
         method: "POST",
         headers: { Accept: "application/json" },
       });
@@ -382,7 +378,7 @@ export default function CustomerHistory() {
   async function cancelService(id) {
     if (!window.confirm("Cancel this service request?")) return;
     try {
-      const res = await authFetch(`/customer/cancel-service/${id}`, {
+      const res = await fetch(`/customer/cancel-service/${id}`, {
         method: "POST",
         headers: { Accept: "application/json" },
       });
@@ -431,7 +427,7 @@ export default function CustomerHistory() {
       return;
     }
     try {
-      const res = await authFetch(`/customer/rate-service/${ratingBookingId}`, {
+      const res = await fetch(`/customer/rate-service/${ratingBookingId}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

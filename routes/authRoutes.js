@@ -142,7 +142,7 @@ router.post("/signup", async (req, res) => {
     const frontendBase = process.env.FRONTEND_URL || "http://localhost:5173";
     const redirect = `${frontendBase.replace(
       /\/$/,
-      ""
+      "",
     )}/verify-otp?email=${encodeURIComponent(email)}`;
 
     if (wantsJson) {
@@ -190,7 +190,7 @@ router.post("/login", async (req, res) => {
       const frontendBase = process.env.FRONTEND_URL || "http://localhost:5173";
       const verifyUrl = `${frontendBase.replace(
         /\/$/,
-        ""
+        "",
       )}/verify-otp?email=${encodeURIComponent(email)}`;
       return res.status(403).json({
         message: "Please verify your email to continue.",

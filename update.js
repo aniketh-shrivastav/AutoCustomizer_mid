@@ -18,13 +18,13 @@ mongoose.connect("mongodb://localhost:27017/car_customization", {
 
       // Build cost map
       const serviceCostMap = {};
-      provider.servicesOffered.forEach(service => {
+      provider.servicesOffered.forEach((service) => {
         serviceCostMap[service.name] = service.cost;
       });
 
       // Calculate totalCost
       let total = 0;
-      booking.selectedServices.forEach(serviceName => {
+      booking.selectedServices.forEach((serviceName) => {
         total += serviceCostMap[serviceName] || 0;
       });
 

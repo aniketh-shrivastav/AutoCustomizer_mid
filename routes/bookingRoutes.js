@@ -127,4 +127,3 @@ router.post("/create-booking", async (req, res) => {
 });
 
 module.exports = router;
-

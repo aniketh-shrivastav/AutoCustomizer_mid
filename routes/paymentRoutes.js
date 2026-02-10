@@ -60,7 +60,7 @@ router.post("/create-checkout-session", requireAuth, async (req, res) => {
           cancelUrl || `${req.protocol}://${req.get("host")}/customer/cart`,
         customer_email: req.session.user.email,
         metadata: {
-          userId: req.user.id || req.user._id,
+          userId: req.session.user.id || req.session.user._id,
           orderId: orderId || "",
         },
         shipping_address_collection: {
@@ -82,7 +82,7 @@ router.post("/create-checkout-session", requireAuth, async (req, res) => {
       id: mockSessionId,
       items: items,
       totalAmount: totalAmount,
-      userId: req.user.id || req.user._id,
+      userId: req.session.user.id || req.session.user._id,
       userEmail: req.session.user.email,
       orderId: orderId || "",
       status: "pending",
@@ -121,7 +121,7 @@ router.get("/mock-session/:sessionId", requireAuth, (req, res) => {
   }
 
   // Check if session belongs to this user
-  const userId = req.user.id || req.user._id;
+  const userId = req.session.user.id || req.session.user._id;
   if (session.userId !== userId && session.userId !== String(userId)) {
     return res.status(403).json({
       success: false,
@@ -155,7 +155,7 @@ router.post("/mock-payment/:sessionId", requireAuth, async (req, res) => {
     }
 
     // Check if session belongs to this user
-    const userId = req.user.id || req.user._id;
+    const userId = req.session.user.id || req.session.user._id;
     if (session.userId !== userId && session.userId !== String(userId)) {
       return res.status(403).json({
         success: false,

@@ -720,4 +720,3 @@ router.get("/api/bookings", serviceOnly, async (req, res) => {
 });
 
 module.exports = router;
-

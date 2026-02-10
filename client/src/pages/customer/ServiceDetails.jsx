@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import CustomerNav from "../../components/CustomerNav";
 import CustomerFooter from "../../components/CustomerFooter";
-import { authFetch } from "../../utils/api";
 import "../../Css/customer.css";
 
 function useLink(href) {
@@ -31,8 +30,9 @@ export default function ServiceDetails() {
       try {
         setLoading(true);
         setError("");
-        const res = await authFetch(`/customer/api/service/${id}`, {
+        const res = await fetch(`/customer/api/service/${id}`, {
           headers: { Accept: "application/json" },
+          credentials: "include",
         });
         if (res.status === 401) {
           navigate("/login", { replace: true });

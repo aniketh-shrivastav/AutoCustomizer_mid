@@ -2,16 +2,6 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import "../../Css/publicPages.css";
 
-// Helper to get auth headers with JWT token
-function getAuthHeaders() {
-  const token = localStorage.getItem("token");
-  const headers = { Accept: "application/json" };
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
-  }
-  return headers;
-}
-
 export default function AllIndex() {
   const navigate = useNavigate();
   const [session, setSession] = useState({ authenticated: false });
@@ -22,7 +12,7 @@ export default function AllIndex() {
     async function load() {
       try {
         const res = await fetch("/api/session", {
-          headers: getAuthHeaders(),
+          headers: { Accept: "application/json" },
         });
         if (!res.ok) throw new Error("Failed session");
         const j = await res.json();

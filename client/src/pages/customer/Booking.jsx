@@ -1,7 +1,6 @@
 ﻿import React, { useEffect, useMemo, useState } from "react";
 import CustomerNav from "../../components/CustomerNav";
 import CustomerFooter from "../../components/CustomerFooter";
-import { authFetch } from "../../utils/api";
 import "../../Css/customer.css";
 import "../../Css/booking.css";
 
@@ -25,9 +24,6 @@ export default function CustomerBooking() {
   }
   function handleLogout(e) {
     e.preventDefault();
-    // Clear JWT token and user data
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
     const next = encodeURIComponent(`${window.location.origin}/`);
     window.location.href = `${backendBase()}/logout?next=${next}`;
   }
@@ -74,7 +70,7 @@ export default function CustomerBooking() {
     async function load() {
       try {
         setLoading(true);
-        const res = await authFetch("/customer/api/booking", {
+        const res = await fetch("/customer/api/booking", {
           headers: { Accept: "application/json" },
         });
         if (res.status === 401) {
@@ -122,10 +118,11 @@ export default function CustomerBooking() {
       try {
         setProviderReviewsLoading(true);
         setProviderReviewsError("");
-        const res = await authFetch(
+        const res = await fetch(
           `/customer/api/provider/${providerId}/reviews`,
           {
             headers: { Accept: "application/json" },
+            credentials: "include",
           },
         );
         if (!res.ok) throw new Error("Failed to load provider reviews");
@@ -384,7 +381,7 @@ export default function CustomerBooking() {
 
   async function confirmBooking() {
     try {
-      const res = await authFetch("/bookings/create-booking", {
+      const res = await fetch("/bookings/create-booking", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

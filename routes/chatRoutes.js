@@ -369,4 +369,3 @@ router.get("/chat/unread-count", isAuthenticated, async (req, res) => {
 });
 
 module.exports = router;
-

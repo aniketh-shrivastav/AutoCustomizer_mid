@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import CustomerNav from "../../components/CustomerNav";
 import CustomerFooter from "../../components/CustomerFooter";
-import { authFetch } from "../../utils/api";
 import "../../Css/customer.css";
 
 function useLink(href) {
@@ -34,9 +33,6 @@ export default function CustomerCart() {
   }
   function handleLogout(e) {
     e.preventDefault();
-    // Clear JWT token and user data
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
     const next = encodeURIComponent(`${window.location.origin}/`);
     window.location.href = `${backendBase()}/logout?next=${next}`;
   }
@@ -57,10 +53,10 @@ export default function CustomerCart() {
         setLoading(true);
         // Load cart and check Stripe config
         const [cartRes, configRes] = await Promise.all([
-          authFetch("/customer/api/cart", {
+          fetch("/customer/api/cart", {
             headers: { Accept: "application/json" },
           }),
-          authFetch("/api/payments/config", {
+          fetch("/api/payments/config", {
             headers: { Accept: "application/json" },
           }),
         ]);
@@ -91,7 +87,7 @@ export default function CustomerCart() {
   async function updateQuantity(productId, action) {
     if (!userId) return;
     try {
-      const res = await authFetch(`/api/cart/update/${userId}`, {
+      const res = await fetch(`/api/cart/update/${userId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -102,7 +98,7 @@ export default function CustomerCart() {
       const j = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(j.message || "Update failed");
       // reload items
-      const cartRes = await authFetch("/customer/api/cart", {
+      const cartRes = await fetch("/customer/api/cart", {
         headers: { Accept: "application/json" },
       });
       const cart = await cartRes.json();
@@ -120,7 +116,7 @@ export default function CustomerCart() {
   async function handleStripeCheckout() {
     try {
       setProcessingPayment(true);
-      const res = await authFetch("/api/payments/create-checkout-session", {
+      const res = await fetch("/api/payments/create-checkout-session", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -161,7 +157,7 @@ export default function CustomerCart() {
     }
 
     try {
-      const res = await authFetch("/customer/create-order", {
+      const res = await fetch("/customer/create-order", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
