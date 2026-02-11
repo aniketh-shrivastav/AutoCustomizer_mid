@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Routes, Route, Navigate, Link } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -44,6 +44,7 @@ import SellerOrders from "./pages/seller/Orders";
 import SellerReviews from "./pages/seller/Reviews";
 
 import Logout from "./pages/Logout";
+import NotFound from "./pages/NotFound";
 
 // ------------------------------------------
 
@@ -398,18 +399,7 @@ export default function App() {
       />
 
       {/* 404 */}
-      <Route
-        path="*"
-        element={
-          <div style={{ padding: 24 }}>
-            <h2>Page not found</h2>
-            <p>
-              Quick links: <Link to="/">Home</Link>,{" "}
-              <Link to="/login">Login</Link>, <Link to="/signup">Signup</Link>
-            </p>
-          </div>
-        }
-      />
+      <Route path="*" element={<NotFound />} />
     </Routes>
   );
 }

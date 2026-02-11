@@ -247,10 +247,10 @@ router.post("/login", async (req, res) => {
           return res.json({
             success: true,
             role: "seller",
-            redirect: "/Seller/dashboard",
+            redirect: "/seller/dashboard",
           });
         }
-        return res.redirect("/Seller/dashboard");
+        return res.redirect("/seller/dashboard");
       case "service-provider":
         if (wantsJson) {
           return res.json({

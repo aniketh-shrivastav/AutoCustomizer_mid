@@ -29,6 +29,8 @@ function wantsJSON(req) {
  */
 const isAuthenticated = (req, res, next) => {
   if (req.session && req.session.user) {
+    // Normalize user access for downstream handlers.
+    req.user = req.session.user;
     return next();
   }
 
@@ -50,6 +52,9 @@ const isAuthenticated = (req, res, next) => {
  */
 function requireRole(role, roleName) {
   return (req, res, next) => {
+    if (!req.user && req.session?.user) {
+      req.user = req.session.user;
+    }
     if (req.session.user?.role === role) {
       return next();
     }

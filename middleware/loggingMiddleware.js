@@ -14,14 +14,19 @@ const fs = require("fs");
 
 // Log file configuration
 const LOG_DIR = path.join(__dirname, "..", "logs");
+const ERROR_LOG_DIR = path.join(LOG_DIR, "errors");
 const ACCESS_LOG = path.join(LOG_DIR, "access.log");
-const PERF_LOG = path.join(LOG_DIR, "performance.log");
+const PERF_LOG = null;
 const DEBUG_LOG = path.join(LOG_DIR, "debug.log");
-const ERROR_LOG = path.join(LOG_DIR, "error.log");
+const ERROR_LOG = path.join(ERROR_LOG_DIR, "error.log");
+const LOG_ROTATION_MS = 20 * 1000;
 
 // Ensure logs directory exists
 if (!fs.existsSync(LOG_DIR)) {
   fs.mkdirSync(LOG_DIR, { recursive: true });
+}
+if (!fs.existsSync(ERROR_LOG_DIR)) {
+  fs.mkdirSync(ERROR_LOG_DIR, { recursive: true });
 }
 
 /**
@@ -29,8 +34,28 @@ if (!fs.existsSync(LOG_DIR)) {
  * @param {string} filePath - Path to log file
  * @param {string} message - Log message
  */
+function formatBucket(timestampMs) {
+  const d = new Date(timestampMs);
+  const pad = (v) => String(v).padStart(2, "0");
+  return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(
+    d.getHours(),
+  )}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+}
+
+function resolveRotatedPath(filePath) {
+  if (!filePath || !filePath.endsWith(".log")) return filePath;
+  const dir = path.dirname(filePath);
+  const base = path.basename(filePath, ".log");
+  const bucketStart =
+    Math.floor(Date.now() / LOG_ROTATION_MS) * LOG_ROTATION_MS;
+  const suffix = formatBucket(bucketStart);
+  return path.join(dir, `${base}-${suffix}.log`);
+}
+
 const appendLog = (filePath, message) => {
-  fs.appendFile(filePath, message + "\n", (err) => {
+  if (!filePath) return;
+  const targetPath = resolveRotatedPath(filePath);
+  fs.appendFile(targetPath, message + "\n", (err) => {
     if (err) console.error("Failed to write log:", err);
   });
 };
@@ -127,12 +152,28 @@ const resetAnalytics = () => {
   requestCounts = {};
 };
 
+let rotationTimer = null;
+const startLogRotation = () => {
+  if (rotationTimer) return rotationTimer;
+
+  const writeHeartbeat = () => {
+    const timestamp = new Date().toISOString();
+    appendLog(ACCESS_LOG, `[${timestamp}] [HEARTBEAT] log rotation`);
+  };
+
+  writeHeartbeat();
+  rotationTimer = setInterval(writeHeartbeat, LOG_ROTATION_MS);
+  return rotationTimer;
+};
+
 module.exports = {
   LOG_DIR,
+  ERROR_LOG_DIR,
   ACCESS_LOG,
   PERF_LOG,
   DEBUG_LOG,
   ERROR_LOG,
+  LOG_ROTATION_MS,
   appendLog,
   logError,
   requestLogger,
@@ -141,4 +182,5 @@ module.exports = {
   apiAnalytics,
   getAnalytics,
   resetAnalytics,
+  startLogRotation,
 };

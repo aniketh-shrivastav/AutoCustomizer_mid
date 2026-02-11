@@ -44,9 +44,6 @@ const securityMiddleware = require("./securityMiddleware");
 // File Upload (Third-Party Middleware - multer wrapper)
 const uploadMiddleware = require("./uploadMiddleware");
 
-// Static File Protection (Application-level Middleware)
-const staticProtectionMiddleware = require("./staticProtectionMiddleware");
-
 // Error Handling (Error-handling Middleware)
 const errorMiddleware = require("./errorMiddleware");
 
@@ -66,9 +63,6 @@ module.exports = {
   // Upload exports
   ...uploadMiddleware,
 
-  // Static protection exports
-  ...staticProtectionMiddleware,
-
   // Error handling exports
   ...errorMiddleware,
 
@@ -78,6 +72,5 @@ module.exports = {
   logging: loggingMiddleware,
   security: securityMiddleware,
   upload: uploadMiddleware,
-  staticProtection: staticProtectionMiddleware,
   error: errorMiddleware,
 };

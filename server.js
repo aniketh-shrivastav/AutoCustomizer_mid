@@ -11,13 +11,10 @@ const User = require("./models/User");
 
 // Import Middleware Modules (organized by type)
 const {
-  // Application-level middleware (static file protection)
-  protectManagerFiles,
-  protectCustomerFiles,
-  protectServiceFiles,
-  protectSellerFiles,
   // Custom middleware (logging, security)
   requestLogger,
+  responseTime,
+  startLogRotation,
   securityHeaders,
   contentSecurityPolicy,
   rateLimit,
@@ -78,8 +75,9 @@ app.use(express.urlencoded({ extended: true }));
 // ------------------------------------------------------------
 // 3. CUSTOM MIDDLEWARE (Application-level usage)
 // ------------------------------------------------------------
-// Request logging (uncomment in production for logging)
-// app.use(requestLogger);
+app.use(requestLogger);
+app.use(responseTime);
+startLogRotation();
 
 // Security headers
 app.use(securityHeaders);
@@ -97,24 +95,7 @@ app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 
 // ------------------------------------------------------------
-// 4. APPLICATION-LEVEL MIDDLEWARE (Static file protection)
-// ------------------------------------------------------------
-// These run before static file serving to protect HTML pages
-
-// Protect manager static HTML pages
-app.use("/manager", protectManagerFiles);
-
-// Protect customer static HTML pages
-app.use("/customer", protectCustomerFiles);
-
-// Protect service provider static HTML pages
-app.use("/service", protectServiceFiles);
-
-// Protect seller static HTML pages
-app.use(["/seller", "/Seller"], protectSellerFiles);
-
-// ------------------------------------------------------------
-// 5. BUILT-IN MIDDLEWARE (Static file serving)
+// 4. BUILT-IN MIDDLEWARE (Static file serving)
 // ------------------------------------------------------------
 // express.static(): Serve static files from public directory
 app.use(express.static("public"));

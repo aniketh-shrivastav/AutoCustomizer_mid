@@ -463,7 +463,7 @@ export default function CustomerBooking() {
           <div className="booking-header">
             <h1 className="booking-title">Service Booking</h1>
             <p className="booking-subtitle">
-              Choose a service provider and customize your booking
+              Choose a service provider and customize your car
             </p>
           </div>
 
