@@ -32,8 +32,6 @@
 // Authentication & Authorization (Custom Middleware)
 const authMiddleware = require("./authMiddleware");
 
-// Validation (Custom Middleware)
-const validationMiddleware = require("./validationMiddleware");
 
 // Logging (Custom Middleware)
 const loggingMiddleware = require("./loggingMiddleware");
@@ -51,9 +49,6 @@ module.exports = {
   // Auth exports
   ...authMiddleware,
 
-  // Validation exports
-  ...validationMiddleware,
-
   // Logging exports
   ...loggingMiddleware,
 
@@ -68,7 +63,6 @@ module.exports = {
 
   // Named module exports for selective imports
   auth: authMiddleware,
-  validation: validationMiddleware,
   logging: loggingMiddleware,
   security: securityMiddleware,
   upload: uploadMiddleware,

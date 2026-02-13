@@ -17,6 +17,29 @@ function requireAuth(req, res, next) {
   next();
 }
 
+function resolveFrontendBase(req, successUrl, cancelUrl) {
+  const envBase = process.env.FRONTEND_URL;
+  const origin = req.get("origin");
+
+  const fromUrl = (value) => {
+    if (!value || typeof value !== "string") return null;
+    try {
+      const parsed = new URL(value);
+      return `${parsed.protocol}//${parsed.host}`;
+    } catch (e) {
+      return null;
+    }
+  };
+
+  return (
+    fromUrl(successUrl) ||
+    fromUrl(cancelUrl) ||
+    envBase ||
+    origin ||
+    `${req.protocol}://${req.get("host")}`
+  );
+}
+
 // Create checkout session (Stripe or Mock)
 router.post("/create-checkout-session", requireAuth, async (req, res) => {
   try {
@@ -33,6 +56,8 @@ router.post("/create-checkout-session", requireAuth, async (req, res) => {
       (sum, item) => sum + item.price * item.quantity,
       0,
     );
+
+    const frontendBase = resolveFrontendBase(req, successUrl, cancelUrl);
 
     // If Stripe is configured, use real Stripe
     if (stripe) {
@@ -55,9 +80,8 @@ router.post("/create-checkout-session", requireAuth, async (req, res) => {
         mode: "payment",
         success_url:
           successUrl ||
-          `${req.protocol}://${req.get("host")}/customer/payment-success?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url:
-          cancelUrl || `${req.protocol}://${req.get("host")}/customer/cart`,
+          `${frontendBase}/customer/payment-success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: cancelUrl || `${frontendBase}/customer/cart`,
         customer_email: req.session.user.email,
         metadata: {
           userId: req.session.user.id || req.session.user._id,
@@ -93,11 +117,10 @@ router.post("/create-checkout-session", requireAuth, async (req, res) => {
     mockSessions.set(mockSessionId, mockSession);
 
     // Return mock checkout URL
-    const baseUrl = `${req.protocol}://${req.get("host")}`;
     res.json({
       success: true,
       sessionId: mockSessionId,
-      url: `${baseUrl}/customer/mock-checkout?session_id=${mockSessionId}`,
+      url: `${frontendBase}/customer/mock-checkout?session_id=${mockSessionId}`,
       mode: "mock",
     });
   } catch (error) {

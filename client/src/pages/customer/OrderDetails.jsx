@@ -65,6 +65,13 @@ export default function OrderDetails() {
     return statusMap[status?.toLowerCase()] || "customer-status-pending";
   };
 
+  const formatExpectedDate = (value) => {
+    if (!value) return "-";
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return "-";
+    return d.toLocaleDateString();
+  };
+
   return (
     <div className="customer-page">
       <CustomerNav />
@@ -291,6 +298,20 @@ export default function OrderDetails() {
                         >
                           {item.itemStatus || order.orderStatus}
                         </span>
+                      </div>
+                      <div
+                        style={{
+                          marginTop: "10px",
+                          fontSize: "14px",
+                          color: "var(--customer-text-secondary)",
+                        }}
+                      >
+                        <span>Expected Delivery: </span>
+                        <strong
+                          style={{ color: "var(--customer-text-primary)" }}
+                        >
+                          {formatExpectedDate(item.deliveryDate)}
+                        </strong>
                       </div>
                     </div>
                   </div>
