@@ -41,9 +41,21 @@ export default function CustomerCart() {
     () => items.reduce((sum, i) => sum + i.quantity, 0),
     [items],
   );
-  const totalAmount = useMemo(
+  const subtotal = useMemo(
     () => items.reduce((sum, i) => sum + i.price * i.quantity, 0),
     [items],
+  );
+  const deliveryCost = useMemo(
+    () => Math.round(subtotal * 0.05 * 100) / 100,
+    [subtotal],
+  );
+  const tax = useMemo(
+    () => Math.round(subtotal * 0.18 * 100) / 100,
+    [subtotal],
+  );
+  const totalAmount = useMemo(
+    () => subtotal + deliveryCost + tax,
+    [subtotal, deliveryCost, tax],
   );
 
   useEffect(() => {
@@ -289,10 +301,51 @@ export default function CustomerCart() {
                   <span>₹{it.price * it.quantity}</span>
                 </div>
               ))}
+              <div
+                style={{
+                  borderTop: "1px solid var(--customer-border)",
+                  paddingTop: "12px",
+                  marginTop: "12px",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    marginBottom: "8px",
+                    color: "var(--customer-text-secondary)",
+                  }}
+                >
+                  <span>Subtotal</span>
+                  <span>₹{subtotal.toFixed(2)}</span>
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    marginBottom: "8px",
+                    color: "var(--customer-text-secondary)",
+                  }}
+                >
+                  <span>Delivery Cost (5%)</span>
+                  <span>₹{deliveryCost.toFixed(2)}</span>
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    marginBottom: "8px",
+                    color: "var(--customer-text-secondary)",
+                  }}
+                >
+                  <span>Tax (18%)</span>
+                  <span>₹{tax.toFixed(2)}</span>
+                </div>
+              </div>
               <div className="customer-cart-total">
                 <span>Total Amount</span>
                 <span className="customer-cart-total-amount">
-                  ₹{totalAmount}
+                  ₹{totalAmount.toFixed(2)}
                 </span>
               </div>
             </div>
@@ -447,17 +500,63 @@ export default function CustomerCart() {
                 <h4 style={{ marginBottom: "8px" }}>
                   Ready to Place Your Order?
                 </h4>
-                <p style={{ color: "var(--customer-text-secondary)" }}>
-                  Total Amount:{" "}
-                  <strong
+                <div
+                  style={{
+                    background: "var(--customer-card-bg)",
+                    borderRadius: "8px",
+                    padding: "16px",
+                    marginBottom: "16px",
+                    textAlign: "left",
+                  }}
+                >
+                  <div
                     style={{
-                      color: "var(--customer-primary)",
-                      fontSize: "1.25rem",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      marginBottom: "8px",
+                      color: "var(--customer-text-secondary)",
                     }}
                   >
-                    ₹{totalAmount}
-                  </strong>
-                </p>
+                    <span>Subtotal</span>
+                    <span>₹{subtotal.toFixed(2)}</span>
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      marginBottom: "8px",
+                      color: "var(--customer-text-secondary)",
+                    }}
+                  >
+                    <span>Delivery Cost (5%)</span>
+                    <span>₹{deliveryCost.toFixed(2)}</span>
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      marginBottom: "8px",
+                      color: "var(--customer-text-secondary)",
+                    }}
+                  >
+                    <span>Tax (18%)</span>
+                    <span>₹{tax.toFixed(2)}</span>
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      paddingTop: "8px",
+                      borderTop: "1px solid var(--customer-border)",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    <span>Total</span>
+                    <span style={{ color: "var(--customer-primary)" }}>
+                      ₹{totalAmount.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
                 <p
                   style={{
                     color: "var(--customer-text-secondary)",

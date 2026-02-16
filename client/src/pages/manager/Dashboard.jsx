@@ -179,6 +179,16 @@ export default function ManagerDashboard() {
     return DEFAULT_USER_GROWTH_CHART;
   }, [data]);
 
+  const highlights = data?.highlights || {};
+  const bestSeller = highlights.bestSeller || null;
+  const bestProvider = highlights.bestProvider || null;
+  const repeatOrders = highlights.repeatOrders || {
+    count: 0,
+    topCustomers: [],
+  };
+  const mostOrderedProduct = highlights.mostOrderedProduct || null;
+  const topServices = highlights.topServices || [];
+
   const handleProductAction = async (productId, action) => {
     if (!productId || !["approve", "reject"].includes(action)) return;
     setProductActionState({
@@ -483,6 +493,120 @@ export default function ManagerDashboard() {
           <div className="stat-card">
             <h3>Commission (20%)</h3>
             <p className="number">{formatCurrency(data.commission)}</p>
+          </div>
+        </div>
+
+        <div className="product-tabs" style={{ marginBottom: 24 }}>
+          <h2>Executive Highlights</h2>
+          <div className="stats-grid">
+            <div className="stat-card">
+              <h3>Best Seller</h3>
+              <p className="number">{bestSeller?.name || "N/A"}</p>
+              <div style={{ color: "#6b7280", fontSize: 13 }}>
+                {bestSeller
+                  ? `${formatCurrency(bestSeller.revenue)} • ${bestSeller.units || 0} units`
+                  : "No sales yet"}
+              </div>
+            </div>
+            <div className="stat-card">
+              <h3>Best Service Provider</h3>
+              <p className="number">
+                {bestProvider?.workshopName || bestProvider?.name || "N/A"}
+              </p>
+              <div style={{ color: "#6b7280", fontSize: 13 }}>
+                {bestProvider
+                  ? `${formatCurrency(bestProvider.revenue)} • ${bestProvider.bookings || 0} bookings`
+                  : "No service revenue yet"}
+              </div>
+            </div>
+            <div className="stat-card">
+              <h3>Most Ordered Product</h3>
+              <p className="number">{mostOrderedProduct?._id?.name || "N/A"}</p>
+              <div style={{ color: "#6b7280", fontSize: 13 }}>
+                {mostOrderedProduct
+                  ? `${mostOrderedProduct.quantity || 0} orders • ${formatCurrency(mostOrderedProduct.revenue)}`
+                  : "No product orders yet"}
+              </div>
+            </div>
+            <div className="stat-card">
+              <h3>Repeat Customers</h3>
+              <p className="number">{repeatOrders.count || 0}</p>
+              <div style={{ color: "#6b7280", fontSize: 13 }}>
+                Customers with 2+ orders
+              </div>
+            </div>
+            <div className="stat-card">
+              <h3>Top Service Preference</h3>
+              <p className="number">{topServices[0]?._id || "N/A"}</p>
+              <div style={{ color: "#6b7280", fontSize: 13 }}>
+                {topServices[0]
+                  ? `${topServices[0].count} bookings`
+                  : "No service data yet"}
+              </div>
+            </div>
+          </div>
+
+          <div className="charts-container" style={{ marginTop: 16 }}>
+            <div className="chart-wrapper">
+              <h2>Top Repeat Customers</h2>
+              <div className="table-responsive">
+                <table className="generic-table">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Email</th>
+                      <th>Orders</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(repeatOrders.topCustomers || []).length === 0 ? (
+                      <tr>
+                        <td colSpan={3} style={{ textAlign: "center" }}>
+                          No repeat customers yet.
+                        </td>
+                      </tr>
+                    ) : (
+                      repeatOrders.topCustomers.map((c) => (
+                        <tr key={c._id}>
+                          <td>{c.name || "N/A"}</td>
+                          <td>{c.email || "N/A"}</td>
+                          <td>{c.orders || 0}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div className="chart-wrapper">
+              <h2>Most Preferred Services</h2>
+              <div className="table-responsive">
+                <table className="generic-table">
+                  <thead>
+                    <tr>
+                      <th>Service</th>
+                      <th>Bookings</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {topServices.length === 0 ? (
+                      <tr>
+                        <td colSpan={2} style={{ textAlign: "center" }}>
+                          No service preferences yet.
+                        </td>
+                      </tr>
+                    ) : (
+                      topServices.map((s) => (
+                        <tr key={s._id}>
+                          <td>{s._id}</td>
+                          <td>{s.count}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </div>
 

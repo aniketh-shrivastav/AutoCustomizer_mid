@@ -22,7 +22,7 @@ function addFooter(doc) {
       "AutoCustomizer © 2025 - All rights reserved",
       50,
       doc.page.height - 40,
-      { align: "center", width: doc.page.width - 100 }
+      { align: "center", width: doc.page.width - 100 },
     );
 }
 
@@ -59,7 +59,7 @@ exports.getOrderReceipt = async (req, res) => {
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename=Order_${order._id}.pdf`
+      `attachment; filename=Order_${order._id}.pdf`,
     );
     doc.pipe(res);
 
@@ -80,7 +80,7 @@ exports.getOrderReceipt = async (req, res) => {
         ["Delivery Address", order.deliveryAddress],
         ["District", order.district],
       ],
-      [150, 350]
+      [150, 350],
     );
 
     // Items Table
@@ -88,7 +88,20 @@ exports.getOrderReceipt = async (req, res) => {
     order.items.forEach((item) => {
       items.push([item.name, item.quantity.toString(), `₹${item.price}`]);
     });
-    items.push(["Total", "", `₹${order.totalAmount}`]);
+
+    // Calculate subtotal, delivery cost, and tax
+    const subtotal = order.items.reduce(
+      (sum, item) => sum + item.price * item.quantity,
+      0,
+    );
+    const deliveryCost = Math.round(subtotal * 0.05 * 100) / 100;
+    const tax = Math.round(subtotal * 0.18 * 100) / 100;
+    const grandTotal = subtotal + deliveryCost + tax;
+
+    items.push(["Subtotal", "", `₹${subtotal.toFixed(2)}`]);
+    items.push(["Delivery Cost (5%)", "", `₹${deliveryCost.toFixed(2)}`]);
+    items.push(["Tax (18%)", "", `₹${tax.toFixed(2)}`]);
+    items.push(["Grand Total", "", `₹${grandTotal.toFixed(2)}`]);
 
     drawTable(doc, 50, yPos + 10, items, [250, 100, 150]);
 
@@ -105,7 +118,7 @@ exports.getOrderReceipt = async (req, res) => {
 exports.getServiceReceipt = async (req, res) => {
   try {
     const service = await ServiceBooking.findById(req.params.id).populate(
-      "providerId"
+      "providerId",
     );
     if (!service) return res.status(404).send("Service not found");
 
@@ -113,7 +126,7 @@ exports.getServiceReceipt = async (req, res) => {
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename=Service_${service._id}.pdf`
+      `attachment; filename=Service_${service._id}.pdf`,
     );
     doc.pipe(res);
 
@@ -138,7 +151,7 @@ exports.getServiceReceipt = async (req, res) => {
         ["Description", service.description],
         ["Total Cost", `₹${service.totalCost}`],
       ],
-      [150, 350]
+      [150, 350],
     );
 
     // Footer

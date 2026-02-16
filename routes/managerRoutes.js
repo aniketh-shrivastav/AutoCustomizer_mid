@@ -53,6 +53,12 @@ async function collectDashboardStats() {
     serviceRevenueAgg,
     baseUserCountsAgg,
     monthlyUserGrowthAgg,
+    bestSellerAgg,
+    bestProviderAgg,
+    repeatOrdersAgg,
+    repeatOrdersCountAgg,
+    mostOrderedProductAgg,
+    topServicesAgg,
   ] = await Promise.all([
     User.countDocuments({ suspended: { $ne: true } }),
     User.aggregate([
@@ -131,6 +137,118 @@ async function collectDashboardStats() {
         },
       },
     ]),
+    Order.aggregate([
+      { $unwind: "$items" },
+      { $match: { "items.itemStatus": "delivered" } },
+      {
+        $group: {
+          _id: "$items.seller",
+          revenue: {
+            $sum: { $multiply: ["$items.price", "$items.quantity"] },
+          },
+          units: { $sum: "$items.quantity" },
+        },
+      },
+      { $sort: { revenue: -1 } },
+      { $limit: 1 },
+      {
+        $lookup: {
+          from: "users",
+          localField: "_id",
+          foreignField: "_id",
+          as: "seller",
+        },
+      },
+      { $unwind: { path: "$seller", preserveNullAndEmptyArrays: true } },
+      {
+        $project: {
+          _id: 1,
+          revenue: 1,
+          units: 1,
+          name: "$seller.name",
+          email: "$seller.email",
+        },
+      },
+    ]),
+    ServiceBooking.aggregate([
+      { $match: { status: { $in: ["Ready", "Completed"] } } },
+      {
+        $group: {
+          _id: "$providerId",
+          revenue: { $sum: "$totalCost" },
+          bookings: { $sum: 1 },
+        },
+      },
+      { $sort: { revenue: -1 } },
+      { $limit: 1 },
+      {
+        $lookup: {
+          from: "users",
+          localField: "_id",
+          foreignField: "_id",
+          as: "provider",
+        },
+      },
+      { $unwind: { path: "$provider", preserveNullAndEmptyArrays: true } },
+      {
+        $project: {
+          _id: 1,
+          revenue: 1,
+          bookings: 1,
+          name: "$provider.name",
+          workshopName: "$provider.workshopName",
+          email: "$provider.email",
+        },
+      },
+    ]),
+    Order.aggregate([
+      { $group: { _id: "$userId", orders: { $sum: 1 } } },
+      { $match: { orders: { $gte: 2 } } },
+      { $sort: { orders: -1 } },
+      { $limit: 5 },
+      {
+        $lookup: {
+          from: "users",
+          localField: "_id",
+          foreignField: "_id",
+          as: "user",
+        },
+      },
+      { $unwind: { path: "$user", preserveNullAndEmptyArrays: true } },
+      {
+        $project: {
+          _id: 1,
+          orders: 1,
+          name: "$user.name",
+          email: "$user.email",
+        },
+      },
+    ]),
+    Order.aggregate([
+      { $group: { _id: "$userId", orders: { $sum: 1 } } },
+      { $match: { orders: { $gte: 2 } } },
+      { $count: "count" },
+    ]),
+    Order.aggregate([
+      { $unwind: "$items" },
+      {
+        $group: {
+          _id: { productId: "$items.productId", name: "$items.name" },
+          quantity: { $sum: "$items.quantity" },
+          revenue: {
+            $sum: { $multiply: ["$items.price", "$items.quantity"] },
+          },
+        },
+      },
+      { $sort: { quantity: -1 } },
+      { $limit: 1 },
+    ]),
+    ServiceBooking.aggregate([
+      { $unwind: "$selectedServices" },
+      { $group: { _id: "$selectedServices", count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 5 },
+    ]),
   ]);
 
   const userDistribution = userCountsAgg.reduce(
@@ -208,6 +326,16 @@ async function collectDashboardStats() {
     userGrowth.sellers.push(runningTotals["seller"] || 0);
   });
 
+  const bestSeller = Array.isArray(bestSellerAgg) ? bestSellerAgg[0] : null;
+  const bestProvider = Array.isArray(bestProviderAgg)
+    ? bestProviderAgg[0]
+    : null;
+  const repeatCount = repeatOrdersCountAgg?.[0]?.count || 0;
+  const mostOrderedProduct = Array.isArray(mostOrderedProductAgg)
+    ? mostOrderedProductAgg[0]
+    : null;
+  const topServices = Array.isArray(topServicesAgg) ? topServicesAgg : [];
+
   return {
     totalUsers,
     userCounts,
@@ -216,6 +344,16 @@ async function collectDashboardStats() {
     rejectedProducts,
     totalEarnings,
     commission,
+    highlights: {
+      bestSeller,
+      bestProvider,
+      repeatOrders: {
+        count: repeatCount,
+        topCustomers: repeatOrdersAgg || [],
+      },
+      mostOrderedProduct,
+      topServices,
+    },
     charts: {
       monthlyRevenue,
       userGrowth,
@@ -861,6 +999,12 @@ router.post(
           .json({ success: false, message: "User not found" });
       }
 
+      if (user.role === "admin" && req.session.user?.role !== "admin") {
+        return res
+          .status(403)
+          .json({ success: false, message: "Admins cannot be suspended" });
+      }
+
       // Instead of deleting, update the "suspended" field
       user.suspended = true; // Ensure you have this field in your schema
       await user.save();
@@ -887,6 +1031,12 @@ router.post(
         return res
           .status(404)
           .json({ success: false, message: "User not found" });
+      }
+
+      if (user.role === "admin" && req.session.user?.role !== "admin") {
+        return res
+          .status(403)
+          .json({ success: false, message: "Admins cannot be restored" });
       }
 
       user.suspended = false; // Re-activate the user

@@ -34,6 +34,7 @@ export default function ProductManagement() {
   const [products, setProducts] = useState([]);
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("all");
 
   const imageInputRef = useRef(null);
 
@@ -104,6 +105,23 @@ export default function ProductManagement() {
   useEffect(() => {
     loadProducts();
   }, []);
+
+  // Filter products by status
+  const filteredProducts = useMemo(() => {
+    if (activeTab === "all") return products;
+    return products.filter((p) => p.status === activeTab);
+  }, [products, activeTab]);
+
+  // Count products by status
+  const statusCounts = useMemo(
+    () => ({
+      all: products.length,
+      pending: products.filter((p) => p.status === "pending").length,
+      approved: products.filter((p) => p.status === "approved").length,
+      rejected: products.filter((p) => p.status === "rejected").length,
+    }),
+    [products],
+  );
 
   // Add Product
   async function handleSubmit(e) {
@@ -314,14 +332,92 @@ export default function ProductManagement() {
         {/* Product List */}
         <div className="product-list">
           <h2>Product List</h2>
+
+          {/* Status Tabs */}
+          <div
+            style={{
+              display: "flex",
+              gap: "8px",
+              marginBottom: "20px",
+              flexWrap: "wrap",
+            }}
+          >
+            {[
+              { key: "all", label: "All Products" },
+              { key: "pending", label: "On Hold" },
+              { key: "approved", label: "Accepted" },
+              { key: "rejected", label: "Rejected" },
+            ].map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                style={{
+                  padding: "10px 20px",
+                  border: "none",
+                  borderRadius: "8px",
+                  cursor: "pointer",
+                  fontWeight: activeTab === tab.key ? "600" : "400",
+                  background:
+                    activeTab === tab.key
+                      ? tab.key === "approved"
+                        ? "#10b981"
+                        : tab.key === "rejected"
+                          ? "#ef4444"
+                          : tab.key === "pending"
+                            ? "#f59e0b"
+                            : "#6a11cb"
+                      : "#e5e7eb",
+                  color: activeTab === tab.key ? "#fff" : "#374151",
+                  transition: "all 0.2s ease",
+                }}
+              >
+                {tab.label} ({statusCounts[tab.key]})
+              </button>
+            ))}
+          </div>
+
           {loading ? (
             <p>Loading products...</p>
-          ) : products.length === 0 ? (
-            <p className="no-products">No products found.</p>
+          ) : filteredProducts.length === 0 ? (
+            <p className="no-products">
+              {activeTab === "all"
+                ? "No products found."
+                : `No ${activeTab === "pending" ? "on hold" : activeTab} products.`}
+            </p>
           ) : (
             <div className="product-grid">
-              {products.map((p) => (
-                <div className="product-card" key={p._id}>
+              {filteredProducts.map((p) => (
+                <div
+                  className="product-card"
+                  key={p._id}
+                  style={{ position: "relative" }}
+                >
+                  {/* Status Badge */}
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "10px",
+                      right: "10px",
+                      padding: "4px 12px",
+                      borderRadius: "20px",
+                      fontSize: "12px",
+                      fontWeight: "600",
+                      textTransform: "uppercase",
+                      background:
+                        p.status === "approved"
+                          ? "#10b981"
+                          : p.status === "rejected"
+                            ? "#ef4444"
+                            : "#f59e0b",
+                      color: "#fff",
+                    }}
+                  >
+                    {p.status === "pending"
+                      ? "On Hold"
+                      : p.status === "approved"
+                        ? "Accepted"
+                        : "Rejected"}
+                  </div>
                   <div className="product-details">
                     <h3>{p.name}</h3>
                     <p>

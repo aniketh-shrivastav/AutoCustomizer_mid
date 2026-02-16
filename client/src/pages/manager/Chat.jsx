@@ -89,7 +89,7 @@ export default function ManagerChat() {
   useEffect(() => {
     (async () => {
       const u = await fetchSession();
-      if (!u || u.role !== "manager") {
+      if (!u || !["manager", "admin"].includes(u.role)) {
         window.location.href = "/login";
         return;
       }

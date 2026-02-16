@@ -55,7 +55,11 @@ function requireRole(role, roleName) {
     if (!req.user && req.session?.user) {
       req.user = req.session.user;
     }
-    if (req.session.user?.role === role) {
+    const currentRole = req.session.user?.role;
+    if (role === "admin" && currentRole === "manager") {
+      return next();
+    }
+    if (currentRole === role) {
       return next();
     }
 
@@ -74,12 +78,14 @@ const isManager = requireRole("manager", "Managers");
 const isSeller = requireRole("seller", "Sellers");
 const isCustomer = requireRole("customer", "Customers");
 const isServiceProvider = requireRole("service-provider", "Service Providers");
+const isAdmin = requireRole("admin", "Admins");
 
 // Combined middleware arrays for convenience
 const managerOnly = [isAuthenticated, isManager];
 const sellerOnly = [isAuthenticated, isSeller];
 const customerOnly = [isAuthenticated, isCustomer];
 const serviceOnly = [isAuthenticated, isServiceProvider];
+const adminOnly = [isAuthenticated, isAdmin];
 
 /**
  * JWT Authentication Middleware (placeholder)
@@ -99,9 +105,11 @@ module.exports = {
   isSeller,
   isCustomer,
   isServiceProvider,
+  isAdmin,
   managerOnly,
   sellerOnly,
   customerOnly,
   serviceOnly,
+  adminOnly,
   jwtAuth,
 };

@@ -5,7 +5,7 @@ const ServiceSchema = new mongoose.Schema(
     name: { type: String, required: true },
     cost: { type: Number, required: true },
   },
-  { _id: false }
+  { _id: false },
 ); // No _id needed for subdocuments
 
 const UserSchema = new mongoose.Schema({
@@ -15,7 +15,7 @@ const UserSchema = new mongoose.Schema({
   password: String,
   role: {
     type: String,
-    enum: ["customer", "seller", "service-provider", "manager"],
+    enum: ["customer", "seller", "service-provider", "manager", "admin"],
     required: true,
   },
   createdAt: { type: Date, default: Date.now },

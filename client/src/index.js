@@ -10,6 +10,7 @@ const container = document.getElementById("root");
 const root = createRoot(container);
 
 function resolveThemeScope(pathname = "") {
+  if (pathname.startsWith("/admin")) return "admin";
   if (pathname.startsWith("/manager")) return "manager";
   if (pathname.startsWith("/customer")) return "customer";
   if (pathname.startsWith("/seller")) return "seller";
@@ -49,5 +50,5 @@ root.render(
         <App />
       </BrowserRouter>
     </Provider>
-  </React.StrictMode>
+  </React.StrictMode>,
 );

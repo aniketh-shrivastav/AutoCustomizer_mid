@@ -67,7 +67,7 @@ export default function Signup() {
         msg: "Password must be at least 6 characters long",
       },
     ],
-    []
+    [],
   );
 
   const fieldsForRole = {
@@ -107,6 +107,17 @@ export default function Signup() {
     manager: [
       { name: "name", type: "text", placeholder: "Full Name" },
       { name: "email", type: "email", placeholder: "Manager Email" },
+      { name: "phone", type: "tel", placeholder: "Phone Number" },
+      { name: "password", type: "password", placeholder: "Password" },
+      {
+        name: "confirmPassword",
+        type: "password",
+        placeholder: "Retype Password",
+      },
+    ],
+    admin: [
+      { name: "name", type: "text", placeholder: "Full Name" },
+      { name: "email", type: "email", placeholder: "Admin Email" },
       { name: "phone", type: "tel", placeholder: "Phone Number" },
       { name: "password", type: "password", placeholder: "Password" },
       {
@@ -201,8 +212,8 @@ export default function Signup() {
             role === "seller"
               ? "businessName"
               : role === "service-provider"
-              ? "workshopName"
-              : "name";
+                ? "workshopName"
+                : "name";
           setFieldError(nameKey, msg);
         } else {
           alert(msg);
@@ -219,6 +230,7 @@ export default function Signup() {
     seller: "Register as Seller",
     "service-provider": "Register as Service Provider",
     manager: "Register as Manager",
+    admin: "Register as Admin",
   };
 
   return (
@@ -255,6 +267,7 @@ export default function Signup() {
             <option value="customer">Customer</option>
             <option value="seller">Seller</option>
             <option value="service-provider">Service Provider</option>
+            <option value="admin">Admin</option>
           </select>
 
           <form

@@ -31,10 +31,19 @@ router.post("/signup", async (req, res) => {
   // Validation regex
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const nameRegex = /^[A-Za-z\s.-]+$/;
+  const allowedRoles = [
+    "customer",
+    "seller",
+    "service-provider",
+    "manager",
+    "admin",
+  ];
 
   let error = null;
   if (!finalName || !email || !password || !role) {
     error = "All fields are required";
+  } else if (!allowedRoles.includes(role)) {
+    error = "Invalid role";
   } else if (!emailRegex.test(email) || !/(\.com|\.in)$/i.test(email)) {
     error = "Please enter a valid email ending in .com or .in";
   } else if (!nameRegex.test(finalName)) {
@@ -60,6 +69,18 @@ router.post("/signup", async (req, res) => {
         return res.status(400).json({ success: false, message: errMsg });
       } else {
         return res.render("signup", { error: errMsg });
+      }
+    }
+
+    if (role === "admin") {
+      const adminCount = await User.countDocuments({ role: "admin" });
+      if (adminCount > 0) {
+        const errMsg = "Admin account already exists";
+        if (wantsJson) {
+          return res.status(403).json({ success: false, message: errMsg });
+        } else {
+          return res.render("signup", { error: errMsg });
+        }
       }
     }
 
@@ -260,6 +281,15 @@ router.post("/login", async (req, res) => {
           });
         }
         return res.redirect("/service/dashboardService");
+      case "admin":
+        if (wantsJson) {
+          return res.json({
+            success: true,
+            role: "admin",
+            redirect: "/admin/dashboard",
+          });
+        }
+        return res.redirect("/admin/dashboard");
       default:
         return res.status(403).send("Unknown role");
     }

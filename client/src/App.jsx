@@ -16,6 +16,8 @@ import Payments from "./pages/manager/Payments";
 import Support from "./pages/manager/Support";
 import ManagerChat from "./pages/manager/Chat";
 
+import AdminDashboard from "./pages/admin/Dashboard";
+
 import AllIndex from "./pages/all/Index";
 import FAQ from "./pages/all/FAQ";
 import ContactUs from "./pages/all/ContactUs";
@@ -79,7 +81,14 @@ function RequireRole({ role, children }) {
 
   if (loading) return null; // optionally show spinner
   if (!user) return <Navigate to="/login" replace />;
-  if (role && user.role !== role) return <Navigate to="/login" replace />;
+  if (role) {
+    if (role === "admin" && !["admin", "manager"].includes(user.role)) {
+      return <Navigate to="/login" replace />;
+    }
+    if (role !== "admin" && user.role !== role) {
+      return <Navigate to="/login" replace />;
+    }
+  }
 
   return children;
 }
@@ -99,6 +108,16 @@ export default function App() {
       <Route path="/logout" element={<Logout />} />
       <Route path="/faq" element={<FAQ />} />
       <Route path="/contactus" element={<ContactUs />} />
+
+      {/* Admin (protected) */}
+      <Route
+        path="/admin/dashboard"
+        element={
+          <RequireRole role="admin">
+            <AdminDashboard />
+          </RequireRole>
+        }
+      />
 
       {/* Customer (protected) */}
       <Route
@@ -313,6 +332,14 @@ export default function App() {
           </RequireRole>
         }
       />
+      <Route
+        path="/manager/chat"
+        element={
+          <RequireRole role="manager">
+            <ManagerChat />
+          </RequireRole>
+        }
+      />
 
       {/* Seller */}
       <Route
@@ -320,14 +347,6 @@ export default function App() {
         element={
           <RequireRole role="seller">
             <SellerReviews />
-          </RequireRole>
-        }
-      />
-      <Route
-        path="/manager/chat"
-        element={
-          <RequireRole role="manager">
-            <ManagerChat />
           </RequireRole>
         }
       />

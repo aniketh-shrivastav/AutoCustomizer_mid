@@ -1,5 +1,9 @@
 import { configureStore } from "@reduxjs/toolkit";
 import themeReducer from "./themeSlice";
+import adminReducer, {
+  ADMIN_STATE_STORAGE_KEY,
+  selectAdminPersistedState,
+} from "./adminSlice";
 import managerReducer, {
   MANAGER_STATE_STORAGE_KEY,
   selectManagerPersistedState,
@@ -20,6 +24,7 @@ import sellerReducer, {
 export const store = configureStore({
   reducer: {
     theme: themeReducer,
+    admin: adminReducer,
     manager: managerReducer,
     customer: customerReducer,
     service: serviceReducer,
@@ -31,10 +36,20 @@ if (typeof window !== "undefined") {
   store.subscribe(() => {
     const state = store.getState();
     try {
+      const adminSnapshot = selectAdminPersistedState(state.admin);
+      window.localStorage.setItem(
+        ADMIN_STATE_STORAGE_KEY,
+        JSON.stringify(adminSnapshot),
+      );
+    } catch (err) {
+      console.warn("Failed to persist admin state", err);
+    }
+
+    try {
       const managerSnapshot = selectManagerPersistedState(state.manager);
       window.localStorage.setItem(
         MANAGER_STATE_STORAGE_KEY,
-        JSON.stringify(managerSnapshot)
+        JSON.stringify(managerSnapshot),
       );
     } catch (err) {
       console.warn("Failed to persist manager state", err);
@@ -44,7 +59,7 @@ if (typeof window !== "undefined") {
       const customerSnapshot = selectCustomerPersistedState(state.customer);
       window.localStorage.setItem(
         CUSTOMER_STATE_STORAGE_KEY,
-        JSON.stringify(customerSnapshot)
+        JSON.stringify(customerSnapshot),
       );
     } catch (err) {
       console.warn("Failed to persist customer state", err);
@@ -54,7 +69,7 @@ if (typeof window !== "undefined") {
       const serviceSnapshot = selectServicePersistedState(state.service);
       window.localStorage.setItem(
         SERVICE_STATE_STORAGE_KEY,
-        JSON.stringify(serviceSnapshot)
+        JSON.stringify(serviceSnapshot),
       );
     } catch (err) {
       console.warn("Failed to persist service state", err);
@@ -64,7 +79,7 @@ if (typeof window !== "undefined") {
       const sellerSnapshot = selectSellerPersistedState(state.seller);
       window.localStorage.setItem(
         SELLER_STATE_STORAGE_KEY,
-        JSON.stringify(sellerSnapshot)
+        JSON.stringify(sellerSnapshot),
       );
     } catch (err) {
       console.warn("Failed to persist seller state", err);

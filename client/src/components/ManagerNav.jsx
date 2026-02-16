@@ -20,7 +20,7 @@ export default function ManagerNav() {
       { to: "/manager/support", label: "Support" },
       { to: "/manager/chat", label: "Chat" },
     ],
-    []
+    [],
   );
 
   function backendBase() {

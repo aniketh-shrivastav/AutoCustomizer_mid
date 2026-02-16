@@ -110,6 +110,7 @@ app.use(express.static(__dirname));
 // isSeller, etc. are defined and used within these route files)
 // Route imports
 const authRoutes = require("./routes/authRoutes");
+const adminRoutes = require("./routes/adminRoutes");
 const managerRoutes = require("./routes/managerRoutes");
 const customerRoutes = require("./routes/customerRoutes");
 const serviceProviderRoutes = require("./routes/serviceProviderRoutes");
@@ -124,6 +125,7 @@ const paymentRoutes = require("./routes/paymentRoutes");
 // Mount routes
 app.use("/", profileSettingsRoutes);
 app.use("/", authRoutes);
+app.use("/admin", adminRoutes);
 app.use("/manager", managerRoutes);
 app.use("/customer", customerRoutes);
 app.use("/service", serviceProviderRoutes);

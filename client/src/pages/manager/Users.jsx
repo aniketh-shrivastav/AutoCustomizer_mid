@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import ManagerNav from "../../components/ManagerNav";
 import "../../Css/manager.css";
 
-const ROLES = ["customer", "seller", "service-provider", "manager"]; // order matters
+const ROLES = ["customer", "seller", "service-provider", "manager", "admin"]; // order matters
 
 export default function ManagerUsers() {
   const [loading, setLoading] = useState(true);
@@ -448,8 +448,8 @@ function RoleSection({ role, users, onAction }) {
               </tr>
             ) : (
               users.map((u) => {
-                const isManager = u.role === "manager";
-                const actions = isManager ? (
+                const isProtected = ["manager", "admin"].includes(u.role);
+                const actions = isProtected ? (
                   <span>Not Allowed</span>
                 ) : !u.suspended ? (
                   <button

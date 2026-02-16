@@ -1,6 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit";
 
-const SCOPES = ["global", "manager", "customer", "seller", "service"];
+const SCOPES = ["global", "manager", "admin", "customer", "seller", "service"];
 
 function prefersDarkMode() {
   if (typeof window === "undefined") return false;
